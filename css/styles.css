@@ -537,9 +537,19 @@ select.pitch-select:focus {
 .step-cell.on.chord { background: linear-gradient(135deg, #5b21b6, var(--chord)); }
 .step-cell.on.lead { background: linear-gradient(135deg, #c2410c, var(--lead)); }
 .step-cell.on.drum-tom { background: linear-gradient(135deg, #7c2d12, #ea580c); }
-.step-cell.on.drum-clap { background: linear-gradient(135deg, #9d174d, #f472b6); }
 .step-cell.on.drum-cymbal { background: linear-gradient(135deg, #475569, #94a3b8); }
-.step-cell.on.drum-splash { background: linear-gradient(135deg, #334155, #cbd5e1); }
+.step-cell.on.drum-clap { background: linear-gradient(135deg, #9d174d, #f9a8d4); }
+.step-cell.on.drum-wood { background: linear-gradient(135deg, #78350f, #fbbf24); }
+.step-cell.on.drum-tri { background: linear-gradient(135deg, #64748b, #e2e8f0); }
+.step-cell.on.drum-perc { background: linear-gradient(135deg, #713f12, #d97706); }
+.step-cell.on.melodic-flute { background: linear-gradient(135deg, #0e7490, #67e8f9); }
+.step-cell.on.melodic-organ { background: linear-gradient(135deg, #6d28d9, #c4b5fd); }
+.step-cell.on.melodic-pluck { background: linear-gradient(135deg, #047857, #34d399); }
+.step-cell.on.melodic-pad { background: linear-gradient(135deg, #4338ca, #818cf8); }
+.step-cell.on.melodic-bells { background: linear-gradient(135deg, #0891b2, #67e8f9); }
+.step-cell.on.melodic-harp { background: linear-gradient(135deg, #0f766e, #5eead4); }
+.step-cell.on.melodic-brass { background: linear-gradient(135deg, #b45309, #fcd34d); }
+.step-cell.on.melodic-strings { background: linear-gradient(135deg, #4c1d95, #a78bfa); }
 .step-cell.on.melodic-piano { background: linear-gradient(135deg, #1e3a5f, #93c5fd); }
 .step-cell.on.melodic-violin { background: linear-gradient(135deg, #7f1d1d, #fca5a5); }
 .step-cell.on.melodic-viola { background: linear-gradient(135deg, #9a3412, #fdba74); }
@@ -562,9 +572,19 @@ select.pitch-select:focus {
 .track-name-btn.drum-tom,
 .track-name.drum-tom { color: #ea580c; }
 .track-name-btn.drum-clap,
-.track-name.drum-clap { color: #f472b6; }
+.track-name.drum-clap { color: #f9a8d4; }
 .track-name-btn.drum-cymbal { color: #94a3b8; }
-.track-name-btn.drum-splash { color: #cbd5e1; }
+.track-name-btn.drum-wood { color: #fbbf24; }
+.track-name-btn.drum-tri { color: #e2e8f0; }
+.track-name-btn.drum-perc { color: #d97706; }
+.track-name-btn.melodic-flute { color: #67e8f9; }
+.track-name-btn.melodic-organ { color: #c4b5fd; }
+.track-name-btn.melodic-pluck { color: #34d399; }
+.track-name-btn.melodic-pad { color: #818cf8; }
+.track-name-btn.melodic-bells { color: #67e8f9; }
+.track-name-btn.melodic-harp { color: #5eead4; }
+.track-name-btn.melodic-brass { color: #fcd34d; }
+.track-name-btn.melodic-strings { color: #a78bfa; }
 .track-name-btn.bass,
 .track-name.bass { color: var(--bass); }
 .track-name-btn.chord,
