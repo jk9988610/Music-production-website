@@ -2,7 +2,7 @@
  * 版本管理与在线更新检测
  */
 const AppVersion = (() => {
-  const CURRENT = "1.3.3";
+  const CURRENT = "1.3.4";
   const BUILD = "dev";
   const STORAGE_BUILD = "hf-last-build";
 
@@ -83,20 +83,6 @@ const AppVersion = (() => {
     });
   }
 
-  function bindDebugLogButtons() {
-    const handler = () => {
-      AppLogger.printToConsole();
-      const logContent = document.getElementById("logContent");
-      const logDialog = document.getElementById("logDialog");
-      if (logContent) logContent.textContent = AppLogger.formatAll();
-      if (logDialog && !logDialog.open) logDialog.showModal();
-    };
-    ["btnDebugLog"].forEach((id) => {
-      const btn = document.getElementById(id);
-      if (btn) btn.addEventListener("click", handler);
-    });
-  }
-
   function initUI() {
     syncVersionLabels();
 
@@ -105,8 +91,6 @@ const AppVersion = (() => {
     const btnPrintLogs = document.getElementById("btnPrintLogs");
     const logDialog = document.getElementById("logDialog");
     const logContent = document.getElementById("logContent");
-
-    bindDebugLogButtons();
 
     if (btnLogs && logDialog) {
       btnLogs.addEventListener("click", () => {

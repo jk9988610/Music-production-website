@@ -54,8 +54,7 @@
         <button type="button" class="btn btn-ghost btn-compact" id="btnClear">清</button>
         <span class="header-divider" aria-hidden="true"></span>
         <button type="button" class="btn btn-ghost btn-compact" id="btnHelp" title="帮助">帮助</button>
-        <button type="button" class="btn btn-ghost btn-compact" id="btnLogs" title="日志">日志</button>
-        <button type="button" class="btn btn-ghost btn-compact" id="btnDebugLog" title="调试日志">调试</button>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnLogs" title="查看日志并打印到控制台">日志</button>
         <button type="button" class="btn btn-ghost btn-compact" id="btnUpdate" title="检查更新">更新</button>
       </div>
     </header>
@@ -113,7 +112,7 @@
         <dt>保存与草稿</dt>
         <dd>自动保存草稿；顶栏「存/读/清」管理项目。</dd>
         <dt>版本与更新</dt>
-        <dd>顶栏显示版本号；「更新」检测新版本，「调试」打印含版本的日志到控制台（F12）。</dd>
+        <dd>顶栏显示版本号；「更新」检测新版本；「日志」查看运行记录并可打印到控制台（F12）。</dd>
       </dl>
       <h4>快捷键</h4>
       <ul class="help-list">
@@ -130,7 +129,7 @@
     </div>
     <pre class="log-content" id="logContent" aria-live="polite"></pre>
     <menu class="log-dialog-actions">
-      <button type="button" class="btn btn-ghost btn-xs" id="btnPrintLogs">打印</button>
+      <button type="button" class="btn btn-ghost btn-xs" id="btnPrintLogs">打印到控制台</button>
       <button type="button" class="btn btn-ghost btn-xs" id="btnClearLogs">清空</button>
     </menu>
   </dialog>
