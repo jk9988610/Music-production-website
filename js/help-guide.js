@@ -54,11 +54,11 @@ const HelpGuide = (() => {
       label: "音序",
       html: `
         <h4>步进音序器</h4>
-        <p>默认 7 轨，可用「+轨」「−轨」增减（1～12 轨）。每轨可点 <strong>音色</strong> 切换乐器（底鼓、通鼓、拍手、领奏、拨弦、垫音等 15 种）。横向每一步 = 1/16 拍。</p>
+        <p>默认 7 轨，可用「+轨」「−轨」增减（1～12 轨）。<strong>点击轨名</strong>（如军鼓、领奏）弹窗切换乐器，名称完整显示。横向每一步 = 1/16 拍。</p>
         <ul class="help-list">
           <li><strong>鼓类</strong>：点击格开 / 关，无音高。</li>
           <li><strong>旋律类</strong>（贝斯、和弦、领奏等）：点击选音高，格内显示如 <code>C4</code>。</li>
-          <li><strong>音色</strong>：轨名旁的按钮，弹窗切换乐器（跨鼓 / 旋律类型时会自动处理格内数据）。</li>
+          <li><strong>换乐器</strong>：直接点左侧轨名；跨鼓 / 旋律类型时会自动处理格内数据。</li>
           <li><strong>密度</strong>：倍率按钮（½×～4×），弹窗选择。</li>
           <li><strong>±轨 / ±4步</strong>：增减轨道数与 Pattern 长度。</li>
         </ul>

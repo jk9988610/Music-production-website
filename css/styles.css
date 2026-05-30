@@ -455,21 +455,37 @@ select.pitch-select:focus {
   padding-right: 0.15rem;
 }
 
-.track-label-col .track-name {
+.track-name-btn {
   flex: 1 1 auto;
   min-width: 0;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.12rem 0.15rem;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+  border-radius: 4px;
+  line-height: 1.2;
 }
 
-.track-inst-btn,
+.track-name-btn:hover {
+  background: var(--bg-elevated);
+}
+
+.track-name-btn:focus-visible {
+  outline: 1px solid var(--accent-dim);
+  outline-offset: 1px;
+}
+
 .track-rate-btn {
   flex: 0 0 auto;
   padding: 0.05rem 0.25rem !important;
   font-size: 0.55rem !important;
   min-width: 1.65rem;
-}
-
-.track-inst-btn {
-  min-width: 1.85rem;
 }
 
 .track-count-info {
@@ -522,20 +538,55 @@ select.pitch-select:focus {
 .step-cell.on.lead { background: linear-gradient(135deg, #c2410c, var(--lead)); }
 .step-cell.on.drum-tom { background: linear-gradient(135deg, #7c2d12, #ea580c); }
 .step-cell.on.drum-clap { background: linear-gradient(135deg, #9d174d, #f472b6); }
-.step-cell.on.drum-ride { background: linear-gradient(135deg, #475569, #94a3b8); }
+.step-cell.on.drum-cymbal { background: linear-gradient(135deg, #475569, #94a3b8); }
+.step-cell.on.drum-wood { background: linear-gradient(135deg, #78350f, #fbbf24); }
+.step-cell.on.drum-tri { background: linear-gradient(135deg, #64748b, #e2e8f0); }
+.step-cell.on.melodic-flute { background: linear-gradient(135deg, #0e7490, #67e8f9); }
+.step-cell.on.melodic-harp { background: linear-gradient(135deg, #0f766e, #5eead4); }
+.step-cell.on.melodic-brass { background: linear-gradient(135deg, #b45309, #fcd34d); }
+.step-cell.on.melodic-strings { background: linear-gradient(135deg, #4c1d95, #a78bfa); }
+.step-cell.on.melodic-synth { background: linear-gradient(135deg, #be123c, #fb7185); }
 .step-cell.on.drum-perc { background: linear-gradient(135deg, #713f12, #fbbf24); }
 .step-cell.on.melodic-pluck { background: linear-gradient(135deg, #047857, #34d399); }
 .step-cell.on.melodic-pad { background: linear-gradient(135deg, #4338ca, #818cf8); }
 .step-cell.on.melodic-organ { background: linear-gradient(135deg, #6d28d9, #c4b5fd); }
 .step-cell.on.melodic-bells { background: linear-gradient(135deg, #0891b2, #67e8f9); }
 
+.track-name-btn.drum-kick,
+.track-name.drum-kick { color: var(--drum); }
+.track-name-btn.drum-snare,
+.track-name.drum-snare { color: #ec4899; }
+.track-name-btn.drum-hat,
+.track-name.drum-hat { color: #f9a8d4; }
+.track-name-btn.drum-open,
+.track-name.drum-open { color: #fbcfe8; }
+.track-name-btn.drum-tom,
 .track-name.drum-tom { color: #ea580c; }
+.track-name-btn.drum-clap,
 .track-name.drum-clap { color: #f472b6; }
-.track-name.drum-ride { color: #94a3b8; }
+.track-name-btn.drum-cymbal { color: #94a3b8; }
+.track-name-btn.drum-wood { color: #fbbf24; }
+.track-name-btn.drum-tri { color: #e2e8f0; }
+.track-name-btn.drum-perc,
 .track-name.drum-perc { color: #fbbf24; }
+.track-name-btn.melodic-flute { color: #67e8f9; }
+.track-name-btn.melodic-harp { color: #5eead4; }
+.track-name-btn.melodic-brass { color: #fcd34d; }
+.track-name-btn.melodic-strings { color: #a78bfa; }
+.track-name-btn.melodic-synth { color: #fb7185; }
+.track-name-btn.bass,
+.track-name.bass { color: var(--bass); }
+.track-name-btn.chord,
+.track-name.chord { color: var(--chord); }
+.track-name-btn.lead,
+.track-name.lead { color: var(--lead); }
+.track-name-btn.melodic-pluck,
 .track-name.melodic-pluck { color: #34d399; }
+.track-name-btn.melodic-pad,
 .track-name.melodic-pad { color: #818cf8; }
+.track-name-btn.melodic-organ,
 .track-name.melodic-organ { color: #c4b5fd; }
+.track-name-btn.melodic-bells,
 .track-name.melodic-bells { color: #67e8f9; }
 
 .step-cell.current {

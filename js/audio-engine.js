@@ -81,6 +81,33 @@ const AudioEngine = (() => {
     noise.stop(time + dur + 0.02);
   }
 
+  function playWoodOn(c, out, time, gain = 0.7) {
+    const osc = c.createOscillator();
+    const env = c.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, time);
+    osc.frequency.exponentialRampToValueAtTime(520, time + 0.02);
+    env.gain.setValueAtTime(gain, time);
+    env.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+    osc.connect(env);
+    env.connect(out);
+    osc.start(time);
+    osc.stop(time + 0.14);
+  }
+
+  function playTriOn(c, out, time, gain = 0.55) {
+    const osc = c.createOscillator();
+    const env = c.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 1800;
+    env.gain.setValueAtTime(gain, time);
+    env.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
+    osc.connect(env);
+    env.connect(out);
+    osc.start(time);
+    osc.stop(time + 0.4);
+  }
+
   function playTomOn(c, out, time, gain = 0.8) {
     const osc = c.createOscillator();
     const env = c.createGain();
@@ -112,6 +139,11 @@ const AudioEngine = (() => {
       pad: { wave: "sine", lp: 1400, attack: 0.08 },
       organ: { wave: "square", lp: 2400, attack: 0.01 },
       bells: { wave: "sine", lp: 4000, attack: 0.005 },
+      flute: { wave: "sine", lp: 3600, attack: 0.04 },
+      harp: { wave: "triangle", lp: 4200, attack: 0.002 },
+      brass: { wave: "sawtooth", lp: 1800, attack: 0.03 },
+      strings: { wave: "sawtooth", lp: 2400, attack: 0.06 },
+      synth: { wave: "square", lp: 3000, attack: 0.01 },
     };
     const p = cfg[type] || cfg.lead;
     osc.type = p.wave;
@@ -162,8 +194,15 @@ const AudioEngine = (() => {
       case "openhat":
         playHatOn(c, out, time, true, 0.55);
         break;
+      case "cymbal":
       case "ride":
         playHatOn(c, out, time, true, 0.42, 5500);
+        break;
+      case "wood":
+        playWoodOn(c, out, time);
+        break;
+      case "tri":
+        playTriOn(c, out, time);
         break;
       case "tom":
         playTomOn(c, out, time);
@@ -204,6 +243,31 @@ const AudioEngine = (() => {
       case "bells":
         if (noteMidi != null) {
           playSynthOn(c, out, time, noteMidi, "bells", stepDuration * 0.75, 0.45);
+        }
+        break;
+      case "flute":
+        if (noteMidi != null) {
+          playSynthOn(c, out, time, noteMidi, "flute", stepDuration * 0.8, 0.42);
+        }
+        break;
+      case "harp":
+        if (noteMidi != null) {
+          playSynthOn(c, out, time, noteMidi, "harp", stepDuration * 0.45, 0.48);
+        }
+        break;
+      case "brass":
+        if (noteMidi != null) {
+          playSynthOn(c, out, time, noteMidi, "brass", stepDuration * 0.88, 0.5);
+        }
+        break;
+      case "strings":
+        if (noteMidi != null) {
+          playSynthOn(c, out, time, noteMidi, "strings", stepDuration * 1.0, 0.4);
+        }
+        break;
+      case "synth":
+        if (noteMidi != null) {
+          playSynthOn(c, out, time, noteMidi, "synth", stepDuration * 0.7, 0.44);
         }
         break;
       default:

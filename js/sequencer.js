@@ -173,7 +173,9 @@ const Sequencer = (() => {
     trackLayout = raw
       .map((t) => ({
         trackId: String(t.trackId || t.id || ""),
-        instrumentId: String(t.instrumentId || t.trackId || ""),
+        instrumentId: Instruments.resolveId(
+          String(t.instrumentId || t.trackId || "")
+        ),
       }))
       .filter((t) => t.trackId && Instruments.get(t.instrumentId));
     if (!trackLayout.length) {

@@ -214,7 +214,7 @@
       label: inst.name,
     }));
     openChoiceDialog({
-      title: `${track.name} · 切换乐器`,
+      title: `切换乐器 · 当前 ${track.name}`,
       columns: 4,
       currentValue: track.instrumentId,
       items,
@@ -237,7 +237,7 @@
     }
     const items = Sequencer.listInstruments().map((inst) => ({
       value: inst.id,
-      label: `${inst.name}${inst.type === "drum" ? "" : " ♪"}`,
+      label: inst.name,
     }));
     openChoiceDialog({
       title: "添加轨道 · 选择乐器",
@@ -693,21 +693,16 @@
       const labelCol = document.createElement("div");
       labelCol.className = "track-label-col";
 
-      const name = document.createElement("span");
-      name.className = `track-name ${track.type === "drum" ? "drum" : track.class}`;
-      name.textContent = track.name;
-      labelCol.appendChild(name);
-
-      const instBtn = document.createElement("button");
-      instBtn.type = "button";
-      instBtn.className = "note-btn pitch-pick-btn track-inst-btn";
-      instBtn.title = "切换乐器";
-      instBtn.textContent = "音色";
-      instBtn.addEventListener("click", (e) => {
+      const nameBtn = document.createElement("button");
+      nameBtn.type = "button";
+      nameBtn.className = `track-name-btn ${track.class}`;
+      nameBtn.textContent = track.name;
+      nameBtn.title = `点击切换乐器（当前：${track.name}）`;
+      nameBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         openInstrumentPicker(track.id);
       });
-      labelCol.appendChild(instBtn);
+      labelCol.appendChild(nameBtn);
 
       const rateBtn = document.createElement("button");
       rateBtn.type = "button";
