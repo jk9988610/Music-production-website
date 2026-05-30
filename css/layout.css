@@ -431,3 +431,29 @@ html[data-layout-compact-header="1"] .header-row {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.layout-print-output {
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  max-height: 10rem;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.layout-print-output:not([hidden]) {
+  display: block;
+}
+
+.layout-actions-row .btn.active-flash {
+  color: var(--accent);
+  border-color: var(--accent);
+}

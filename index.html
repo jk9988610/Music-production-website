@@ -128,7 +128,10 @@
             <option value="wide">宽屏双列</option>
           </select>
           <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutReset">恢复默认</button>
+          <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutPrint" title="打印到控制台并显示在下方">打印布局</button>
+          <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutCopy" title="复制布局报告">复制</button>
         </div>
+        <pre class="layout-print-output" id="layoutPrintOutput" hidden aria-live="polite"></pre>
       </div>
       <div class="layout-section">
         <h4>整体</h4>
@@ -160,7 +163,7 @@
         <label class="layout-control">编曲格高 <input type="range" id="layoutArrangeH" min="22" max="56" value="30"><output id="layoutArrangeHVal">30</output> px</label>
         <label class="layout-control">混音轨宽 <input type="range" id="layoutMixerW" min="2.5" max="5" step="0.25" value="3.35"><output id="layoutMixerWVal">3.35</output> rem</label>
       </div>
-      <p class="layout-hint">布局随「存/读」与草稿自动保存。</p>
+      <p class="layout-hint">布局随「存/读」与草稿自动保存。「打印布局」输出模块顺序、参数与页面实测尺寸。</p>
     </div>
   </dialog>
 

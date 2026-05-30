@@ -307,6 +307,142 @@ const LayoutManager = (() => {
     });
   }
 
+  const MODULE_LABELS = { arrange: "编曲", sequencer: "音序", mixer: "混音" };
+
+  const CSS_VAR_KEYS = [
+    "--chrome-module-gap",
+    "--main-module-gap",
+    "--chrome-module-pad-x",
+    "--chrome-module-pad-b",
+    "--chrome-legend-size",
+    "--chrome-toolbar-gap",
+    "--content-seq-step",
+    "--content-seq-label",
+    "--content-arrange-slot-w",
+    "--content-arrange-slot-h",
+    "--content-mixer-track-w",
+    "--layout-app-max-width",
+    "--layout-module-radius",
+  ];
+
+  function formatLayoutReport() {
+    const lines = [];
+    const ver =
+      typeof AppVersion !== "undefined" && AppVersion.getInfo
+        ? `v${AppVersion.getInfo().version} · build ${AppVersion.getInfo().build}`
+        : "unknown";
+    lines.push("=== HarmonyForge 模块布局报告 ===");
+    lines.push(ver);
+    lines.push(`时间 ${new Date().toLocaleString("zh-CN")}`);
+    lines.push("");
+
+    lines.push("【模块顺序与可见性】");
+    state.order.forEach((id, i) => {
+      const on = state.visible[id] !== false;
+      lines.push(`${i + 1}. ${MODULE_LABELS[id] || id} (${id}) · ${on ? "显示" : "隐藏"}`);
+    });
+    lines.push("");
+
+    lines.push("【布局参数】");
+    lines.push(`间距自适应: ${state.autoGap ? "是" : "否"}`);
+    lines.push(`模块间距: ${state.moduleGap}px · 主区域行距: ${state.mainGap}px`);
+    lines.push(`分栏: ${state.columns} · 页面最大宽度: ${state.appMaxWidth}px`);
+    lines.push(`紧凑顶栏: ${state.compactHeader ? "是" : "否"}`);
+    lines.push(
+      `外壳 padding: ${state.chromeModulePadX}/${state.chromeModulePadB}px · 标题: ${state.chromeLegendSize}rem · 工具条间距: ${state.chromeToolbarGap}px · 圆角: ${state.moduleRadius}px`
+    );
+    lines.push(
+      `音序格: ${state.contentSeqStep}rem · 轨名: ${state.contentSeqLabel}rem · 编曲格: ${state.contentArrangeSlotW}×${state.contentArrangeSlotH}px · 混音轨: ${state.contentMixerTrackW}`
+    );
+    lines.push("");
+
+    lines.push("【已应用 CSS 变量】");
+    const rootStyle = getComputedStyle(document.documentElement);
+    CSS_VAR_KEYS.forEach((key) => {
+      const val = rootStyle.getPropertyValue(key).trim();
+      if (val) lines.push(`${key}: ${val}`);
+    });
+    lines.push(`data-layout-columns: ${document.documentElement.dataset.layoutColumns || "1"}`);
+    lines.push(`data-layout-auto-gap: ${document.documentElement.dataset.layoutAutoGap || "0"}`);
+    lines.push("");
+
+    lines.push("【DOM 实测尺寸】");
+    if (mainEl) {
+      const mr = mainEl.getBoundingClientRect();
+      lines.push(`main: ${Math.round(mr.width)}×${Math.round(mr.height)}px`);
+    }
+    const app = document.querySelector(".app");
+    if (app) {
+      const ar = app.getBoundingClientRect();
+      lines.push(`app: ${Math.round(ar.width)}×${Math.round(ar.height)}px · viewport ${window.innerWidth}×${window.innerHeight}`);
+    }
+    (mainEl || document).querySelectorAll("fieldset.module[data-module]").forEach((fs) => {
+      const id = fs.dataset.module;
+      const r = fs.getBoundingClientRect();
+      const body = fs.querySelector(".module-body");
+      const chrome = fs.querySelector(".module-chrome");
+      const br = body?.getBoundingClientRect();
+      const cr = chrome?.getBoundingClientRect();
+      lines.push(
+        `[${MODULE_LABELS[id] || id}] fieldset ${Math.round(r.width)}×${Math.round(r.height)}px` +
+          ` · body ${body ? Math.round(br.width) + "×" + Math.round(br.height) : "—"}` +
+          ` · 工具条 ${chrome ? Math.round(cr.height) : 0}px` +
+          ` · ${fs.hidden ? "隐藏" : "显示"}`
+      );
+    });
+    lines.push("");
+
+    lines.push("【布局 JSON（可存入项目）】");
+    lines.push(JSON.stringify(exportState(), null, 2));
+
+    return lines.join("\n");
+  }
+
+  async function copyText(text) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;left:-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function printLayout() {
+    const report = formatLayoutReport();
+    console.log(report);
+    if (typeof AppLogger !== "undefined") {
+      AppLogger.info("模块布局报告", "已输出到控制台与布局面板");
+    }
+    const pre = document.getElementById("layoutPrintOutput");
+    if (pre) {
+      pre.textContent = report;
+      pre.hidden = false;
+    }
+    const st = document.getElementById("statusText");
+    if (st) st.textContent = "布局报告已打印（见下方或控制台）";
+    return report;
+  }
+
+  async function copyLayoutReport() {
+    const report = formatLayoutReport();
+    try {
+      await copyText(report);
+      if (typeof AppLogger !== "undefined") AppLogger.info("布局报告已复制到剪贴板");
+      const st = document.getElementById("statusText");
+      if (st) st.textContent = "布局报告已复制";
+      return true;
+    } catch (err) {
+      if (typeof AppLogger !== "undefined") AppLogger.error("复制布局失败", err.message);
+      return false;
+    }
+  }
+
   function initUI() {
     const dialog = document.getElementById("layoutDialog");
     const btnLayout = document.getElementById("btnLayout");
@@ -344,6 +480,23 @@ const LayoutManager = (() => {
         if (preset.value) applyPreset(preset.value);
         syncDialogControls();
         preset.value = "";
+      });
+    }
+
+    const btnPrint = document.getElementById("btnLayoutPrint");
+    const btnCopy = document.getElementById("btnLayoutCopy");
+    if (btnPrint) {
+      btnPrint.addEventListener("click", () => {
+        printLayout();
+        btnPrint.classList.add("active-flash");
+        setTimeout(() => btnPrint.classList.remove("active-flash"), 1200);
+      });
+    }
+    if (btnCopy) {
+      btnCopy.addEventListener("click", async () => {
+        await copyLayoutReport();
+        btnCopy.classList.add("active-flash");
+        setTimeout(() => btnCopy.classList.remove("active-flash"), 1200);
       });
     }
 
@@ -449,6 +602,9 @@ const LayoutManager = (() => {
     setEditMode,
     isAutoGap,
     getManualGaps,
+    formatLayoutReport,
+    printLayout,
+    copyLayoutReport,
     MODULE_IDS,
     PRESETS,
     DEFAULTS,
