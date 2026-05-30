@@ -1,5 +1,5 @@
 /**
- * Web Audio 合成 — 乐队常用乐器；弓弦/钢琴为简化物理模型（见各 play* 注释）
+ * Web Audio 合成 — 乐队常用乐器；弓弦为物理简化模型，钢琴为现代流行合成（见各 play* 注释）
  */
 const AudioEngine = (() => {
   let ctx = null;
@@ -208,85 +208,83 @@ const AudioEngine = (() => {
   }
 
   /**
-   * 钢琴 — 简化击弦/音板模型（非采样）：
-   * - 分音非谐性 fₙ ≈ n·f₀·√(1 + B·n²)（钢琴弦典型近似，非整数倍泛音）
-   * - 起音短带通噪声模拟琴槌敲击
-   * - 各泛音独立衰减（高音更快），经低通扫频模拟音板
-   * 参考思路：Fletcher 弦乐/钢琴物理概要、Web Audio 加法击弦合成常见做法
+   * 钢琴 — 现代流行 / 工作室贴皮取向（非古典击弦、非拨弦快衰）：
+   * - 共享柔和 ADSR，三角主体 + 整数谐波，无琴槌噪声
+   * - 稳定低通 + 轻微 presence，短延迟增加空间感
    */
-  function addPianoStringPair(c, body, time, stopAt, freq, partialGain, detuneCents) {
-    [-detuneCents, detuneCents].forEach((cents) => {
+  function playPianoOn(c, out, time, midi, duration, gain = 0.5) {
+    const freq = midiToFreq(midi);
+    const stopAt = time + duration + 0.25;
+
+    const toneBus = c.createGain();
+    toneBus.gain.value = 1;
+
+    const masterEnv = c.createGain();
+    const peak = gain * 0.82;
+    masterEnv.gain.setValueAtTime(0, time);
+    masterEnv.gain.linearRampToValueAtTime(peak, time + 0.032);
+    masterEnv.gain.linearRampToValueAtTime(peak * 0.94, time + 0.12);
+    masterEnv.gain.setValueAtTime(peak * 0.88, time + duration * 0.5);
+    masterEnv.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.96);
+
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    const lpHz = Math.min(4400, 380 + freq * 5.2);
+    lp.frequency.setValueAtTime(lpHz, time);
+    lp.Q.value = 0.4;
+
+    const presence = c.createBiquadFilter();
+    presence.type = "peaking";
+    presence.frequency.value = Math.min(3200, freq * 2.8 + 900);
+    presence.Q.value = 0.7;
+    presence.gain.value = 2.2;
+
+    toneBus.connect(presence);
+    presence.connect(lp);
+    lp.connect(masterEnv);
+
+    const delay = c.createDelay(0.04);
+    delay.delayTime.value = 0.016;
+    const dlyLp = c.createBiquadFilter();
+    dlyLp.type = "lowpass";
+    dlyLp.frequency.value = 2400;
+    const dlyGain = c.createGain();
+    dlyGain.gain.value = 0.14;
+    toneBus.connect(delay);
+    delay.connect(dlyLp);
+    dlyLp.connect(dlyGain);
+    dlyGain.connect(masterEnv);
+
+    masterEnv.connect(out);
+
+    [-2.2, 2.2, 0].forEach((cents, i) => {
       const osc = c.createOscillator();
-      const env = c.createGain();
-      osc.type = "sine";
+      osc.type = "triangle";
       osc.frequency.setValueAtTime(freq, time);
-      osc.detune.setValueAtTime(cents, time);
-      env.gain.setValueAtTime(0, time);
-      env.gain.linearRampToValueAtTime(partialGain * 0.5, time + 0.0015);
-      env.gain.exponentialRampToValueAtTime(partialGain * 0.18, time + 0.035);
-      env.gain.exponentialRampToValueAtTime(0.001, time + stopAt - time - 0.02);
-      osc.connect(env);
-      env.connect(body);
+      if (cents) osc.detune.setValueAtTime(cents, time);
+      const layer = c.createGain();
+      layer.gain.value = i === 2 ? 0.28 : 0.36;
+      osc.connect(layer);
+      layer.connect(toneBus);
       osc.start(time);
       osc.stop(stopAt);
     });
-  }
 
-  function playPianoOn(c, out, time, midi, duration, gain = 0.5) {
-    const freq = midiToFreq(midi);
-    const inharmonicB = 0.00085;
-    const stopAt = time + duration + 0.45;
-
-    const body = c.createGain();
-    body.gain.value = 1.15;
-    const lp = c.createBiquadFilter();
-    lp.type = "lowpass";
-    const lpStart = Math.min(900, freq * 2.8);
-    const lpPeak = Math.min(6800, freq * 14 + 900);
-    lp.frequency.setValueAtTime(lpStart, time);
-    lp.frequency.exponentialRampToValueAtTime(Math.max(lpStart + 120, lpPeak), time + 0.012);
-    lp.frequency.exponentialRampToValueAtTime(Math.max(700, lpStart * 0.9), time + duration * 0.65);
-    lp.Q.value = 0.55;
-    body.connect(lp);
-    lp.connect(out);
-
-    const hammerLen = Math.max(12, Math.floor(c.sampleRate * 0.009));
-    const hammer = c.createBuffer(1, hammerLen, c.sampleRate);
-    const hData = hammer.getChannelData(0);
-    for (let i = 0; i < hammerLen; i++) {
-      hData[i] = (Math.random() * 2 - 1) * (1 - i / hammerLen) ** 1.4;
-    }
-    const hammerSrc = c.createBufferSource();
-    hammerSrc.buffer = hammer;
-    const hammerF = c.createBiquadFilter();
-    hammerF.type = "bandpass";
-    hammerF.frequency.value = Math.min(5200, freq * 8 + 500);
-    hammerF.Q.value = 0.95;
-    const hammerE = c.createGain();
-    hammerE.gain.setValueAtTime(gain * 0.38, time);
-    hammerE.gain.exponentialRampToValueAtTime(0.001, time + 0.018);
-    hammerSrc.connect(hammerF);
-    hammerF.connect(hammerE);
-    hammerE.connect(body);
-    hammerSrc.start(time);
-    hammerSrc.stop(time + 0.03);
-
-    const partials = [
-      { n: 1, amp: 1, decayMul: 1.05, detune: 5 },
-      { n: 2, amp: 0.52, decayMul: 0.88, detune: 4 },
-      { n: 3, amp: 0.34, decayMul: 0.72, detune: 4 },
-      { n: 4, amp: 0.22, decayMul: 0.58, detune: 3 },
-      { n: 5, amp: 0.14, decayMul: 0.48, detune: 3 },
-      { n: 6, amp: 0.09, decayMul: 0.38, detune: 2 },
-      { n: 7, amp: 0.055, decayMul: 0.3, detune: 2 },
-      { n: 8, amp: 0.035, decayMul: 0.24, detune: 2 },
-    ];
-
-    partials.forEach(({ n, amp, decayMul, detune }) => {
-      const f = freq * n * Math.sqrt(1 + inharmonicB * n * n);
-      const rel = Math.max(0.12, duration * decayMul);
-      const peak = gain * amp * (n === 1 ? 0.58 : 0.5 / Math.sqrt(n));
-      addPianoStringPair(c, body, time, time + rel, f, peak, detune);
+    [
+      { n: 2, amp: 0.18, wave: "sine" },
+      { n: 3, amp: 0.1, wave: "sine" },
+      { n: 4, amp: 0.055, wave: "triangle" },
+      { n: 5, amp: 0.032, wave: "sine" },
+    ].forEach(({ n, amp, wave }) => {
+      const osc = c.createOscillator();
+      osc.type = wave;
+      osc.frequency.setValueAtTime(freq * n, time);
+      const layer = c.createGain();
+      layer.gain.value = amp;
+      osc.connect(layer);
+      layer.connect(toneBus);
+      osc.start(time);
+      osc.stop(stopAt);
     });
   }
 
