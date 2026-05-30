@@ -102,6 +102,10 @@
               <button type="button" class="btn btn-sm" id="btnAddPattern" title="增加一个类型（最多 16 个）">+型</button>
             </div>
             <span class="type-count-info" id="typeCountInfo">4型</span>
+            <label class="seq-loop-toggle" title="循环播放当前类型（A/B/C…）的完整音序，并停止编曲段落播放">
+              <input type="checkbox" id="chkTypeLoop">
+              <span>类型循环</span>
+            </label>
           </div>
           <div class="pattern-tabs-row" role="tablist" aria-label="类型标签">
             <div class="pattern-tabs" id="patternTabs"></div>
@@ -117,6 +121,10 @@
               <button type="button" class="btn btn-sm" id="btnAddSteps" title="增加 4 个步进（最多 64 步）">+4步</button>
             </div>
             <span class="step-count-info" id="stepCountInfo">16步</span>
+            <label class="seq-loop-toggle" title="按顶栏 BPM 循环播放最近编辑的格子内容">
+              <input type="checkbox" id="chkStepLoop">
+              <span>单步循环</span>
+            </label>
           </div>
         </div>
         <div class="module-body sequencer-wrap">

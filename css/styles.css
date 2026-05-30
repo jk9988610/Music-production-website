@@ -655,6 +655,38 @@ kbd {
   cursor: pointer;
 }
 
+.seq-loop-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.seq-loop-toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.sequencer-bar .module-toolbar-row-types .type-count-info {
+  margin-left: auto;
+}
+
+.sequencer-bar .module-toolbar-row-types .seq-loop-toggle {
+  margin-left: 0.35rem;
+}
+
+.sequencer-bar .module-toolbar-row-steps .step-count-info {
+  margin-left: auto;
+}
+
+.sequencer-bar .module-toolbar-row-steps .seq-loop-toggle {
+  margin-left: 0.35rem;
+}
+
 .control-pick .pitch-pick-btn {
   min-width: 2.75rem;
   padding: 0.28rem 0.55rem;
