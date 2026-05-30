@@ -457,3 +457,59 @@ html[data-layout-compact-header="1"] .header-row {
   color: var(--accent);
   border-color: var(--accent);
 }
+
+.layout-print-panel {
+  margin-top: 0.5rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.layout-code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+
+.layout-code-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.layout-code-output {
+  display: block;
+  width: 100%;
+  min-height: 7rem;
+  max-height: 12rem;
+  margin: 0;
+  padding: 0.45rem 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--bg-deep);
+  border: 1px solid var(--accent-dim);
+  border-radius: 4px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.layout-report-details {
+  margin-top: 0.35rem;
+  font-size: 0.62rem;
+}
+
+.layout-report-details summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.layout-print-output {
+  margin-top: 0.25rem;
+  max-height: 6rem;
+}

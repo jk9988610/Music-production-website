@@ -128,10 +128,21 @@
             <option value="wide">宽屏双列</option>
           </select>
           <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutReset">恢复默认</button>
-          <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutPrint" title="打印到控制台并显示在下方">打印布局</button>
-          <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutCopy" title="复制布局报告">复制</button>
+          <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutPrint" title="打印报告与布局代码">打印布局</button>
+          <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutCopyCode" title="复制可粘贴的布局代码">复制布局代码</button>
+          <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutCopy" title="复制完整文字报告">复制报告</button>
         </div>
-        <pre class="layout-print-output" id="layoutPrintOutput" hidden aria-live="polite"></pre>
+        <div class="layout-print-panel" id="layoutPrintPanel" hidden>
+          <div class="layout-code-head">
+            <span class="layout-code-title">布局代码（可全选复制）</span>
+            <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutSelectCode">全选代码</button>
+          </div>
+          <textarea class="layout-code-output" id="layoutCodeOutput" readonly spellcheck="false" aria-label="布局代码"></textarea>
+          <details class="layout-report-details">
+            <summary>文字报告</summary>
+            <pre class="layout-print-output" id="layoutPrintOutput"></pre>
+          </details>
+        </div>
       </div>
       <div class="layout-section">
         <h4>整体</h4>

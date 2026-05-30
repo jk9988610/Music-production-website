@@ -325,6 +325,56 @@ const LayoutManager = (() => {
     "--layout-module-radius",
   ];
 
+
+  function formatLayoutCssBlock(s) {
+    const gapNote = s.autoGap ? "/* 间距自适应开启，运行时由视口计算 */" : `${s.moduleGap}px`;
+    const mainGap = s.autoGap ? "/* auto */" : `${s.mainGap}px`;
+    const mixerW =
+      typeof s.contentMixerTrackW === "string"
+        ? s.contentMixerTrackW
+        : `${s.contentMixerTrackW}rem`;
+    return [
+      ":root {",
+      s.autoGap ? "  /* --chrome-module-gap: 自适应 */" : `  --chrome-module-gap: ${s.moduleGap}px;`,
+      s.autoGap ? "  /* --main-module-gap: 自适应 */" : `  --main-module-gap: ${s.mainGap}px;`,
+      `  --chrome-module-pad-x: ${s.chromeModulePadX}px;`,
+      `  --chrome-module-pad-b: ${s.chromeModulePadB}px;`,
+      `  --chrome-legend-size: ${s.chromeLegendSize}rem;`,
+      `  --chrome-toolbar-gap: ${s.chromeToolbarGap}px;`,
+      `  --content-seq-step: ${s.contentSeqStep}rem;`,
+      `  --content-seq-label: ${s.contentSeqLabel}rem;`,
+      `  --content-arrange-slot-w: ${s.contentArrangeSlotW}px;`,
+      `  --content-arrange-slot-h: ${s.contentArrangeSlotH}px;`,
+      `  --content-mixer-track-w: ${mixerW};`,
+      `  --layout-app-max-width: ${s.appMaxWidth}px;`,
+      `  --layout-module-radius: ${s.moduleRadius}px;`,
+      "}",
+      "",
+      "/* html 属性（由 LayoutManager 自动设置，参考用） */",
+      `/* data-layout-columns="${s.columns}" data-layout-compact-header="${s.compactHeader ? "1" : "0"}" data-layout-auto-gap="${s.autoGap ? "1" : "0"}" */`,
+    ].join("\n");
+  }
+
+  /** 可粘贴的布局代码：JSON + 控制台恢复 + CSS */
+  function formatLayoutCode() {
+    const s = exportState();
+    const layoutJson = JSON.stringify(s, null, 2);
+    const projectSnippet = JSON.stringify({ layout: s }, null, 2);
+    return [
+      "// HarmonyForge 布局代码 — 复制后可用于存盘或恢复",
+      "",
+      "// --- 1. 项目文件中的 layout 字段（与「存/读」一致）---",
+      projectSnippet,
+      "",
+      "// --- 2. 浏览器控制台立即应用 ---",
+      `LayoutManager.importState(${layoutJson});`,
+      "",
+      "// --- 3. CSS 变量参考（可粘贴到自定义样式 :root）---",
+      formatLayoutCssBlock(s),
+      "",
+    ].join("\n");
+  }
+
   function formatLayoutReport() {
     const lines = [];
     const ver =
@@ -415,18 +465,37 @@ const LayoutManager = (() => {
 
   function printLayout() {
     const report = formatLayoutReport();
+    const code = formatLayoutCode();
     console.log(report);
+    console.log("\n--- 布局代码 ---\n", code);
     if (typeof AppLogger !== "undefined") {
-      AppLogger.info("模块布局报告", "已输出到控制台与布局面板");
+      AppLogger.info("模块布局报告", "已输出；布局代码见弹窗文本框");
     }
+    const panel = document.getElementById("layoutPrintPanel");
+    const codeEl = document.getElementById("layoutCodeOutput");
     const pre = document.getElementById("layoutPrintOutput");
-    if (pre) {
-      pre.textContent = report;
-      pre.hidden = false;
-    }
+    if (panel) panel.hidden = false;
+    if (codeEl) codeEl.value = code;
+    if (pre) pre.textContent = report;
     const st = document.getElementById("statusText");
-    if (st) st.textContent = "布局报告已打印（见下方或控制台）";
-    return report;
+    if (st) st.textContent = "已生成布局代码，可点「复制布局代码」或全选下方文本框";
+    return { report, code };
+  }
+
+  async function copyLayoutCode() {
+    const code = formatLayoutCode();
+    const codeEl = document.getElementById("layoutCodeOutput");
+    if (codeEl && !codeEl.value) codeEl.value = code;
+    try {
+      await copyText(code);
+      if (typeof AppLogger !== "undefined") AppLogger.info("布局代码已复制到剪贴板");
+      const st = document.getElementById("statusText");
+      if (st) st.textContent = "布局代码已复制，可粘贴到项目或控制台";
+      return true;
+    } catch (err) {
+      if (typeof AppLogger !== "undefined") AppLogger.error("复制布局代码失败", err.message);
+      return false;
+    }
   }
 
   async function copyLayoutReport() {
@@ -485,6 +554,10 @@ const LayoutManager = (() => {
 
     const btnPrint = document.getElementById("btnLayoutPrint");
     const btnCopy = document.getElementById("btnLayoutCopy");
+    const btnCopyCode = document.getElementById("btnLayoutCopyCode");
+    const btnSelectCode = document.getElementById("btnLayoutSelectCode");
+    const codeEl = document.getElementById("layoutCodeOutput");
+
     if (btnPrint) {
       btnPrint.addEventListener("click", () => {
         printLayout();
@@ -492,11 +565,29 @@ const LayoutManager = (() => {
         setTimeout(() => btnPrint.classList.remove("active-flash"), 1200);
       });
     }
+    if (btnCopyCode) {
+      btnCopyCode.addEventListener("click", async () => {
+        const panel = document.getElementById("layoutPrintPanel");
+        if (panel?.hidden) printLayout();
+        await copyLayoutCode();
+        btnCopyCode.classList.add("active-flash");
+        setTimeout(() => btnCopyCode.classList.remove("active-flash"), 1200);
+      });
+    }
     if (btnCopy) {
       btnCopy.addEventListener("click", async () => {
+        const panel = document.getElementById("layoutPrintPanel");
+        if (panel?.hidden) printLayout();
         await copyLayoutReport();
         btnCopy.classList.add("active-flash");
         setTimeout(() => btnCopy.classList.remove("active-flash"), 1200);
+      });
+    }
+    if (btnSelectCode && codeEl) {
+      btnSelectCode.addEventListener("click", () => {
+        if (!codeEl.value) printLayout();
+        codeEl.focus();
+        codeEl.select();
       });
     }
 
@@ -603,7 +694,9 @@ const LayoutManager = (() => {
     isAutoGap,
     getManualGaps,
     formatLayoutReport,
+    formatLayoutCode,
     printLayout,
+    copyLayoutCode,
     copyLayoutReport,
     MODULE_IDS,
     PRESETS,
