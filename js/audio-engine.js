@@ -1,12 +1,10 @@
 /**
- * Web Audio 合成引擎 — 每件乐器独立音色，不做移调借用
+ * Web Audio 合成 — 乐队常用乐器，弓弦参照「锯齿源 + 起弓噪声 + 延迟揉弦 + 体腔滤波」
  */
 const AudioEngine = (() => {
   let ctx = null;
   let masterGain = null;
   const trackGains = {};
-
-  const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
   function midiToFreq(midi) {
     return 440 * Math.pow(2, (midi - 69) / 12);
@@ -58,32 +56,6 @@ const AudioEngine = (() => {
     tone.stop(time + 0.1);
   }
 
-  function playClapOn(c, out, time, gain = 0.7) {
-    [0, 0.012, 0.024].forEach((off, i) => {
-      const bufferSize = Math.floor(c.sampleRate * 0.06);
-      const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let j = 0; j < bufferSize; j++) {
-        data[j] = (Math.random() * 2 - 1) * (1 - j / bufferSize);
-      }
-      const noise = c.createBufferSource();
-      noise.buffer = buffer;
-      const f = c.createBiquadFilter();
-      f.type = "bandpass";
-      f.frequency.value = 2200;
-      f.Q.value = 0.8;
-      const env = c.createGain();
-      const t = time + off;
-      env.gain.setValueAtTime(gain * (0.9 - i * 0.2), t);
-      env.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
-      noise.connect(f);
-      f.connect(env);
-      env.connect(out);
-      noise.start(t);
-      noise.stop(t + 0.08);
-    });
-  }
-
   function playHatOn(c, out, time, open = false, gain = 0.5, filterHz = 7000) {
     const dur = open ? 0.25 : 0.05;
     const bufferSize = Math.floor(c.sampleRate * dur);
@@ -121,226 +93,239 @@ const AudioEngine = (() => {
     osc.stop(time + 0.3);
   }
 
-  function playWoodOn(c, out, time, gain = 0.75) {
-    const osc = c.createOscillator();
-    const env = c.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(1200, time);
-    osc.frequency.exponentialRampToValueAtTime(600, time + 0.015);
-    env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-    osc.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(time + 0.12);
-  }
-
-  function playTriOn(c, out, time, gain = 0.5) {
-    const osc = c.createOscillator();
-    const env = c.createGain();
-    osc.type = "sine";
-    osc.frequency.value = 2100;
-    env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + 0.45);
-    osc.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(time + 0.5);
-  }
-
-  function playPercOn(c, out, time, gain = 0.65) {
-    const osc = c.createOscillator();
-    const env = c.createGain();
-    const filter = c.createBiquadFilter();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(320, time);
-    osc.frequency.exponentialRampToValueAtTime(140, time + 0.08);
-    filter.type = "bandpass";
-    filter.frequency.value = 400;
-    filter.Q.value = 1.2;
-    env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + 0.22);
-    osc.connect(filter);
-    filter.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(time + 0.25);
-  }
-
-  function playNoiseBurst(c, out, time, dur, gain, filterHz, q = 1) {
-    const bufferSize = Math.floor(c.sampleRate * dur);
-    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
-    }
-    const noise = c.createBufferSource();
-    noise.buffer = buffer;
-    const filter = c.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = filterHz;
-    filter.Q.value = q;
-    const env = c.createGain();
-    env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + dur);
-    noise.connect(filter);
-    filter.connect(env);
-    env.connect(out);
-    noise.start(time);
-    noise.stop(time + dur + 0.02);
-  }
-
-  function playMonoVoice(c, out, time, midi, duration, gain, opts) {
+  /**
+   * 弓弦合成（参考 bowed string 模型，非简单锯齿+低通）：
+   * - 锯齿波模拟弓毛激励
+   * - 起音短噪声模拟弓毛抓弦
+   * - 低通扫频模拟琴身共鸣建立
+   * - 延迟 LFO 揉弦（约 4–5.5 Hz）
+   */
+  function playBowedString(c, out, time, midi, duration, gain, preset) {
     const freq = midiToFreq(midi);
-    const osc = c.createOscillator();
-    const env = c.createGain();
-    const filter = c.createBiquadFilter();
-    osc.type = opts.wave || "sine";
-    osc.frequency.value = freq;
-    if (opts.detuneCents) osc.detune.value = opts.detuneCents;
-    filter.type = opts.filterType || "lowpass";
-    filter.frequency.value = opts.lp ?? 3000;
-    filter.Q.value = opts.q ?? 2;
-    const attack = opts.attack ?? 0.02;
-    const release = duration * (opts.releaseMul ?? 0.85);
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(gain, time + attack);
-    if (opts.sustainLevel != null) {
-      env.gain.setValueAtTime(gain * opts.sustainLevel, time + duration * 0.35);
+    const stopAt = time + duration + 0.2;
+
+    const bowLen = preset.bowNoiseDur ?? 0.04;
+    const bowBuf = Math.floor(c.sampleRate * bowLen);
+    const bow = c.createBuffer(1, bowBuf, c.sampleRate);
+    const bowData = bow.getChannelData(0);
+    for (let i = 0; i < bowBuf; i++) {
+      bowData[i] = (Math.random() * 2 - 1) * (1 - i / bowBuf);
     }
-    env.gain.exponentialRampToValueAtTime(0.001, time + release);
-    osc.connect(filter);
-    filter.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(time + release + 0.05);
+    const bowSrc = c.createBufferSource();
+    bowSrc.buffer = bow;
+    const bowF = c.createBiquadFilter();
+    bowF.type = "bandpass";
+    bowF.frequency.value = preset.bowFilterHz ?? 1800;
+    bowF.Q.value = 0.9;
+    const bowE = c.createGain();
+    bowE.gain.setValueAtTime(gain * (preset.bowNoiseGain ?? 0.12), time);
+    bowE.gain.exponentialRampToValueAtTime(0.001, time + bowLen);
+    bowSrc.connect(bowF);
+    bowF.connect(bowE);
+    bowE.connect(out);
+    bowSrc.start(time);
+    bowSrc.stop(time + bowLen + 0.01);
+
+    const partials = preset.detuneCents ?? [-7, 0, 7];
+    const atk = preset.attack ?? 0.06;
+    const rel = duration * (preset.releaseMul ?? 0.9);
+
+    partials.forEach((cents, idx) => {
+      const osc = c.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = freq;
+      osc.detune.value = cents;
+
+      const vib = c.createOscillator();
+      vib.type = "sine";
+      vib.frequency.value = preset.vibratoHz ?? 5;
+      const vibDepth = c.createGain();
+      vibDepth.gain.value = preset.vibratoCents ?? 18;
+      vib.connect(vibDepth);
+      vibDepth.connect(osc.detune);
+      const vibStart = time + (preset.vibratoDelay ?? 0.14);
+      vib.start(vibStart);
+      vib.stop(stopAt);
+
+      const body = c.createBiquadFilter();
+      body.type = "lowpass";
+      body.Q.value = preset.resonance ?? 1.6;
+      const lpLo = preset.lpAttackHz ?? 400;
+      const lpHi = preset.lpSustainHz ?? 3500;
+      body.frequency.setValueAtTime(lpLo, time);
+      body.frequency.exponentialRampToValueAtTime(lpHi, time + atk);
+
+      const amp = c.createGain();
+      const pGain = gain * (idx === 1 ? 0.42 : 0.28);
+      amp.gain.setValueAtTime(0, time);
+      amp.gain.linearRampToValueAtTime(pGain, time + atk);
+      amp.gain.setValueAtTime(pGain * (preset.sustain ?? 0.75), time + atk + 0.04);
+      amp.gain.exponentialRampToValueAtTime(0.001, time + rel);
+
+      osc.connect(body);
+      body.connect(amp);
+      amp.connect(out);
+      osc.start(time);
+      osc.stop(stopAt);
+    });
+  }
+
+  const BOW_VIOLIN = {
+    attack: 0.05,
+    lpAttackHz: 520,
+    lpSustainHz: 4800,
+    vibratoHz: 5.4,
+    vibratoCents: 20,
+    vibratoDelay: 0.1,
+    resonance: 2,
+    releaseMul: 0.85,
+    sustain: 0.7,
+    bowNoiseGain: 0.14,
+    bowFilterHz: 2200,
+  };
+
+  const BOW_CELLO = {
+    attack: 0.07,
+    lpAttackHz: 220,
+    lpSustainHz: 1600,
+    vibratoHz: 4.2,
+    vibratoCents: 14,
+    vibratoDelay: 0.16,
+    resonance: 2.4,
+    releaseMul: 0.92,
+    sustain: 0.8,
+    bowNoiseGain: 0.16,
+    bowFilterHz: 900,
+    detuneCents: [-5, 0, 5],
+  };
+
+  function playViolinOn(c, out, time, midi, duration, gain = 0.4) {
+    playBowedString(c, out, time, midi, duration, gain, BOW_VIOLIN);
+  }
+
+  function playCelloOn(c, out, time, midi, duration, gain = 0.44) {
+    playBowedString(c, out, time, midi, duration, gain, BOW_CELLO);
   }
 
   function playPianoOn(c, out, time, midi, duration, gain = 0.5) {
     const freq = midiToFreq(midi);
-    [1, 2, 3, 4].forEach((h, i) => {
+    [1, 2, 3, 4, 5].forEach((h, i) => {
       const osc = c.createOscillator();
       const env = c.createGain();
       osc.type = "sine";
       osc.frequency.value = freq * h;
-      const g = gain * (1 / (i + 1));
+      const g = gain * (1 / (i + 1.1));
       env.gain.setValueAtTime(0, time);
-      env.gain.linearRampToValueAtTime(g, time + 0.003);
-      env.gain.exponentialRampToValueAtTime(0.001, time + duration * (0.6 - i * 0.08));
+      env.gain.linearRampToValueAtTime(g, time + 0.004);
+      env.gain.exponentialRampToValueAtTime(0.001, time + duration * (0.55 - i * 0.06));
       osc.connect(env);
       env.connect(out);
       osc.start(time);
-      osc.stop(time + duration);
+      osc.stop(time + duration + 0.05);
     });
   }
 
-  function playBellsOn(c, out, time, midi, duration, gain = 0.45) {
+  function playMono(c, out, time, midi, duration, gain, cfg) {
     const freq = midiToFreq(midi);
-    [1, 2.4, 3.8].forEach((ratio, i) => {
-      const osc = c.createOscillator();
-      const env = c.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq * ratio;
-      env.gain.setValueAtTime(0, time);
-      env.gain.linearRampToValueAtTime(gain * (0.7 - i * 0.15), time + 0.002);
-      env.gain.exponentialRampToValueAtTime(0.001, time + duration * (1.1 - i * 0.1));
-      osc.connect(env);
-      env.connect(out);
-      osc.start(time);
-      osc.stop(time + duration * 1.2);
-    });
+    const osc = c.createOscillator();
+    const env = c.createGain();
+    const f = c.createBiquadFilter();
+    osc.type = cfg.wave || "sawtooth";
+    osc.frequency.value = freq;
+    f.type = "lowpass";
+    f.frequency.value = cfg.lp ?? 2500;
+    f.Q.value = cfg.q ?? 2;
+    const atk = cfg.attack ?? 0.02;
+    const rel = duration * (cfg.releaseMul ?? 0.85);
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(gain, time + atk);
+    env.gain.exponentialRampToValueAtTime(0.001, time + rel);
+    osc.connect(f);
+    f.connect(env);
+    env.connect(out);
+    osc.start(time);
+    osc.stop(time + rel + 0.05);
   }
 
-  function playHarpOn(c, out, time, midi, duration, gain = 0.48) {
-    playMonoVoice(c, out, time, midi, duration * 0.55, gain, {
-      wave: "triangle",
-      lp: 4800,
-      attack: 0.001,
-      releaseMul: 0.5,
-    });
+  function playSaxOn(c, out, time, midi, duration, gain = 0.45) {
+    const freq = midiToFreq(midi);
+    const osc = c.createOscillator();
+    const osc2 = c.createOscillator();
+    const env = c.createGain();
+    const f = c.createBiquadFilter();
+    osc.type = "sawtooth";
+    osc2.type = "square";
+    osc.frequency.value = freq;
+    osc2.frequency.value = freq;
+    osc2.detune.value = 3;
+    f.type = "lowpass";
+    f.frequency.setValueAtTime(800, time);
+    f.frequency.exponentialRampToValueAtTime(3200, time + 0.05);
+    f.Q.value = 2;
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(gain, time + 0.045);
+    env.gain.setValueAtTime(gain * 0.75, time + duration * 0.35);
+    env.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.82);
+    osc.connect(f);
+    osc2.connect(f);
+    f.connect(env);
+    env.connect(out);
+    osc.start(time);
+    osc2.start(time);
+    osc.stop(time + duration + 0.1);
+    osc2.stop(time + duration + 0.1);
   }
 
-  function playStringsOn(c, out, time, midi, duration, gain = 0.38) {
-    [-7, 0, 7].forEach((cents, i) => {
-      playMonoVoice(c, out, time, midi, duration, gain * (i === 1 ? 0.5 : 0.28), {
-        wave: "sawtooth",
-        lp: 2800,
-        attack: 0.08,
-        releaseMul: 1.0,
-        sustainLevel: 0.75,
-        detuneCents: cents,
-      });
-    });
+  function playTrumpetOn(c, out, time, midi, duration, gain = 0.48) {
+    const freq = midiToFreq(midi);
+    const osc = c.createOscillator();
+    const env = c.createGain();
+    const f = c.createBiquadFilter();
+    osc.type = "sawtooth";
+    osc.frequency.value = freq;
+    f.type = "lowpass";
+    f.frequency.setValueAtTime(600, time);
+    f.frequency.exponentialRampToValueAtTime(3800, time + 0.04);
+    f.Q.value = 2.5;
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(gain, time + 0.035);
+    env.gain.setValueAtTime(gain * 0.82, time + duration * 0.4);
+    env.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.8);
+    osc.connect(f);
+    f.connect(env);
+    env.connect(out);
+    osc.start(time);
+    osc.stop(time + duration + 0.1);
   }
 
-  function playBrassOn(c, out, time, midi, duration, gain = 0.48) {
-    playMonoVoice(c, out, time, midi, duration, gain, {
-      wave: "sawtooth",
-      lp: 1900,
-      attack: 0.06,
-      releaseMul: 0.88,
-      q: 3,
-    });
-    playNoiseBurst(c, out, time + 0.02, duration * 0.4, gain * 0.12, 1200, 0.6);
-  }
-
-  function playFluteOn(c, out, time, midi, duration, gain = 0.42) {
-    playMonoVoice(c, out, time, midi, duration, gain * 0.85, {
-      wave: "sine",
-      lp: 3800,
-      attack: 0.05,
-      releaseMul: 0.8,
-    });
-    playNoiseBurst(c, out, time, duration * 0.9, gain * 0.08, 2800, 0.4);
-  }
-
-  function playPadOn(c, out, time, midi, duration, gain = 0.36) {
-    playMonoVoice(c, out, time, midi, duration * 1.15, gain, {
-      wave: "sine",
-      lp: 1400,
-      attack: 0.12,
-      releaseMul: 1.05,
-      sustainLevel: 0.8,
-    });
-  }
-
-  function playPluckOn(c, out, time, midi, duration, gain = 0.5) {
-    playMonoVoice(c, out, time, midi, duration * 0.45, gain, {
-      wave: "triangle",
-      lp: 3200,
-      attack: 0.001,
-      releaseMul: 0.45,
-    });
-  }
-
-  function playOrganOn(c, out, time, midi, duration, gain = 0.4) {
-    [0, 12].forEach((semi, i) => {
-      playMonoVoice(c, out, time, midi + semi, duration, gain * (i === 0 ? 0.55 : 0.35), {
-        wave: "square",
-        lp: 2200,
-        attack: 0.015,
-        releaseMul: 0.9,
-      });
-    });
-  }
-
-  function playPipeOrganOn(c, out, time, midi, duration, gain = 0.4) {
-    [0, 7, 12].forEach((semi, i) => {
-      playMonoVoice(c, out, time, midi + semi, duration, gain * (0.45 - i * 0.08), {
-        wave: "square",
-        lp: 2600,
-        attack: 0.02,
-        releaseMul: 0.95,
-      });
-    });
+  function playTromboneOn(c, out, time, midi, duration, gain = 0.46) {
+    const freq = midiToFreq(midi);
+    const osc = c.createOscillator();
+    const env = c.createGain();
+    const f = c.createBiquadFilter();
+    osc.type = "sawtooth";
+    osc.frequency.value = freq;
+    f.type = "lowpass";
+    f.frequency.setValueAtTime(350, time);
+    f.frequency.exponentialRampToValueAtTime(2400, time + 0.055);
+    f.Q.value = 2.2;
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(gain, time + 0.05);
+    env.gain.setValueAtTime(gain * 0.85, time + duration * 0.45);
+    env.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.88);
+    osc.connect(f);
+    f.connect(env);
+    env.connect(out);
+    osc.start(time);
+    osc.stop(time + duration + 0.12);
   }
 
   function playChordOn(c, out, time, rootMidi, duration, gain) {
     [0, 4, 7].forEach((semi, i) => {
-      playMonoVoice(c, out, time, rootMidi + semi, duration, gain * (i === 0 ? 0.5 : 0.35), {
+      playMono(c, out, time, rootMidi + semi, duration, gain * (i === 0 ? 0.48 : 0.32), {
         wave: "triangle",
-        lp: 2000,
-        attack: 0.02,
+        lp: 1900,
+        attack: 0.025,
         releaseMul: 0.85,
       });
     });
@@ -359,126 +344,51 @@ const AudioEngine = (() => {
     const d = stepDuration;
     switch (voice) {
       case "bass":
-        playMonoVoice(c, out, time, noteMidi, d * 0.95, gain, {
+        playMono(c, out, time, noteMidi, d * 0.95, gain, {
           wave: "sawtooth",
-          lp: 600,
-          attack: 0.005,
-          releaseMul: 0.85,
+          lp: 550,
+          attack: 0.006,
+          releaseMul: 0.88,
+          q: 1.5,
         });
         break;
       case "lead":
-        playMonoVoice(c, out, time, noteMidi, d * 0.85, gain, {
+        playMono(c, out, time, noteMidi, d * 0.85, gain, {
           wave: "square",
-          lp: 3200,
-          attack: 0.02,
-          releaseMul: 0.85,
+          lp: 3000,
+          attack: 0.015,
+          releaseMul: 0.82,
         });
         break;
       case "piano":
-        playPianoOn(c, out, time, noteMidi, d * 0.7, gain);
+        playPianoOn(c, out, time, noteMidi, d * 0.72, gain);
         break;
-      case "violin":
-        playMonoVoice(c, out, time, noteMidi, d * 0.82, gain, {
+      case "eguitar":
+        playMono(c, out, time, noteMidi, d * 0.62, gain, {
           wave: "sawtooth",
-          lp: 4600,
-          attack: 0.025,
-          releaseMul: 0.8,
-        });
-        break;
-      case "viola":
-        playMonoVoice(c, out, time, noteMidi, d * 0.88, gain, {
-          wave: "sawtooth",
-          lp: 3600,
-          attack: 0.03,
-          releaseMul: 0.82,
-          detuneCents: -15,
-        });
-        break;
-      case "cello":
-        playMonoVoice(c, out, time, noteMidi, d * 0.95, gain, {
-          wave: "sawtooth",
-          lp: 2200,
-          attack: 0.04,
-          releaseMul: 0.9,
-          detuneCents: -25,
-        });
-        break;
-      case "clarinet":
-        playMonoVoice(c, out, time, noteMidi, d * 0.85, gain, {
-          wave: "square",
-          lp: 2900,
-          attack: 0.05,
-          releaseMul: 0.8,
+          lp: 3400,
+          attack: 0.006,
+          releaseMul: 0.68,
+          q: 1.8,
         });
         break;
       case "sax":
-        playMonoVoice(c, out, time, noteMidi, d * 0.8, gain, {
-          wave: "sawtooth",
-          lp: 2700,
-          attack: 0.04,
-          releaseMul: 0.82,
-          q: 2.5,
-        });
+        playSaxOn(c, out, time, noteMidi, d * 0.82, gain);
         break;
-      case "oboe":
-        playMonoVoice(c, out, time, noteMidi, d * 0.82, gain, {
-          wave: "square",
-          lp: 3100,
-          attack: 0.05,
-          releaseMul: 0.78,
-          q: 3,
-        });
+      case "trumpet":
+        playTrumpetOn(c, out, time, noteMidi, d * 0.8, gain);
         break;
-      case "flute":
-        playFluteOn(c, out, time, noteMidi, d * 0.85, gain);
+      case "trombone":
+        playTromboneOn(c, out, time, noteMidi, d * 0.88, gain);
         break;
-      case "eguitar":
-        playMonoVoice(c, out, time, noteMidi, d * 0.65, gain, {
-          wave: "sawtooth",
-          lp: 3500,
-          attack: 0.008,
-          releaseMul: 0.7,
-        });
+      case "violin":
+        playViolinOn(c, out, time, noteMidi, d, gain);
         break;
-      case "organ":
-        playOrganOn(c, out, time, noteMidi, d * 0.9, gain);
-        break;
-      case "pipeorgan":
-        playPipeOrganOn(c, out, time, noteMidi, d * 0.95, gain);
-        break;
-      case "pluck":
-        playPluckOn(c, out, time, noteMidi, d, gain);
-        break;
-      case "pad":
-        playPadOn(c, out, time, noteMidi, d, gain);
-        break;
-      case "bells":
-        playBellsOn(c, out, time, noteMidi, d * 0.75, gain);
-        break;
-      case "harp":
-        playHarpOn(c, out, time, noteMidi, d, gain);
-        break;
-      case "brass":
-        playBrassOn(c, out, time, noteMidi, d * 0.88, gain);
-        break;
-      case "strings":
-        playStringsOn(c, out, time, noteMidi, d, gain);
-        break;
-      case "synth":
-        playMonoVoice(c, out, time, noteMidi, d * 0.75, gain, {
-          wave: "square",
-          lp: 3000,
-          attack: 0.01,
-          releaseMul: 0.85,
-        });
+      case "cello":
+        playCelloOn(c, out, time, noteMidi, d, gain);
         break;
       default:
-        playMonoVoice(c, out, time, noteMidi, d * 0.8, gain, {
-          wave: "sine",
-          lp: 3000,
-          attack: 0.02,
-          releaseMul: 0.85,
-        });
+        playMono(c, out, time, noteMidi, d * 0.8, gain, { lp: 2600, attack: 0.02 });
         break;
     }
   }
@@ -489,10 +399,8 @@ const AudioEngine = (() => {
         playKickOn(c, out, time);
         break;
       case "snare":
-        playSnareOn(c, out, time);
-        break;
       case "clap":
-        playClapOn(c, out, time);
+        playSnareOn(c, out, time);
         break;
       case "hihat":
         playHatOn(c, out, time, false);
@@ -502,24 +410,17 @@ const AudioEngine = (() => {
         break;
       case "cymbal":
       case "ride":
+      case "splash":
         playHatOn(c, out, time, true, 0.42, 5500);
         break;
       case "tom":
+      case "wood":
+      case "tri":
+      case "perc":
         playTomOn(c, out, time);
         break;
-      case "wood":
-        playWoodOn(c, out, time);
-        break;
-      case "tri":
-        playTriOn(c, out, time);
-        break;
-      case "perc":
-        playPercOn(c, out, time);
-        break;
       case "chord":
-        if (noteMidi != null) {
-          playChordOn(c, out, time, noteMidi, stepDuration * 0.9, 0.45);
-        }
+        if (noteMidi != null) playChordOn(c, out, time, noteMidi, stepDuration * 0.9, 0.42);
         break;
       default:
         playMelodic(c, out, voice, time, noteMidi, stepDuration, 0.42);
@@ -528,9 +429,7 @@ const AudioEngine = (() => {
   }
 
   function playTrackSoundOn(c, outGetter, trackId, time, noteMidi, stepDuration) {
-    const out = outGetter(trackId);
-    const voice = resolveVoice(trackId);
-    playVoiceOn(c, out, voice, time, noteMidi, stepDuration);
+    playVoiceOn(c, outGetter(trackId), resolveVoice(trackId), time, noteMidi, stepDuration);
   }
 
   function ensureContext() {
@@ -540,9 +439,7 @@ const AudioEngine = (() => {
       masterGain.gain.value = 0.85;
       masterGain.connect(ctx.destination);
     }
-    if (ctx.state === "suspended") {
-      ctx.resume();
-    }
+    if (ctx.state === "suspended") ctx.resume();
     return ctx;
   }
 
@@ -558,19 +455,15 @@ const AudioEngine = (() => {
   }
 
   function setTrackVolume(trackId, vol) {
-    const g = getTrackGain(trackId);
-    g.gain.setTargetAtTime(vol, ctx.currentTime, 0.02);
+    getTrackGain(trackId).gain.setTargetAtTime(vol, ctx.currentTime, 0.02);
   }
 
   function playTrackSound(trackId, time, noteMidi, stepDuration) {
-    const c = ensureContext();
-    playTrackSoundOn(c, (id) => getTrackGain(id), trackId, time, noteMidi, stepDuration);
+    playTrackSoundOn(ensureContext(), (id) => getTrackGain(id), trackId, time, noteMidi, stepDuration);
   }
 
   function previewTrackNote(trackId, midi, duration = 0.28) {
-    ensureContext();
-    const time = ctx.currentTime + 0.02;
-    playTrackSound(trackId, time, midi, duration);
+    playTrackSound(trackId, ensureContext().currentTime + 0.02, midi, duration);
   }
 
   function createOfflineScheduler(volumes) {
@@ -579,8 +472,7 @@ const AudioEngine = (() => {
       schedule(c, master, trackId, time, noteMidi, stepDuration) {
         if (!gains[trackId]) {
           const g = c.createGain();
-          const def = volumes[trackId] ?? 0.75;
-          g.gain.value = def;
+          g.gain.value = volumes[trackId] ?? 0.75;
           g.connect(master);
           gains[trackId] = g;
         }
@@ -590,7 +482,6 @@ const AudioEngine = (() => {
   }
 
   return {
-    NOTE_NAMES,
     ensureContext,
     setTrackVolume,
     playTrackSound,
