@@ -11,31 +11,19 @@ const AudioExport = (() => {
     return ["kick", "snare", "hihat", "openhat", "bass", "chord", "lead"];
   }
 
-  function stepDelay(stepInPattern, swing, base) {
-    if (swing <= 0) return base;
-    const isOff = stepInPattern % 2 === 1;
-    const factor = 1 + (swing / 100) * (isOff ? 0.33 : -0.15);
-    return base * factor;
-  }
-
   function computeArrangementDuration(project) {
     const seq = project.sequencer;
     const sections = project.arranger?.sections || [];
     const steps = seq.steps || 16;
     const bpm = project.bpm || 120;
-    const swing = project.swing || 0;
     const base = 60 / bpm / 4;
-    let total = 0;
     const totalSteps = sections.length * steps;
-    for (let g = 0; g < totalSteps; g++) {
-      total += stepDelay(g % steps, swing, base);
-    }
+    const total = totalSteps * base;
     return {
       total,
       sections,
       steps,
       bpm,
-      swing,
       base,
       patterns: seq.patterns,
       volumes: seq.volumes,
@@ -73,7 +61,7 @@ const AudioExport = (() => {
           });
         });
       }
-      time += stepDelay(step, info.swing, info.base);
+      time += info.base;
     }
 
     return offline.startRendering();

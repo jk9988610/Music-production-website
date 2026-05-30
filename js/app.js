@@ -22,7 +22,6 @@
   let nextStepTime = 0;
   let stepCounter = 0;
   let bpm = 120;
-  let swing = 0;
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
@@ -32,8 +31,6 @@
     btnStop: $("#btnStop"),
     bpm: $("#bpm"),
     bpmValue: $("#bpmValue"),
-    swing: $("#swing"),
-    swingValue: $("#swingValue"),
     btnNoteTonalityReset: $("#btnNoteTonalityReset"),
     patternTabs: $("#patternTabs"),
     btnRemovePattern: $("#btnRemovePattern"),
@@ -985,11 +982,6 @@
       els.bpmValue.textContent = bpm;
       scheduleAutosave();
     });
-    els.swing.addEventListener("input", () => {
-      swing = Number(els.swing.value);
-      els.swingValue.textContent = `${swing}%`;
-      scheduleAutosave();
-    });
     if (els.btnNoteTonalityReset) {
       els.btnNoteTonalityReset.addEventListener("click", (e) => {
         e.preventDefault();
@@ -1333,14 +1325,6 @@
     return 60 / bpm / 4;
   }
 
-  function getStepDelay(stepInPattern) {
-    const base = getStepDuration();
-    if (swing <= 0) return base;
-    const isOff = stepInPattern % 2 === 1;
-    const factor = 1 + (swing / 100) * (isOff ? 0.33 : -0.15);
-    return base * factor;
-  }
-
   function togglePlay() {
     if (playing && playMode === "arrange") {
       pause();
@@ -1423,13 +1407,7 @@
 
     while (nextStepTime < ctx.currentTime + lookAhead) {
       playStepAt(nextStepTime);
-      let delayStep;
-      if (playMode === "step") {
-        delayStep = loopStepIndex;
-      } else {
-        delayStep = stepCounter % Sequencer.steps;
-      }
-      nextStepTime += getStepDelay(delayStep);
+      nextStepTime += getStepDuration();
       stepCounter++;
     }
 
@@ -1520,7 +1498,6 @@
       sequencer: Sequencer.exportState(),
       arranger: Arranger.exportState(),
       bpm: Number(els.bpm.value),
-      swing: Number(els.swing.value),
       layout: typeof LayoutManager !== "undefined" ? LayoutManager.exportState() : undefined,
     };
   }
@@ -1536,11 +1513,6 @@
       els.bpm.value = data.bpm;
       bpm = data.bpm;
       els.bpmValue.textContent = bpm;
-    }
-    if (data.swing != null) {
-      els.swing.value = data.swing;
-      swing = data.swing;
-      els.swingValue.textContent = `${swing}%`;
     }
     renderPatternTabs();
     renderStepLabels();

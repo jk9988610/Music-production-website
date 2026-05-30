@@ -157,7 +157,7 @@ const HelpGuide = (() => {
         <h4>播放</h4>
         <ul class="help-list">
           <li><kbd>Space</kbd> 播放 / 暂停编曲时间轴（按段顺序）</li>
-          <li>BPM、摆：顶栏调节速度与摇摆</li>
+          <li>BPM：顶栏调节速度</li>
           <li>播放时音序当前 Pattern 高亮；时间轴当前段高亮</li>
         </ul>
       `,
