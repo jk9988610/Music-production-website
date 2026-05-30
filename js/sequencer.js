@@ -42,7 +42,25 @@ const Sequencer = (() => {
   let rootKey = 0;
   let scaleName = "major";
   let volumes = {};
-  TRACKS.forEach((t) => { volumes[t.id] = t.type === "drum" ? 0.85 : 0.75; });
+  let trackRates = {};
+  TRACKS.forEach((t) => {
+    volumes[t.id] = t.type === "drum" ? 0.85 : 0.75;
+    trackRates[t.id] = 1;
+  });
+
+  function normalizeTrackRate(rate) {
+    return typeof TrackTiming !== "undefined"
+      ? TrackTiming.normalizeRate(rate)
+      : Number(rate) || 1;
+  }
+
+  function getTrackRate(trackId) {
+    return normalizeTrackRate(trackRates[trackId] ?? 1);
+  }
+
+  function setTrackRate(trackId, rate) {
+    trackRates[trackId] = normalizeTrackRate(rate);
+  }
 
   function emptyCell() {
     return { on: false, note: null, rootKey: null, scaleName: null };
@@ -235,6 +253,7 @@ const Sequencer = (() => {
       steps,
       patterns,
       volumes,
+      trackRates: { ...trackRates },
       rootKey,
       scaleName,
       currentPattern,
@@ -249,6 +268,13 @@ const Sequencer = (() => {
       if (patterns.length < 1) patterns = createEmptyPatterns(1);
     }
     if (state.volumes) volumes = { ...volumes, ...state.volumes };
+    if (state.trackRates) {
+      TRACKS.forEach((t) => {
+        if (state.trackRates[t.id] != null) {
+          trackRates[t.id] = normalizeTrackRate(state.trackRates[t.id]);
+        }
+      });
+    }
     if (state.rootKey != null) rootKey = state.rootKey;
     if (state.scaleName) scaleName = state.scaleName;
     if (state.currentPattern != null) currentPattern = state.currentPattern;
@@ -286,6 +312,9 @@ const Sequencer = (() => {
     setScaleName: (s) => { scaleName = s; },
     volumes: () => volumes,
     setVolume: (id, v) => { volumes[id] = v; },
+    trackRates: () => ({ ...trackRates }),
+    getTrackRate,
+    setTrackRate,
     getScaleNotes,
     getScaleNotesFor,
     getScaleNotesForCell,

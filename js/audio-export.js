@@ -23,7 +23,17 @@ const AudioExport = (() => {
     for (let g = 0; g < totalSteps; g++) {
       total += stepDelay(g % steps, swing, base);
     }
-    return { total, sections, steps, bpm, swing, base, patterns: seq.patterns, volumes: seq.volumes };
+    return {
+      total,
+      sections,
+      steps,
+      bpm,
+      swing,
+      base,
+      patterns: seq.patterns,
+      volumes: seq.volumes,
+      trackRates: seq.trackRates || {},
+    };
   }
 
   async function renderArrangementBuffer(project) {
@@ -49,16 +59,14 @@ const AudioExport = (() => {
       if (pattern) {
         TRACK_IDS.forEach((trackId) => {
           const cell = pattern[trackId]?.[step];
-          if (cell && cell.on) {
-            scheduler.schedule(
-              offline,
-              master,
-              trackId,
-              time,
-              cell.note,
-              info.base
-            );
-          }
+          const rates = info.trackRates || {};
+          const rate =
+            typeof Sequencer !== "undefined"
+              ? Sequencer.getTrackRate(trackId)
+              : TrackTiming.normalizeRate(rates[trackId] ?? 1);
+          TrackTiming.playStepCell(rate, step, cell, time, info.base, (t, note, dur) => {
+            scheduler.schedule(offline, master, trackId, t, note, dur);
+          });
         });
       }
       time += stepDelay(step, info.swing, info.base);

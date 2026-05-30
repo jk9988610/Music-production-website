@@ -678,18 +678,37 @@
   function renderMixer() {
     els.mixer.innerHTML = "";
     const vols = Sequencer.volumes();
+    const rateOpts = TrackTiming.RATE_OPTIONS.map(
+      (o) =>
+        `<option value="${o.value}">${o.label}</option>`
+    ).join("");
     Sequencer.TRACKS.forEach((track) => {
       const wrap = document.createElement("div");
       wrap.className = "mixer-track";
       const pct = Math.round((vols[track.id] ?? 0.8) * 100);
+      const rate = Sequencer.getTrackRate(track.id);
       wrap.innerHTML = `
         <label>
           <span>${track.name}</span>
           <span data-vol-display="${track.id}">${pct}%</span>
         </label>
+        <label class="mixer-rate-label" title="相对主 BPM 的步进密度">
+          <span>密度</span>
+          <select class="mixer-track-rate pitch-select" data-track-rate="${track.id}">${rateOpts}</select>
+        </label>
         <input type="range" min="0" max="100" value="${pct}" data-track="${track.id}">
       `;
-      const range = wrap.querySelector("input");
+      const rateSel = wrap.querySelector(`[data-track-rate="${track.id}"]`);
+      if (rateSel) {
+        rateSel.value = String(rate);
+        rateSel.addEventListener("change", () => {
+          const r = Number(rateSel.value);
+          Sequencer.setTrackRate(track.id, r);
+          scheduleAutosave();
+          setStatus(`${track.name} 步进密度 ${TrackTiming.rateLabel(Sequencer.getTrackRate(track.id))}`);
+        });
+      }
+      const range = wrap.querySelector("input[type=range]");
       range.addEventListener("input", () => {
         const v = range.value / 100;
         Sequencer.setVolume(track.id, v);
@@ -1161,23 +1180,11 @@
 
     const stepDur = getStepDuration();
 
-    if (playMode === "step") {
-      const pattern = Sequencer.getPattern(patternIndex);
-      Sequencer.TRACKS.forEach((track) => {
-        const cell = pattern[track.id][step];
-        if (cell.on) {
-          AudioEngine.playTrackSound(track.id, time, cell.note, stepDur);
-        }
-      });
-    } else {
-      const pattern = Sequencer.getPattern(patternIndex);
-      Sequencer.TRACKS.forEach((track) => {
-        const cell = pattern[track.id][step];
-        if (cell.on) {
-          AudioEngine.playTrackSound(track.id, time, cell.note, stepDur);
-        }
-      });
-    }
+    const pattern = Sequencer.getPattern(patternIndex);
+    Sequencer.TRACKS.forEach((track) => {
+      const cell = pattern[track.id][step];
+      playPatternCellForTrack(track.id, time, step, stepDur, cell);
+    });
 
     if (playMode === "arrange" && step === Sequencer.steps - 1) {
       const nextSec = (currentArrangeSection + 1) % sections.length;

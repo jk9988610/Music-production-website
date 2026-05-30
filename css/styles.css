@@ -525,6 +525,29 @@ select.pitch-select:focus {
   accent-color: var(--accent);
 }
 
+.mixer-horizontal .mixer-track {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.mixer-rate-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.2rem;
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  margin-bottom: 0.1rem;
+}
+
+.mixer-horizontal .mixer-track-rate {
+  font-size: 0.55rem;
+  padding: 0.1rem 0.15rem;
+  min-width: 2.1rem;
+  max-width: 100%;
+}
+
 /* Sidebar */
 .sidebar .panel {
   margin-bottom: 0;

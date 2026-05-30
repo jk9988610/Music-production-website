@@ -17,7 +17,7 @@ const HelpGuide = (() => {
           <li><strong>做主旋律</strong>：在主旋律轨用音阶内音填句，避开与和弦打架的密集区。</li>
           <li><strong>复制变型</strong>：用「+型」复制出 B/C/D，做加花、过门或副歌加密度。</li>
           <li><strong>排段落</strong>：在编曲模块用时间轴把 §1§2§… 指到 A/B/C/D，用「±段」加长曲长。</li>
-          <li><strong>混音</strong>：在混音条平衡鼓组、贝斯、和弦、主旋律音量。</li>
+          <li><strong>混音</strong>：平衡各轨音量；可按轨设「密度」½×～4× 改变相对主 BPM 的触发快慢。</li>
           <li><strong>播放检查</strong>：点播放走完整时间轴；不满意回到对应 Pattern 改步格。</li>
           <li><strong>保存</strong>：自动草稿 +「导出」.hfproj 备份。</li>
         </ol>
@@ -63,6 +63,21 @@ const HelpGuide = (() => {
         <p><strong>Pattern 切换：</strong>音序模块点类型标签 A/B/C，或快捷键 <kbd>1</kbd>–<kbd>9</kbd>，编辑的是不同 Pattern 副本；编曲时间轴点段落格可选该段类型。</p>
         <p><strong>类型循环：</strong>勾选后按 BPM 循环播放当前类型的完整 7 轨音序，并停止顶栏编曲播放。</p>
         <p><strong>单步循环：</strong>先点步进号（1、2、3…）选定列，勾选后按 BPM 循环播放该<strong>整列</strong>上已填内容。鼓轨点选时只响一次，取消不发声。</p>
+      `,
+    },
+    {
+      id: "mixer",
+      label: "混音与密度",
+      html: `
+        <h4>轨音量与步进密度</h4>
+        <p>顶栏 <strong>BPM</strong> 为全曲主时钟（编曲、类型循环、单步循环、导出均以此为准）。</p>
+        <p>混音模块每轨的 <strong>密度</strong>（½× / 1× / 2× / 4×）表示相对主步进的触发倍率：</p>
+        <ul class="help-list">
+          <li><strong>1×</strong>：每个主步最多触发一次（默认）</li>
+          <li><strong>2× / 4×</strong>：同一主步内细分多次（适合镲、装饰音）</li>
+          <li><strong>½×</strong>：每隔一个主步才读该列格子（适合慢一倍的气垫）</li>
+        </ul>
+        <p>网格仍按主步编辑；密度只改变播放与导出时的触发时机，不改变段落长度。</p>
       `,
     },
     {
