@@ -39,14 +39,6 @@
         </div>
       </div>
       <div class="header-row header-row-sub">
-        <label class="control-inline control-pick">
-          <span>调</span>
-          <button type="button" class="note-btn pitch-pick-btn" id="btnKeyPick" title="选择调">C</button>
-        </label>
-        <label class="control-inline control-pick">
-          <span>阶</span>
-          <button type="button" class="note-btn pitch-pick-btn" id="btnScalePick" title="选择音阶">大调</button>
-        </label>
         <span class="header-divider" aria-hidden="true"></span>
         <button type="button" class="btn btn-ghost btn-compact" id="btnExport" title="导出编曲文件 (.hfproj)">导出</button>
         <button type="button" class="btn btn-ghost btn-compact" id="btnImport" title="导入编曲文件">导入</button>
@@ -257,9 +249,10 @@
     <form method="dialog">
       <h3 id="noteDialogTitle">选择音高</h3>
       <div class="note-dialog-tonality">
-        <span class="note-dialog-tonality-label">本格</span>
-        <button type="button" class="note-btn pitch-pick-btn" id="btnNoteKeyPick" title="本格选调（覆盖顶栏默认）">C</button>
-        <button type="button" class="note-btn pitch-pick-btn" id="btnNoteScalePick" title="本格选阶（覆盖顶栏默认）">大调</button>
+        <span class="note-dialog-tonality-label">本格覆盖</span>
+        <button type="button" class="note-btn pitch-pick-btn" id="btnNoteKeyPick" title="仅本格选调（默认跟轨道）">C</button>
+        <button type="button" class="note-btn pitch-pick-btn" id="btnNoteScalePick" title="仅本格选阶（默认跟轨道）">大调</button>
+        <button type="button" class="btn btn-ghost btn-xs" id="btnNoteTonalityReset" title="清除本格覆盖，恢复轨道调/阶">跟轨</button>
       </div>
       <label class="note-preview-toggle">
         <input type="checkbox" id="notePreview" checked>

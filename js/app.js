@@ -34,8 +34,7 @@
     bpmValue: $("#bpmValue"),
     swing: $("#swing"),
     swingValue: $("#swingValue"),
-    btnKeyPick: $("#btnKeyPick"),
-    btnScalePick: $("#btnScalePick"),
+    btnNoteTonalityReset: $("#btnNoteTonalityReset"),
     patternTabs: $("#patternTabs"),
     btnRemovePattern: $("#btnRemovePattern"),
     btnAddPattern: $("#btnAddPattern"),
@@ -93,15 +92,6 @@
     return opt ? opt.label : scaleId;
   }
 
-  function updateKeyScalePickers() {
-    if (els.btnKeyPick) {
-      els.btnKeyPick.textContent = Sequencer.KEYS[Sequencer.rootKey()] ?? "C";
-    }
-    if (els.btnScalePick) {
-      els.btnScalePick.textContent = scaleLabel(Sequencer.scaleName());
-    }
-  }
-
   function openChoiceDialog({ title, items, currentValue, columns, onPick }) {
     if (!els.choiceDialog || !els.choiceGrid) return;
     els.choiceDialogTitle.textContent = title;
@@ -126,36 +116,40 @@
     els.choiceDialog.showModal();
   }
 
-  function openKeyPicker() {
+  function openTrackKeyPicker(trackId) {
+    const track = Sequencer.getTrack(trackId);
+    if (!track || track.type !== "melodic") return;
+    const ton = Sequencer.getTrackTonality(trackId);
     openChoiceDialog({
-      title: "选择调",
+      title: `${track.name} · 调`,
       columns: 4,
-      currentValue: Sequencer.rootKey(),
+      currentValue: ton.rootKey,
       items: Sequencer.KEYS.map((key, i) => ({ value: i, label: key })),
       onPick: (value) => {
         runEdit(() => {
-          Sequencer.setRootKey(Number(value));
-          updateKeyScalePickers();
+          Sequencer.setTrackTonality(trackId, Number(value), null);
+          renderSequencer();
         });
-        scheduleAutosave();
-        setStatus(`调：${Sequencer.KEYS[Sequencer.rootKey()]}`);
+        setStatus(`${track.name} 调：${Sequencer.KEYS[Number(value)]}`);
       },
     });
   }
 
-  function openScalePicker() {
+  function openTrackScalePicker(trackId) {
+    const track = Sequencer.getTrack(trackId);
+    if (!track || track.type !== "melodic") return;
+    const ton = Sequencer.getTrackTonality(trackId);
     openChoiceDialog({
-      title: "选择音阶",
+      title: `${track.name} · 音阶`,
       columns: 2,
-      currentValue: Sequencer.scaleName(),
+      currentValue: ton.scaleName,
       items: Sequencer.SCALE_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
       onPick: (value) => {
         runEdit(() => {
-          Sequencer.setScaleName(value);
-          updateKeyScalePickers();
+          Sequencer.setTrackTonality(trackId, null, value);
+          renderSequencer();
         });
-        scheduleAutosave();
-        setStatus(`音阶：${scaleLabel(Sequencer.scaleName())}`);
+        setStatus(`${track.name} 音阶：${scaleLabel(value)}`);
       },
     });
   }
@@ -370,7 +364,6 @@
   }
 
   function refreshAfterHistory() {
-    updateKeyScalePickers();
     renderPatternTabs();
     renderStepLabels();
     renderSequencer();
@@ -496,7 +489,6 @@
       onChange: () => scheduleAutosave(),
     });
     wireSeqFollowLayoutHooks();
-    updateKeyScalePickers();
     if (!loadDraft()) {
       Sequencer.loadDemoPatterns();
     }
@@ -714,6 +706,32 @@
         openTrackRatePicker(track.id);
       });
       labelCol.appendChild(rateBtn);
+
+      if (track.type === "melodic") {
+        const ton = Sequencer.getTrackTonality(track.id);
+        const keyBtn = document.createElement("button");
+        keyBtn.type = "button";
+        keyBtn.className = "note-btn pitch-pick-btn track-tonality-btn";
+        keyBtn.title = "本轨调（根音）";
+        keyBtn.textContent = Sequencer.KEYS[ton.rootKey] ?? "C";
+        keyBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openTrackKeyPicker(track.id);
+        });
+        labelCol.appendChild(keyBtn);
+
+        const scaleBtn = document.createElement("button");
+        scaleBtn.type = "button";
+        scaleBtn.className = "note-btn pitch-pick-btn track-tonality-btn";
+        scaleBtn.title = "本轨音阶";
+        scaleBtn.textContent = scaleLabel(ton.scaleName);
+        scaleBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openTrackScalePicker(track.id);
+        });
+        labelCol.appendChild(scaleBtn);
+      }
+
       row.appendChild(labelCol);
 
       for (let step = 0; step < Sequencer.steps; step++) {
@@ -786,12 +804,19 @@
   function updateNoteDialogTonalityButtons() {
     if (!noteEditContext) return;
     const { trackId, step, patternIndex } = noteEditContext;
-    const t = Sequencer.getCellTonality(patternIndex, trackId, step);
+    const cell = Sequencer.getPattern(patternIndex)[trackId][step];
+    const resolved = Sequencer.getCellTonality(patternIndex, trackId, step);
+    const overridden = Sequencer.cellHasTonalityOverride(cell);
     if (els.btnNoteKeyPick) {
-      els.btnNoteKeyPick.textContent = Sequencer.KEYS[t.rootKey] ?? "C";
+      els.btnNoteKeyPick.textContent = Sequencer.KEYS[resolved.rootKey] ?? "C";
+      els.btnNoteKeyPick.classList.toggle("tonality-overridden", overridden);
     }
     if (els.btnNoteScalePick) {
-      els.btnNoteScalePick.textContent = scaleLabel(t.scaleName);
+      els.btnNoteScalePick.textContent = scaleLabel(resolved.scaleName);
+      els.btnNoteScalePick.classList.toggle("tonality-overridden", overridden);
+    }
+    if (els.btnNoteTonalityReset) {
+      els.btnNoteTonalityReset.disabled = !overridden;
     }
   }
 
@@ -829,7 +854,7 @@
     const { trackId, step, patternIndex } = noteEditContext;
     const ton = Sequencer.getCellTonality(patternIndex, trackId, step);
     openChoiceDialog({
-      title: "本格调",
+      title: "本格覆盖 · 调",
       columns: 4,
       currentValue: ton.rootKey,
       items: Sequencer.KEYS.map((key, i) => ({ value: i, label: key })),
@@ -850,7 +875,7 @@
     const { trackId, step, patternIndex } = noteEditContext;
     const ton = Sequencer.getCellTonality(patternIndex, trackId, step);
     openChoiceDialog({
-      title: "本格音阶",
+      title: "本格覆盖 · 音阶",
       columns: 2,
       currentValue: ton.scaleName,
       items: Sequencer.SCALE_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
@@ -965,11 +990,18 @@
       els.swingValue.textContent = `${swing}%`;
       scheduleAutosave();
     });
-    if (els.btnKeyPick) {
-      els.btnKeyPick.addEventListener("click", openKeyPicker);
-    }
-    if (els.btnScalePick) {
-      els.btnScalePick.addEventListener("click", openScalePicker);
+    if (els.btnNoteTonalityReset) {
+      els.btnNoteTonalityReset.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (!noteEditContext) return;
+        const { trackId, step, patternIndex } = noteEditContext;
+        runEdit(() => {
+          Sequencer.clearCellTonality(patternIndex, trackId, step);
+          updateNoteDialogTonalityButtons();
+          rebuildNoteGrid();
+        });
+        setStatus("已恢复轨道默认调/阶");
+      });
     }
     if (els.chkTypeLoop) {
       els.chkTypeLoop.addEventListener("change", () => {
@@ -1510,7 +1542,6 @@
       swing = data.swing;
       els.swingValue.textContent = `${swing}%`;
     }
-    updateKeyScalePickers();
     renderPatternTabs();
     renderStepLabels();
     renderSequencer();
