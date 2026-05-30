@@ -513,3 +513,10 @@ html[data-layout-compact-header="1"] .header-row {
   margin-top: 0.25rem;
   max-height: 6rem;
 }
+
+.app-build-value {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  margin-left: 0.1rem;
+}

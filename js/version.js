@@ -3,8 +3,15 @@
  * 以页面内嵌的 BUNDLED_* 为「当前运行版本」；与远端 version.json 比较决定是否可更新
  */
 const AppVersion = (() => {
-  const BUNDLED_VERSION = "1.5.2";
+  let BUNDLED_VERSION = "1.5.3";
   let BUNDLED_BUILD = "dev";
+
+  (function applyMetaBundled() {
+    const mv = document.querySelector('meta[name="hf-app-version"]')?.content;
+    const mb = document.querySelector('meta[name="hf-app-build"]')?.content;
+    if (mv && mv !== "dev") BUNDLED_VERSION = mv;
+    if (mb && mb !== "dev") BUNDLED_BUILD = mb;
+  })();
 
   const scriptEl = document.currentScript;
   if (scriptEl?.src) {
@@ -56,6 +63,13 @@ const AppVersion = (() => {
     document.querySelectorAll(".app-version-value").forEach((el) => {
       el.textContent = BUNDLED_VERSION;
     });
+    const buildShort =
+      BUNDLED_BUILD && BUNDLED_BUILD !== "dev"
+        ? ` · ${String(BUNDLED_BUILD).slice(-8)}`
+        : "";
+    document.querySelectorAll(".app-build-value").forEach((el) => {
+      el.textContent = buildShort;
+    });
     const home = document.querySelector(".home-version");
     if (!home) return;
     const hasUpdate =
@@ -63,8 +77,8 @@ const AppVersion = (() => {
       isNewer({ version: remoteVersion, build: remoteBuild });
     home.classList.toggle("has-update", !!hasUpdate);
     home.title = hasUpdate
-      ? `运行 v${BUNDLED_VERSION} · 可更新至 v${remoteVersion}`
-      : `当前运行 v${BUNDLED_VERSION} · build ${BUNDLED_BUILD}`;
+      ? `运行 v${BUNDLED_VERSION} (build ${BUNDLED_BUILD}) · 可更新至 v${remoteVersion}`
+      : `当前 v${BUNDLED_VERSION} · build ${BUNDLED_BUILD}`;
   }
 
   function noteRemote(remote) {

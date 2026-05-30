@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="在线音乐编曲工作站 — 多轨步进音序器与编曲时间轴">
   <title>HarmonyForge · 编曲工作站</title>
+  <meta name="hf-app-version" content="dev">
+  <meta name="hf-app-build" content="dev">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -18,7 +20,7 @@
         <div class="brand">
           <span class="brand-icon" aria-hidden="true">◈</span>
           <h1>HarmonyForge</h1>
-          <span class="home-version" title="当前版本">v<span class="app-version-value">—</span></span>
+          <span class="home-version" title="当前版本">v<span class="app-version-value">—</span><span class="app-build-value"></span></span>
         </div>
         <div class="transport">
           <button type="button" class="btn btn-icon btn-icon-sm" id="btnPlay" title="播放 (Space)" aria-label="播放">▶</button>
@@ -50,6 +52,9 @@
           </select>
         </label>
         <span class="header-divider" aria-hidden="true"></span>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnExport" title="导出编曲文件 (.hfproj)">导出</button>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnImport" title="导入编曲文件">导入</button>
+        <input type="file" id="projectFileInput" accept=".hfproj,.json,application/json" hidden>
         <button type="button" class="btn btn-ghost btn-compact" id="btnSave">存</button>
         <button type="button" class="btn btn-ghost btn-compact" id="btnLoad">读</button>
         <button type="button" class="btn btn-ghost btn-compact" id="btnClear">清</button>
@@ -202,7 +207,7 @@
         <dt>布局</dt>
         <dd>顶栏「布局」可调模块顺序、显示/隐藏、间距与格子尺寸；支持预设与拖拽排序，随草稿保存。</dd>
         <dt>保存与草稿</dt>
-        <dd>自动保存草稿；顶栏「存/读/清」管理项目。</dd>
+        <dd>自动保存草稿；「导出/导入」下载或打开 <code>.hfproj</code> 编曲文件；「存/读/清」管理浏览器内项目。</dd>
         <dt>版本与更新</dt>
         <dd>顶栏显示<strong>当前运行</strong>版本；「更新」对比线上 version.json 与页面内嵌版本/build，有新版本时提示并强制刷新资源。</dd>
       </dl>
@@ -243,6 +248,7 @@
   <script src="js/sequencer.js"></script>
   <script src="js/arranger.js"></script>
   <script src="js/layout.js"></script>
+  <script src="js/project-io.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

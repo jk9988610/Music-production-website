@@ -41,6 +41,9 @@
     stepCountInfo: $("#stepCountInfo"),
     mixer: $("#mixer"),
     statusText: $("#statusText"),
+    btnExport: $("#btnExport"),
+    btnImport: $("#btnImport"),
+    projectFileInput: $("#projectFileInput"),
     btnSave: $("#btnSave"),
     btnLoad: $("#btnLoad"),
     btnClear: $("#btnClear"),
@@ -458,6 +461,44 @@
       });
     }
 
+
+
+    if (els.btnExport) {
+      els.btnExport.addEventListener("click", () => {
+        try {
+          const suggested = prompt("导出文件名（不含扩展名，留空用时间戳）", "");
+          if (suggested === null) return;
+          const { filename } = ProjectIO.exportToFile(getProjectData(), {
+            name: suggested.trim() || undefined,
+          });
+          AppLogger.info("项目已导出", filename);
+          setStatus(`已导出 ${filename}`);
+        } catch (err) {
+          AppLogger.error("导出失败", err.message);
+          setStatus("导出失败：" + err.message);
+        }
+      });
+    }
+
+    if (els.btnImport && els.projectFileInput) {
+      els.btnImport.addEventListener("click", () => els.projectFileInput.click());
+      els.projectFileInput.addEventListener("change", async () => {
+        const file = els.projectFileInput.files?.[0];
+        els.projectFileInput.value = "";
+        if (!file) return;
+        try {
+          if (!confirm(`导入「${file.name}」将覆盖当前编曲与布局，是否继续？`)) return;
+          const project = await ProjectIO.importFromFile(file);
+          applyProjectData(project);
+          scheduleAutosave();
+          AppLogger.info("项目已导入", file.name);
+          setStatus(`已导入 ${file.name}`);
+        } catch (err) {
+          AppLogger.error("导入失败", err.message);
+          setStatus("导入失败：" + err.message);
+        }
+      });
+    }
 
     els.btnSave.addEventListener("click", saveProject);
     els.btnLoad.addEventListener("click", loadProject);

@@ -39,7 +39,10 @@ jobs:
           cp -r css js _site/
           sed -i "s|href=\"css/styles.css\"|href=\"css/styles.css?v=${BUILD}\"|" _site/index.html
           sed -i "s|href=\"css/layout.css\"|href=\"css/layout.css?v=${BUILD}\"|" _site/index.html
-          for f in app-logger.js version.js layout.js audio-engine.js sequencer.js arranger.js app.js; do
+          sed -i 's|<meta name="hf-app-version" content="[^"]*"|<meta name="hf-app-version" content="'"${VERSION}"'"|' _site/index.html
+          sed -i 's|<meta name="hf-app-build" content="[^"]*"|<meta name="hf-app-build" content="'"${BUILD}"'"|' _site/index.html
+          sed -i 's|class="app-version-value">[^<]*<|class="app-version-value">'"${VERSION}"'<|' _site/index.html
+          for f in app-logger.js version.js layout.js project-io.js audio-engine.js sequencer.js arranger.js app.js; do
             sed -i "s|src=\"js/${f}\"|src=\"js/${f}?v=${BUILD}\"|" _site/index.html
           done
 
