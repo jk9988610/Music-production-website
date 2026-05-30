@@ -8,7 +8,7 @@ const HelpGuide = (() => {
       label: "完整流程",
       html: `
         <h4>从零完成一首编曲</h4>
-        <p>HarmonyForge 把「节奏 → 和声 → 旋律 → 段落」拆开，用 <strong>Pattern（型）</strong> 存短循环，用 <strong>时间轴</strong> 拼成完整曲式。建议按下面顺序操作。</p>
+        <p>HarmonyForge 把「节奏 → 和声 → 旋律 → 段落」拆开，用 <strong>类型</strong> 存短循环，用 <strong>时间轴</strong> 拼成完整曲式。建议按下面顺序操作。</p>
         <ol class="help-steps">
           <li><strong>定调</strong>：顶栏选「调」（根音）与「阶」（音阶）。后续所有旋律选音只在此音阶内。</li>
           <li><strong>做鼓</strong>：在音序器选 Pattern A，只开底鼓 / 军鼓 / 镲，做出 1 小节节奏模板。</li>
@@ -31,7 +31,7 @@ const HelpGuide = (() => {
         <h4>编曲模块</h4>
         <p><strong>工具栏两行：</strong></p>
         <ul class="help-list">
-          <li><strong>Pattern 行</strong>：标签 A/B/C… 切换「正在编辑哪一型」；「−型」「+型」增减 Pattern（最多 16 个）。</li>
+          <li><strong>类型行（在音序模块）</strong>：标签 A/B/C… 切换「正在编辑哪一型」；「−型」「+型」增减 Pattern（最多 16 个）。</li>
           <li><strong>段落 行</strong>：「−段」「+段」减少 / 增加时间轴小节段；右侧显示段数、型数、每段步数。</li>
         </ul>
         <p><strong>时间轴：</strong>每个格子 = 播放时的一个小节。格上大字（A/B/C…）表示该段播放哪一型 Pattern。点击格子会在 A→B→C→… 间轮换，不会删除节奏。</p>

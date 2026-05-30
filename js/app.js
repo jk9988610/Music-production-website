@@ -39,6 +39,7 @@
     btnRemoveSteps: $("#btnRemoveSteps"),
     btnAddSteps: $("#btnAddSteps"),
     stepCountInfo: $("#stepCountInfo"),
+    typeCountInfo: $("#typeCountInfo"),
     mixer: $("#mixer"),
     statusText: $("#statusText"),
     btnExport: $("#btnExport"),
@@ -57,6 +58,59 @@
   function patternLabel(index) {
     if (index < 26) return String.fromCharCode(65 + index);
     return `P${index + 1}`;
+  }
+
+
+  function refreshAfterHistory() {
+    els.keySelect.value = String(Sequencer.rootKey());
+    els.scaleSelect.value = Sequencer.scaleName();
+    renderPatternTabs();
+    renderStepLabels();
+    renderSequencer();
+    renderArrangement();
+    updateStepCountUI();
+    updateTypeCountUI();
+    syncSequencerLayout();
+    syncModuleSpacing();
+    renderMixer();
+    applyVolumesToEngine();
+  }
+
+  function updateHistoryButtons() {
+    const canU = typeof EditHistory !== "undefined" && EditHistory.canUndo();
+    const canR = typeof EditHistory !== "undefined" && EditHistory.canRedo();
+    document.querySelectorAll(".btn-history-undo").forEach((b) => {
+      b.disabled = !canU;
+    });
+    document.querySelectorAll(".btn-history-redo").forEach((b) => {
+      b.disabled = !canR;
+    });
+  }
+
+  function initEditHistory() {
+    if (typeof EditHistory === "undefined") return;
+    EditHistory.init({
+      getState: getProjectData,
+      applyState: (data) => {
+        applyProjectData(data, true);
+        refreshAfterHistory();
+      },
+      onChange: () => updateHistoryButtons(),
+    });
+    updateHistoryButtons();
+  }
+
+  function recordEdit() {
+    if (typeof EditHistory !== "undefined" && !EditHistory.isApplying()) {
+      EditHistory.capture();
+      updateHistoryButtons();
+    }
+  }
+
+  function runEdit(action) {
+    action();
+    recordEdit();
+    scheduleAutosave();
   }
 
   function syncSequencerLayout() {
@@ -137,6 +191,10 @@
     if (!loadDraft()) {
       Sequencer.loadDemoPatterns();
     }
+    if (typeof EditHistory !== "undefined") {
+      EditHistory.reset(getProjectData());
+      updateHistoryButtons();
+    }
     renderPatternTabs();
     renderStepLabels();
     renderSequencer();
@@ -145,6 +203,7 @@
     bindEvents();
     applyVolumesToEngine();
     updateStepCountUI();
+    updateTypeCountUI();
     syncSequencerLayout();
     syncModuleSpacing();
     window.addEventListener("resize", syncModuleSpacing);
@@ -185,14 +244,21 @@
     if (els.btnRemovePattern) {
       els.btnRemovePattern.disabled = Sequencer.patternCount <= Sequencer.MIN_PATTERNS;
     }
+    updateTypeCountUI();
   }
 
   function selectPattern(index) {
     Sequencer.setCurrentPattern(index);
     renderPatternTabs();
     renderSequencer();
-    setStatus(`Pattern ${patternLabel(index)}`);
+    setStatus(`类型 ${patternLabel(index)}`);
     scheduleAutosave();
+  }
+
+  function updateTypeCountUI() {
+    if (els.typeCountInfo) {
+      els.typeCountInfo.textContent = `${Sequencer.patternCount}型`;
+    }
   }
 
   function updateStepCountUI() {
@@ -266,9 +332,10 @@
         openNoteDialog(track.id, step, pi);
       }
     } else {
-      Sequencer.toggleStep(pi, track.id, step);
-      renderSequencer();
-      scheduleAutosave();
+      runEdit(() => {
+        Sequencer.toggleStep(pi, track.id, step);
+        renderSequencer();
+      });
     }
   }
 
@@ -282,10 +349,11 @@
       btn.className = "note-btn";
       btn.textContent = Sequencer.noteLabel(midi);
       btn.addEventListener("click", () => {
-        Sequencer.toggleStep(patternIndex, trackId, step, midi);
-        els.noteDialog.close();
-        renderSequencer();
-        scheduleAutosave();
+        runEdit(() => {
+          Sequencer.toggleStep(patternIndex, trackId, step, midi);
+          els.noteDialog.close();
+          renderSequencer();
+        });
       });
       els.noteGrid.appendChild(btn);
     });
@@ -305,14 +373,15 @@
         <span class="arrange-slot-pattern">${patternLabel(sec.patternIndex)}</span>
       `;
       slot.addEventListener("click", () => {
-        Arranger.cycleSectionPattern(i, Sequencer.patternCount);
-        renderArrangement();
-        scheduleAutosave();
+        runEdit(() => {
+          Arranger.cycleSectionPattern(i, Sequencer.patternCount);
+          renderArrangement();
+        });
       });
       els.arrangeTimeline.appendChild(slot);
     });
 
-    els.arrangeInfo.textContent = `${sections.length}段 · ${Sequencer.patternCount}型 · ${Sequencer.steps}步/段`;
+    els.arrangeInfo.textContent = `${sections.length}段 · ${Sequencer.steps}步/段`;
     if (els.btnRemoveSection) {
       els.btnRemoveSection.disabled = sections.length <= Arranger.MIN_SECTIONS;
     }
@@ -397,63 +466,72 @@
 
     if (els.btnAddSteps) {
       els.btnAddSteps.addEventListener("click", () => {
-        const r = Sequencer.addSteps(Sequencer.STEP_ADD);
-        if (!r.ok) {
-          setStatus(`已达最大 ${Sequencer.MAX_STEPS} 步`);
-          return;
-        }
-        renderStepLabels();
-        renderSequencer();
-        updateStepCountUI();
-        scheduleAutosave();
-        setStatus(`已增加至 ${Sequencer.steps} 步`);
+        runEdit(() => {
+          const r = Sequencer.addSteps(Sequencer.STEP_ADD);
+          if (!r.ok) {
+            setStatus(`已达最大 ${Sequencer.MAX_STEPS} 步`);
+            return;
+          }
+          renderStepLabels();
+          renderSequencer();
+          renderArrangement();
+          updateStepCountUI();
+          setStatus(`已增加至 ${Sequencer.steps} 步`);
+        });
       });
     }
     if (els.btnRemoveSteps) {
       els.btnRemoveSteps.addEventListener("click", () => {
-        const r = Sequencer.removeSteps(Sequencer.STEP_ADD);
-        if (!r.ok) {
-          setStatus(`最少保留 ${Sequencer.MIN_STEPS} 步`);
-          return;
-        }
-        renderStepLabels();
-        renderSequencer();
-        updateStepCountUI();
-        renderArrangement();
-        scheduleAutosave();
-        setStatus(`已减少至 ${Sequencer.steps} 步`);
+        runEdit(() => {
+          const r = Sequencer.removeSteps(Sequencer.STEP_ADD);
+          if (!r.ok) {
+            setStatus(`最少保留 ${Sequencer.MIN_STEPS} 步`);
+            return;
+          }
+          renderStepLabels();
+          renderSequencer();
+          renderArrangement();
+          updateStepCountUI();
+          setStatus(`已减少至 ${Sequencer.steps} 步`);
+        });
       });
     }
 
     if (els.btnAddPattern) {
       els.btnAddPattern.addEventListener("click", () => {
-        const r = Sequencer.addPattern();
-        if (!r.ok) {
-          setStatus(`已达最大 ${Sequencer.MAX_PATTERNS} 个 Pattern`);
-          return;
-        }
-        renderPatternTabs();
-        renderArrangement();
-        scheduleAutosave();
-        setStatus(`已增加至 ${r.count} 个 Pattern（${patternLabel(r.count - 1)}）`);
+        runEdit(() => {
+          const r = Sequencer.addPattern();
+          if (!r.ok) {
+            setStatus(`已达最大 ${Sequencer.MAX_PATTERNS} 个类型`);
+            return;
+          }
+          renderPatternTabs();
+          renderArrangement();
+          setStatus(`已增加至 ${r.count} 个类型（${patternLabel(r.count - 1)}）`);
+        });
       });
     }
     if (els.btnRemovePattern) {
       els.btnRemovePattern.addEventListener("click", () => {
-        const r = Sequencer.removePattern();
-        if (!r.ok) {
-          setStatus(`至少保留 ${Sequencer.MIN_PATTERNS} 个 Pattern`);
-          return;
-        }
-        Arranger.getSections().forEach((sec) => {
-          if (sec.patternIndex >= Sequencer.patternCount) {
-            sec.patternIndex = Sequencer.patternCount - 1;
+        runEdit(() => {
+          const r = Sequencer.removePattern();
+          if (!r.ok) {
+            setStatus(`至少保留 ${Sequencer.MIN_PATTERNS} 个类型`);
+            return;
           }
+          Arranger.getSections().forEach((sec) => {
+            if (sec.patternIndex >= Sequencer.patternCount) {
+              sec.patternIndex = Sequencer.patternCount - 1;
+            }
+          });
+          if (Sequencer.currentPattern() >= Sequencer.patternCount) {
+            Sequencer.setCurrentPattern(Sequencer.patternCount - 1);
+          }
+          renderPatternTabs();
+          renderSequencer();
+          renderArrangement();
+          setStatus(`已减少至 ${r.count} 个类型`);
         });
-        renderPatternTabs();
-        renderArrangement();
-        scheduleAutosave();
-        setStatus(`已减少至 ${r.count} 个 Pattern`);
       });
     }
 
@@ -486,6 +564,10 @@
           if (!confirm(`导入「${file.name}」将覆盖当前编曲与布局，是否继续？`)) return;
           const project = await ProjectIO.importFromFile(file);
           applyProjectData(project);
+          if (typeof EditHistory !== "undefined") {
+            EditHistory.reset(getProjectData());
+            updateHistoryButtons();
+          }
           scheduleAutosave();
           AppLogger.info("项目已导入", file.name);
           setStatus(`已导入 ${file.name}`);
@@ -503,11 +585,12 @@
       if (noteEditContext) {
         const { trackId, step, patternIndex } = noteEditContext;
         const cell = Sequencer.getPattern(patternIndex)[trackId][step];
-        cell.on = false;
-        cell.note = null;
-        els.noteDialog.close();
-        renderSequencer();
-        scheduleAutosave();
+        runEdit(() => {
+          cell.on = false;
+          cell.note = null;
+          els.noteDialog.close();
+          renderSequencer();
+        });
       }
     });
 
@@ -701,11 +784,16 @@
     renderSequencer();
     renderArrangement();
     updateStepCountUI();
+    updateTypeCountUI();
     syncSequencerLayout();
     syncModuleSpacing();
     renderMixer();
     applyVolumesToEngine();
     if (!silent) AppLogger.info("项目数据已应用");
+    if (typeof EditHistory !== "undefined" && !EditHistory.isApplying()) {
+      EditHistory.reset(getProjectData());
+      updateHistoryButtons();
+    }
     return true;
   }
 
@@ -779,8 +867,12 @@
     renderSequencer();
     renderArrangement();
     updateStepCountUI();
+    if (typeof EditHistory !== "undefined") {
+      EditHistory.reset(getProjectData());
+      updateHistoryButtons();
+    }
     scheduleAutosave();
-    setStatus("已重置为演示 Pattern");
+    setStatus("已重置为演示数据");
   }
 
   function setStatus(msg) {

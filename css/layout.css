@@ -591,3 +591,35 @@ html[data-layout-compact-header="1"] .header-row {
 .help-modules dd p:first-child {
   margin-top: 0;
 }
+
+.sequencer-bar .module-toolbar-row-types {
+  align-items: center;
+}
+
+.sequencer-bar .module-toolbar-row-types .pattern-tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+.type-count-info {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.btn-history-undo,
+.btn-history-redo {
+  font-size: 0.62rem !important;
+  padding: 0.18rem 0.4rem !important;
+  min-width: 2.4rem;
+}
+
+.btn-history-undo:disabled,
+.btn-history-redo:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
