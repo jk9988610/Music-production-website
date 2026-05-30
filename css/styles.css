@@ -1175,3 +1175,45 @@ kbd {
 .mixer-horizontal .mixer-track label {
   font-size: 0.55rem;
 }
+
+/* === 仅缩小模块外框（框图），保留内部内容尺寸 === */
+.main {
+  gap: 0.12rem;
+  padding-top: 0.12rem;
+}
+
+.panel.panel-arrange,
+.panel.panel-sequencer,
+.panel.panel-mixer {
+  padding: 0.05rem 0.18rem 0.08rem !important;
+  margin-bottom: 0.06rem !important;
+  border-radius: 4px;
+  border-width: 1px;
+}
+
+.panel-title,
+.arrange-bar h2 {
+  margin: 0 0 0.03rem !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+.panel-mixer .panel-title {
+  margin-bottom: 0.03rem !important;
+}
+
+.arrange-bar {
+  margin-bottom: 0.03rem !important;
+  padding: 0 !important;
+}
+
+.arrange-scroll,
+.panel.panel-sequencer .sequencer-wrap {
+  margin: 0 !important;
+  padding: 0 0 0.02rem !important;
+}
+
+.panel.panel-mixer .mixer-horizontal {
+  margin: 0;
+  padding: 0;
+}
