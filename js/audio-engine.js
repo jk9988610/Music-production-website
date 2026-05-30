@@ -1,5 +1,5 @@
 /**
- * Web Audio 合成 — 乐队常用乐器，弓弦参照「锯齿源 + 起弓噪声 + 延迟揉弦 + 体腔滤波」
+ * Web Audio 合成 — 乐队常用乐器；弓弦/钢琴为简化物理模型（见各 play* 注释）
  */
 const AudioEngine = (() => {
   let ctx = null;
@@ -207,21 +207,77 @@ const AudioEngine = (() => {
     playBowedString(c, out, time, midi, duration, gain, BOW_CELLO);
   }
 
+  /**
+   * 钢琴 — 简化击弦/音板模型（非采样）：
+   * - 分音非谐性 fₙ ≈ n·f₀·√(1 + B·n²)（钢琴弦典型近似，非整数倍泛音）
+   * - 起音短带通噪声模拟琴槌敲击
+   * - 各泛音独立衰减（高音更快），经低通扫频模拟音板
+   * 参考思路：Fletcher 弦乐/钢琴物理概要、Web Audio 加法击弦合成常见做法
+   */
   function playPianoOn(c, out, time, midi, duration, gain = 0.5) {
     const freq = midiToFreq(midi);
-    [1, 2, 3, 4, 5].forEach((h, i) => {
+    const inharmonicB = 0.0006;
+    const stopAt = time + duration + 0.35;
+
+    const body = c.createGain();
+    body.gain.value = 1;
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    const lpStart = Math.min(1200, freq * 3.5);
+    const lpPeak = Math.min(5200, freq * 10 + 600);
+    lp.frequency.setValueAtTime(lpStart, time);
+    lp.frequency.exponentialRampToValueAtTime(Math.max(lpStart + 80, lpPeak), time + 0.018);
+    lp.frequency.exponentialRampToValueAtTime(lpStart * 0.85, time + duration * 0.55);
+    lp.Q.value = 0.65;
+    body.connect(lp);
+    lp.connect(out);
+
+    const hammerLen = Math.max(8, Math.floor(c.sampleRate * 0.006));
+    const hammer = c.createBuffer(1, hammerLen, c.sampleRate);
+    const hData = hammer.getChannelData(0);
+    for (let i = 0; i < hammerLen; i++) {
+      hData[i] = (Math.random() * 2 - 1) * (1 - i / hammerLen) ** 1.6;
+    }
+    const hammerSrc = c.createBufferSource();
+    hammerSrc.buffer = hammer;
+    const hammerF = c.createBiquadFilter();
+    hammerF.type = "bandpass";
+    hammerF.frequency.value = Math.min(4200, freq * 6 + 400);
+    hammerF.Q.value = 1.1;
+    const hammerE = c.createGain();
+    hammerE.gain.setValueAtTime(gain * 0.22, time);
+    hammerE.gain.exponentialRampToValueAtTime(0.001, time + 0.012);
+    hammerSrc.connect(hammerF);
+    hammerF.connect(hammerE);
+    hammerE.connect(body);
+    hammerSrc.start(time);
+    hammerSrc.stop(time + 0.02);
+
+    const partials = [
+      { n: 1, amp: 1, decayMul: 1 },
+      { n: 2, amp: 0.48, decayMul: 0.78 },
+      { n: 3, amp: 0.3, decayMul: 0.6 },
+      { n: 4, amp: 0.18, decayMul: 0.48 },
+      { n: 5, amp: 0.11, decayMul: 0.38 },
+      { n: 6, amp: 0.065, decayMul: 0.3 },
+    ];
+
+    partials.forEach(({ n, amp, decayMul }) => {
+      const f = freq * n * Math.sqrt(1 + inharmonicB * n * n);
       const osc = c.createOscillator();
       const env = c.createGain();
       osc.type = "sine";
-      osc.frequency.value = freq * h;
-      const g = gain * (1 / (i + 1.1));
+      osc.frequency.setValueAtTime(f, time);
+      const rel = Math.max(0.08, duration * decayMul);
+      const peak = gain * amp * (n === 1 ? 0.42 : 0.36 / Math.sqrt(n));
       env.gain.setValueAtTime(0, time);
-      env.gain.linearRampToValueAtTime(g, time + 0.004);
-      env.gain.exponentialRampToValueAtTime(0.001, time + duration * (0.55 - i * 0.06));
+      env.gain.linearRampToValueAtTime(peak, time + 0.002);
+      env.gain.exponentialRampToValueAtTime(peak * 0.35, time + 0.04);
+      env.gain.exponentialRampToValueAtTime(0.001, time + rel);
       osc.connect(env);
-      env.connect(out);
+      env.connect(body);
       osc.start(time);
-      osc.stop(time + duration + 0.05);
+      osc.stop(stopAt);
     });
   }
 
