@@ -1175,66 +1175,112 @@ kbd {
 .mixer-horizontal .mixer-track label {
   font-size: 0.55rem;
 }
+/* ============================================================
+   模块外壳 (CHROME) — 仅修改 --chrome-* 变量 = 只改框，不改格子
+   模块内容 (CONTENT) — 仅修改 --content-* 变量 = 只改格子/滑条
+   ============================================================ */
+:root {
+  --chrome-module-gap: 1px;
+  --chrome-module-pad-x: 3px;
+  --chrome-module-pad-b: 0px;
+  --chrome-legend-size: 0.6rem;
+  --chrome-toolbar-gap: 1px;
+  --content-seq-step: 0.95rem;
+  --content-seq-label: 3.25rem;
+  --content-arrange-slot-w: 40px;
+  --content-arrange-slot-h: 30px;
+  --content-mixer-track-w: 3.35rem;
+  --content-sequencer-max-h: none;
+  --content-arrange-max-h: none;
+}
 
-/* === 模块外壳：fieldset + legend，标题嵌在边框上不占内部高度 === */
+/* --- CHROME: fieldset 边框、legend、工具条 --- */
 fieldset.module {
   border: 1px solid var(--border);
-  border-radius: 4px;
-  margin: 0 0 4px;
-  padding: 0 5px 4px;
+  border-radius: 3px;
+  margin: 0 0 var(--chrome-module-gap);
+  padding: 0 var(--chrome-module-pad-x) var(--chrome-module-pad-b);
   min-width: 0;
   background: var(--bg-panel);
 }
 
 fieldset.module legend {
-  font-size: 0.65rem;
+  font-size: var(--chrome-legend-size);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--text-muted);
-  padding: 0 4px;
-  margin-left: 2px;
-  line-height: 1.2;
+  padding: 0 3px;
+  margin-left: 1px;
+  line-height: 1;
 }
 
-/* 外壳内缘：只保留内容区，不再单独占一行标题 */
+fieldset.module .module-chrome,
 fieldset.module .arrange-bar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.25rem 0.35rem;
-  margin: 0 0 2px;
+  gap: 0.2rem 0.3rem;
+  margin: 0 0 var(--chrome-toolbar-gap);
   padding: 0;
 }
 
-fieldset.module .arrange-scroll,
-fieldset.module .sequencer-wrap {
+fieldset.module .module-body {
   margin: 0;
   padding: 0;
+  min-width: 0;
 }
 
-fieldset.module.module-sequencer {
-  --seq-label-col: 3.25rem;
-  --seq-step-size: 0.95rem;
+/* --- CONTENT: 仅 .module-body 内部尺寸 --- */
+fieldset.module .module-body {
+  --seq-label-col: var(--content-seq-label);
+  --seq-step-size: var(--content-seq-step);
 }
 
-fieldset.module.module-arrange .arrange-slot {
-  width: 40px;
-  min-height: 30px;
+fieldset.module.module-sequencer .module-body {
+  max-height: var(--content-sequencer-max-h);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+fieldset.module.module-arrange .module-body {
+  max-height: var(--content-arrange-max-h);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+fieldset.module .module-body .arrange-slot {
+  width: var(--content-arrange-slot-w);
+  min-height: var(--content-arrange-slot-h);
   padding: 0.15rem 0.2rem;
+  box-sizing: border-box;
 }
 
-fieldset.module .panel-title,
-fieldset.module .arrange-bar h2 {
-  display: none;
+fieldset.module .module-body .step-cell {
+  width: var(--seq-step-size);
+  height: var(--seq-step-size);
 }
 
-/* 旧 .panel 类若仍存在时不再额外撑高 */
-.panel.panel-arrange,
-.panel.panel-sequencer,
-.panel.panel-mixer {
-  padding: 0;
-  margin: 0;
-  border: none;
-  background: transparent;
+fieldset.module .module-body .mixer-horizontal {
+  gap: 0.12rem;
+}
+
+fieldset.module .module-body .mixer-horizontal .mixer-track {
+  flex: 0 0 var(--content-mixer-track-w);
+  min-width: var(--content-mixer-track-w);
+}
+
+/* 调试：?debug=layers 橙=外壳 fieldset，青=内容 body */
+html[data-debug-layers] fieldset.module {
+  outline: 2px dashed #f59e0b;
+  outline-offset: 0;
+}
+
+html[data-debug-layers] fieldset.module .module-body {
+  outline: 1px dashed #22d3ee;
+  outline-offset: -1px;
+}
+
+html[data-debug-layers] fieldset.module .module-chrome {
+  outline: 1px dotted #a78bfa;
 }

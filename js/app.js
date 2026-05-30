@@ -47,6 +47,10 @@
   let noteEditContext = null;
 
   function init() {
+    if (new URLSearchParams(location.search).get("debug") === "layers") {
+      document.documentElement.setAttribute("data-debug-layers", "");
+    }
+
     AppLogger.info("HarmonyForge 启动", `v${AppVersion.CURRENT} · build ${AppVersion.BUILD}`);
     AppVersion.initUI();
     populateKeySelect();

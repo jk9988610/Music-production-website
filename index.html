@@ -60,29 +60,29 @@
     </header>
 
     <main class="main">
-      <fieldset class="module module-arrange" aria-label="编曲时间轴">
+      <fieldset class="module module-arrange" aria-label="编曲时间轴" data-shell="chrome">
         <legend>编曲</legend>
-        <div class="arrange-bar">
+        <div class="module-chrome arrange-bar">
           <div class="pattern-tabs" id="patternTabs" role="tablist"></div>
           <button type="button" class="btn btn-sm" id="btnAddSection">+段</button>
           <span class="arrange-info" id="arrangeInfo">8段</span>
         </div>
-        <div class="arrange-scroll">
+        <div class="module-body arrange-scroll">
           <div class="arrange-timeline" id="arrangeTimeline"></div>
         </div>
       </fieldset>
 
-      <fieldset class="module module-sequencer" aria-label="步进音序器">
+      <fieldset class="module module-sequencer" aria-label="步进音序器" data-shell="chrome">
         <legend>音序</legend>
-        <div class="sequencer-wrap">
+        <div class="module-body sequencer-wrap">
           <div class="step-labels" id="stepLabels"></div>
           <div class="tracks" id="tracks"></div>
         </div>
       </fieldset>
 
-      <fieldset class="module module-mixer" aria-label="混音">
+      <fieldset class="module module-mixer" aria-label="混音" data-shell="chrome">
         <legend>混音</legend>
-        <div class="mixer-tracks mixer-horizontal" id="mixer"></div>
+        <div class="module-body mixer-tracks mixer-horizontal" id="mixer"></div>
       </fieldset>
     </main>
 
@@ -99,6 +99,8 @@
     <div class="help-body">
       <h4>模块使用指导</h4>
       <dl class="help-modules">
+                <dt>外壳与内容</dt>
+        <dd>灰框与标题「编曲/音序/混音」为外壳；格子与滑条在 <code>.module-body</code> 内。只改 CSS 中 <code>--chrome-*</code> 压缩框高，<code>--content-*</code> 控制内容。URL 加 <code>?debug=layers</code> 可橙框=外壳、青框=内容。</dd>
         <dt>编曲时间轴</dt>
         <dd>每个格子 1 小节（16 步），点击切换 Pattern（A–D），「+段」增加小节。</dd>
         <dt>Pattern 库</dt>
