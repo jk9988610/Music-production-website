@@ -176,11 +176,18 @@ const AudioEngine = (() => {
     }
   }
 
+  function previewTrackNote(trackId, midi, duration = 0.28) {
+    ensureContext();
+    const time = ctx.currentTime + 0.02;
+    playTrackSound(trackId, time, midi, duration);
+  }
+
   return {
     NOTE_NAMES,
     ensureContext,
     setTrackVolume,
     playTrackSound,
+    previewTrackNote,
     midiToFreq,
     getContext: () => ctx,
   };

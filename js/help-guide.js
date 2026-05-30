@@ -36,6 +36,7 @@ const HelpGuide = (() => {
         </ul>
         <p><strong>时间轴：</strong>每个格子 = 播放时的一个小节。格上大字（A/B/C…）表示该段播放哪一型 Pattern。点击格子会在 A→B→C→… 间轮换，不会删除节奏。</p>
         <p><strong>与音序的关系：</strong>你在音序里编辑的是「某一型的 7 轨数据」；时间轴只负责「第几小节播放哪一型」。例如 §1–§4 用 A（主歌），§5–§8 用 B（副歌）。</p>
+        <p>点击时间轴上的段落格，会弹出类型选择窗（A/B/C…），可自由选择该段使用的 Pattern。</p>
         <p><strong>典型曲式示例：</strong></p>
         <ul class="help-list">
           <li>§1–§2 → A（前奏 / 主歌节奏）</li>
@@ -58,7 +59,7 @@ const HelpGuide = (() => {
           <li>步数变多后横向滚动查看；最底行「主旋律」需完整可见，若被裁切可略增布局中的模块内边距。</li>
         </ul>
         <p><strong>播放头：</strong>播放时当前步会高亮；编曲播放模式下时间轴对应段也会亮。</p>
-        <p><strong>Pattern 切换：</strong>编曲栏点 A/B/C 或快捷键 <kbd>1</kbd>–<kbd>9</kbd>，编辑的是不同 Pattern 副本。</p>
+        <p><strong>Pattern 切换：</strong>音序模块点类型标签 A/B/C，或快捷键 <kbd>1</kbd>–<kbd>9</kbd>，编辑的是不同 Pattern 副本；编曲时间轴点段落格可选该段类型。</p>
       `,
     },
     {
@@ -66,7 +67,8 @@ const HelpGuide = (() => {
       label: "音高与配器",
       html: `
         <h4>程序音高基础</h4>
-        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。顶栏「调 + 阶」决定选音弹窗里有哪些音（约 C2–C6）。</p>
+        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。顶栏「调」「阶」以网格弹窗选择（与选音弹窗同款样式），决定选音弹窗里有哪些音（约 C2–C6）。</p>
+        <p>选音弹窗可勾选 <strong>试听</strong>：点击音高会用该轨对应乐器预听一次，满意后点「选用」写入格子；不勾选时点击即写入。</p>
 
         <h4>底鼓 · 军鼓 · 镲</h4>
         <p><strong>无音高。</strong>只负责节奏框架。</p>

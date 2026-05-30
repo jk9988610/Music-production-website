@@ -29,6 +29,13 @@ const Sequencer = (() => {
     dorian: [0, 2, 3, 5, 7, 9, 10],
   };
 
+  const SCALE_OPTIONS = [
+    { id: "major", label: "大调" },
+    { id: "minor", label: "小调" },
+    { id: "pentatonic", label: "五声" },
+    { id: "dorian", label: "多利亚" },
+  ];
+
   let steps = DEFAULT_STEPS;
   let patterns = createEmptyPatterns(DEFAULT_PATTERN_COUNT);
   let currentPattern = 0;
@@ -234,6 +241,8 @@ const Sequencer = (() => {
     DEFAULT_PATTERN_COUNT,
     TRACKS,
     KEYS,
+    SCALE_OPTIONS,
+    SCALES,
     patterns: () => patterns,
     currentPattern: () => currentPattern,
     setCurrentPattern: (i) => { currentPattern = i; },

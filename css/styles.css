@@ -582,8 +582,41 @@ kbd {
 }
 
 .note-dialog h3 {
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   font-size: 1rem;
+}
+
+.note-preview-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.note-preview-toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.note-dialog-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.control-pick .pitch-pick-btn {
+  min-width: 2.75rem;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.72rem;
+}
+
+.choice-dialog .note-grid {
+  margin-bottom: 0.5rem;
 }
 
 .note-grid {

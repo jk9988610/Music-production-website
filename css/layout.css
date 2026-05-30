@@ -566,7 +566,11 @@ html[data-layout-compact-header="1"] .header-row {
   gap: 0;
 }
 
-.sequencer-bar .step-count-info {
+.sequencer-bar .module-toolbar-row-steps .step-count-info {
+  margin-left: auto;
+}
+
+.sequencer-bar .module-toolbar-row-types .type-count-info {
   margin-left: auto;
 }
 

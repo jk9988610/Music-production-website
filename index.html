@@ -39,18 +39,13 @@
         </div>
       </div>
       <div class="header-row header-row-sub">
-        <label class="control-inline">
+        <label class="control-inline control-pick">
           <span>调</span>
-          <select id="keySelect" class="pitch-select"></select>
+          <button type="button" class="note-btn pitch-pick-btn" id="btnKeyPick" title="选择调">C</button>
         </label>
-        <label class="control-inline">
+        <label class="control-inline control-pick">
           <span>阶</span>
-          <select id="scaleSelect" class="pitch-select">
-            <option value="major">大调</option>
-            <option value="minor">小调</option>
-            <option value="pentatonic">五声</option>
-            <option value="dorian">多利亚</option>
-          </select>
+          <button type="button" class="note-btn pitch-pick-btn" id="btnScalePick" title="选择音阶">大调</button>
         </label>
         <span class="header-divider" aria-hidden="true"></span>
         <button type="button" class="btn btn-ghost btn-compact" id="btnExport" title="导出编曲文件 (.hfproj)">导出</button>
@@ -92,18 +87,6 @@
       <fieldset class="module module-sequencer" data-module="sequencer" aria-label="步进音序器" data-shell="chrome">
         <legend>音序</legend>
         <div class="module-chrome sequencer-bar">
-          <div class="module-toolbar-row">
-            <span class="module-toolbar-label">步进</span>
-            <div class="btn-step-group" aria-label="撤销与重做">
-              <button type="button" class="btn btn-sm btn-history-undo" title="撤销 (Ctrl+Z)">撤销</button>
-              <button type="button" class="btn btn-sm btn-history-redo" title="重做 (Ctrl+Y)">重做</button>
-            </div>
-            <div class="btn-step-group" aria-label="步进数量">
-              <button type="button" class="btn btn-sm" id="btnRemoveSteps" title="减少 4 个步进（最少 4 步）">−4步</button>
-              <button type="button" class="btn btn-sm" id="btnAddSteps" title="增加 4 个步进（最多 64 步）">+4步</button>
-            </div>
-            <span class="step-count-info" id="stepCountInfo">16步</span>
-          </div>
           <div class="module-toolbar-row module-toolbar-row-types">
             <span class="module-toolbar-label">类型</span>
             <div class="btn-step-group" aria-label="撤销与重做">
@@ -118,6 +101,18 @@
           </div>
           <div class="pattern-tabs-row" role="tablist" aria-label="类型标签">
             <div class="pattern-tabs" id="patternTabs"></div>
+          </div>
+          <div class="module-toolbar-row module-toolbar-row-steps">
+            <span class="module-toolbar-label">步进</span>
+            <div class="btn-step-group" aria-label="撤销与重做">
+              <button type="button" class="btn btn-sm btn-history-undo" title="撤销 (Ctrl+Z)">撤销</button>
+              <button type="button" class="btn btn-sm btn-history-redo" title="重做 (Ctrl+Y)">重做</button>
+            </div>
+            <div class="btn-step-group" aria-label="步进数量">
+              <button type="button" class="btn btn-sm" id="btnRemoveSteps" title="减少 4 个步进（最少 4 步）">−4步</button>
+              <button type="button" class="btn btn-sm" id="btnAddSteps" title="增加 4 个步进（最多 64 步）">+4步</button>
+            </div>
+            <span class="step-count-info" id="stepCountInfo">16步</span>
           </div>
         </div>
         <div class="module-body sequencer-wrap">
@@ -237,11 +232,27 @@
 
   <dialog id="noteDialog" class="note-dialog">
     <form method="dialog">
-      <h3>选择音高</h3>
+      <h3 id="noteDialogTitle">选择音高</h3>
+      <label class="note-preview-toggle">
+        <input type="checkbox" id="notePreview">
+        <span>试听</span>
+      </label>
+      <p class="note-dialog-hint" id="noteDialogHint">勾选「试听」后点击音高可预听；再点「选用」写入格子。</p>
       <div class="note-grid" id="noteGrid"></div>
       <menu>
         <button type="submit" value="cancel" class="btn btn-ghost">取消</button>
         <button type="button" id="noteClear" class="btn btn-ghost">清除</button>
+        <button type="button" id="noteApply" class="btn btn-sm">选用</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="choiceDialog" class="note-dialog choice-dialog">
+    <form method="dialog">
+      <h3 id="choiceDialogTitle">选择</h3>
+      <div class="note-grid" id="choiceGrid"></div>
+      <menu>
+        <button type="submit" value="cancel" class="btn btn-ghost">取消</button>
       </menu>
     </form>
   </dialog>

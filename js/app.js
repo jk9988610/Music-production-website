@@ -26,8 +26,8 @@
     bpmValue: $("#bpmValue"),
     swing: $("#swing"),
     swingValue: $("#swingValue"),
-    keySelect: $("#keySelect"),
-    scaleSelect: $("#scaleSelect"),
+    btnKeyPick: $("#btnKeyPick"),
+    btnScalePick: $("#btnScalePick"),
     patternTabs: $("#patternTabs"),
     btnRemovePattern: $("#btnRemovePattern"),
     btnAddPattern: $("#btnAddPattern"),
@@ -49,21 +49,121 @@
     btnLoad: $("#btnLoad"),
     btnClear: $("#btnClear"),
     noteDialog: $("#noteDialog"),
+    noteDialogTitle: $("#noteDialogTitle"),
+    notePreview: $("#notePreview"),
+    noteDialogHint: $("#noteDialogHint"),
     noteGrid: $("#noteGrid"),
     noteClear: $("#noteClear"),
+    noteApply: $("#noteApply"),
+    choiceDialog: $("#choiceDialog"),
+    choiceDialogTitle: $("#choiceDialogTitle"),
+    choiceGrid: $("#choiceGrid"),
   };
 
   let noteEditContext = null;
+  let notePendingMidi = null;
 
   function patternLabel(index) {
     if (index < 26) return String.fromCharCode(65 + index);
     return `P${index + 1}`;
   }
 
+  function scaleLabel(scaleId) {
+    const opt = Sequencer.SCALE_OPTIONS.find((o) => o.id === scaleId);
+    return opt ? opt.label : scaleId;
+  }
+
+  function updateKeyScalePickers() {
+    if (els.btnKeyPick) {
+      els.btnKeyPick.textContent = Sequencer.KEYS[Sequencer.rootKey()] ?? "C";
+    }
+    if (els.btnScalePick) {
+      els.btnScalePick.textContent = scaleLabel(Sequencer.scaleName());
+    }
+  }
+
+  function openChoiceDialog({ title, items, currentValue, columns, onPick }) {
+    if (!els.choiceDialog || !els.choiceGrid) return;
+    els.choiceDialogTitle.textContent = title;
+    els.choiceGrid.innerHTML = "";
+    if (columns) {
+      els.choiceGrid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+    } else {
+      els.choiceGrid.style.gridTemplateColumns = "";
+    }
+    items.forEach((item) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className =
+        "note-btn" + (String(item.value) === String(currentValue) ? " selected" : "");
+      btn.textContent = item.label;
+      btn.addEventListener("click", () => {
+        onPick(item.value, item);
+        els.choiceDialog.close();
+      });
+      els.choiceGrid.appendChild(btn);
+    });
+    els.choiceDialog.showModal();
+  }
+
+  function openKeyPicker() {
+    openChoiceDialog({
+      title: "选择调",
+      columns: 4,
+      currentValue: Sequencer.rootKey(),
+      items: Sequencer.KEYS.map((key, i) => ({ value: i, label: key })),
+      onPick: (value) => {
+        runEdit(() => {
+          Sequencer.setRootKey(Number(value));
+          updateKeyScalePickers();
+        });
+        scheduleAutosave();
+        setStatus(`调：${Sequencer.KEYS[Sequencer.rootKey()]}`);
+      },
+    });
+  }
+
+  function openScalePicker() {
+    openChoiceDialog({
+      title: "选择音阶",
+      columns: 2,
+      currentValue: Sequencer.scaleName(),
+      items: Sequencer.SCALE_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
+      onPick: (value) => {
+        runEdit(() => {
+          Sequencer.setScaleName(value);
+          updateKeyScalePickers();
+        });
+        scheduleAutosave();
+        setStatus(`音阶：${scaleLabel(Sequencer.scaleName())}`);
+      },
+    });
+  }
+
+  function openPatternPickerForSection(sectionIndex) {
+    const sections = Arranger.getSections();
+    const current = sections[sectionIndex]?.patternIndex ?? 0;
+    openChoiceDialog({
+      title: `§${sectionIndex + 1} 选择类型`,
+      columns: Math.min(4, Sequencer.patternCount),
+      currentValue: current,
+      items: Array.from({ length: Sequencer.patternCount }, (_, i) => ({
+        value: i,
+        label: patternLabel(i),
+      })),
+      onPick: (value) => {
+        runEdit(() => {
+          Arranger.setSectionPattern(sectionIndex, Number(value));
+          renderArrangement();
+        });
+        scheduleAutosave();
+        setStatus(`§${sectionIndex + 1} → 类型 ${patternLabel(Number(value))}`);
+      },
+    });
+  }
 
   function refreshAfterHistory() {
-    els.keySelect.value = String(Sequencer.rootKey());
-    els.scaleSelect.value = Sequencer.scaleName();
+    updateKeyScalePickers();
     renderPatternTabs();
     renderStepLabels();
     renderSequencer();
@@ -187,7 +287,7 @@
     LayoutManager.init({
       onChange: () => scheduleAutosave(),
     });
-    populateKeySelect();
+    updateKeyScalePickers();
     if (!loadDraft()) {
       Sequencer.loadDemoPatterns();
     }
@@ -210,16 +310,6 @@
     }
     setStatus("就绪 — 草稿将自动保存");
     scheduleAutosave();
-  }
-
-  function populateKeySelect() {
-    Sequencer.KEYS.forEach((key, i) => {
-      const opt = document.createElement("option");
-      opt.value = String(i);
-      opt.textContent = key;
-      if (i === Sequencer.rootKey()) opt.selected = true;
-      els.keySelect.appendChild(opt);
-    });
   }
 
   function renderPatternTabs() {
@@ -336,25 +426,70 @@
     }
   }
 
+  function highlightNoteGridSelection() {
+    if (!els.noteGrid) return;
+    els.noteGrid.querySelectorAll(".note-btn").forEach((btn) => {
+      const midi = Number(btn.dataset.midi);
+      btn.classList.toggle(
+        "selected",
+        notePendingMidi != null && midi === notePendingMidi
+      );
+    });
+  }
+
+  function commitNoteSelection(midi) {
+    if (!noteEditContext) return;
+    const { trackId, step, patternIndex } = noteEditContext;
+    runEdit(() => {
+      Sequencer.toggleStep(patternIndex, trackId, step, midi);
+      els.noteDialog.close();
+      renderSequencer();
+    });
+    scheduleAutosave();
+  }
+
   function openNoteDialog(trackId, step, patternIndex) {
     noteEditContext = { trackId, step, patternIndex };
+    const cell = Sequencer.getPattern(patternIndex)[trackId][step];
+    notePendingMidi = cell.on && cell.note != null ? cell.note : null;
+    const track = Sequencer.TRACKS.find((t) => t.id === trackId);
+    if (els.noteDialogTitle && track) {
+      els.noteDialogTitle.textContent = `选择音高 · ${track.name}`;
+    }
+    if (els.notePreview) els.notePreview.checked = false;
+    updateNoteDialogHint();
+
     const notes = Sequencer.getScaleNotes();
     els.noteGrid.innerHTML = "";
     notes.forEach((midi) => {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "note-btn";
+      btn.className =
+        "note-btn" + (notePendingMidi === midi ? " selected" : "");
+      btn.dataset.midi = String(midi);
       btn.textContent = Sequencer.noteLabel(midi);
       btn.addEventListener("click", () => {
-        runEdit(() => {
-          Sequencer.toggleStep(patternIndex, trackId, step, midi);
-          els.noteDialog.close();
-          renderSequencer();
-        });
+        if (els.notePreview && els.notePreview.checked) {
+          AudioEngine.ensureContext();
+          AudioEngine.previewTrackNote(trackId, midi);
+          notePendingMidi = midi;
+          highlightNoteGridSelection();
+          setStatus(`试听 ${Sequencer.noteLabel(midi)}（${track?.name ?? ""}）`);
+          return;
+        }
+        commitNoteSelection(midi);
       });
       els.noteGrid.appendChild(btn);
     });
     els.noteDialog.showModal();
+  }
+
+  function updateNoteDialogHint() {
+    if (!els.noteDialogHint) return;
+    const previewOn = els.notePreview && els.notePreview.checked;
+    els.noteDialogHint.textContent = previewOn
+      ? "已开启试听：点击音高预听一次，满意后点「选用」写入格子。"
+      : "未开启试听：点击音高直接写入格子。";
   }
 
   function renderArrangement() {
@@ -365,16 +500,12 @@
       const slot = document.createElement("button");
       slot.type = "button";
       slot.className = "arrange-slot";
+      slot.title = "点击选择该段使用的类型";
       slot.innerHTML = `
         <span class="arrange-slot-index">§${i + 1}</span>
         <span class="arrange-slot-pattern">${patternLabel(sec.patternIndex)}</span>
       `;
-      slot.addEventListener("click", () => {
-        runEdit(() => {
-          Arranger.cycleSectionPattern(i, Sequencer.patternCount);
-          renderArrangement();
-        });
-      });
+      slot.addEventListener("click", () => openPatternPickerForSection(i));
       els.arrangeTimeline.appendChild(slot);
     });
 
@@ -430,14 +561,24 @@
       els.swingValue.textContent = `${swing}%`;
       scheduleAutosave();
     });
-    els.keySelect.addEventListener("change", () => {
-      Sequencer.setRootKey(Number(els.keySelect.value));
-      scheduleAutosave();
-    });
-    els.scaleSelect.addEventListener("change", () => {
-      Sequencer.setScaleName(els.scaleSelect.value);
-      scheduleAutosave();
-    });
+    if (els.btnKeyPick) {
+      els.btnKeyPick.addEventListener("click", openKeyPicker);
+    }
+    if (els.btnScalePick) {
+      els.btnScalePick.addEventListener("click", openScalePicker);
+    }
+    if (els.notePreview) {
+      els.notePreview.addEventListener("change", updateNoteDialogHint);
+    }
+    if (els.noteApply) {
+      els.noteApply.addEventListener("click", () => {
+        if (notePendingMidi != null) {
+          commitNoteSelection(notePendingMidi);
+        } else {
+          setStatus("请先点击一个音高");
+        }
+      });
+    }
 
     if (els.btnRemoveSection) {
       els.btnRemoveSection.addEventListener("click", () => {
@@ -814,8 +955,7 @@
       swing = data.swing;
       els.swingValue.textContent = `${swing}%`;
     }
-    els.keySelect.value = String(Sequencer.rootKey());
-    els.scaleSelect.value = Sequencer.scaleName();
+    updateKeyScalePickers();
     renderPatternTabs();
     renderStepLabels();
     renderSequencer();
