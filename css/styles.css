@@ -200,7 +200,7 @@ select {
 .main {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.5rem;
+  gap: var(--main-module-gap, 15px);
   flex: 1;
   padding-top: 0.4rem;
   min-width: 0;

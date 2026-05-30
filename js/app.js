@@ -67,38 +67,46 @@
   let moduleSpacingRaf = null;
 
   window.syncModuleSpacing = function syncModuleSpacing() {
-    if (typeof LayoutManager !== "undefined" && !LayoutManager.isAutoGap()) {
-      const g = LayoutManager.getManualGaps();
-      document.documentElement.style.setProperty("--chrome-module-gap", `${g.moduleGap}px`);
-      document.documentElement.style.setProperty("--main-module-gap", `${g.mainGap}px`);
+    const cfg =
+      typeof LayoutManager !== "undefined" && LayoutManager.getSpacingConfig
+        ? LayoutManager.getSpacingConfig()
+        : { autoGap: true, moduleGap: 0, mainGap: 15 };
+
+  const applyGaps = (mainGapPx, moduleGapPx) => {
+      document.documentElement.style.setProperty("--main-module-gap", `${mainGapPx}px`);
+      document.documentElement.style.setProperty("--chrome-module-gap", `${moduleGapPx}px`);
+    };
+
+    if (!cfg.autoGap) {
+      applyGaps(cfg.mainGap, cfg.moduleGap);
       return;
     }
+
+    applyGaps(cfg.mainGap, cfg.moduleGap);
+
     if (moduleSpacingRaf) cancelAnimationFrame(moduleSpacingRaf);
     moduleSpacingRaf = requestAnimationFrame(() => {
       moduleSpacingRaf = null;
       const main = document.querySelector(".main");
-      const modules = main ? [...main.querySelectorAll("fieldset.module")] : [];
-      if (!modules.length) return;
+      const visible = main
+        ? [...main.querySelectorAll("fieldset.module[data-module]:not([hidden])")]
+        : [];
+      if (!visible.length) return;
 
       const header = document.querySelector(".header");
       const footer = document.querySelector(".footer");
       const vh = window.innerHeight;
       const chrome = (header?.offsetHeight || 0) + (footer?.offsetHeight || 0) + 12;
-      const contentH = modules.reduce((sum, el) => sum + el.offsetHeight, 0);
-      const gaps = modules.length - 1;
+      const contentH = visible.reduce((sum, el) => sum + el.offsetHeight, 0);
+      const gaps = Math.max(0, visible.length - 1);
       const free = vh - chrome - contentH;
 
-      let gapPx;
-      if (gaps <= 0) {
-        gapPx = 0;
-      } else if (free > 4) {
-        gapPx = Math.min(14, Math.max(2, Math.floor(free / gaps)));
-      } else {
-        gapPx = Math.max(0, Math.min(4, 2 + Math.floor(free / gaps)));
+      let mainGap = cfg.mainGap;
+      if (gaps > 0 && free > 4) {
+        const autoGrow = Math.floor(free / gaps);
+        mainGap = Math.min(48, Math.max(cfg.mainGap, autoGrow));
       }
-
-      document.documentElement.style.setProperty("--chrome-module-gap", `${gapPx}px`);
-      document.documentElement.style.setProperty("--main-module-gap", `${gapPx}px`);
+      applyGaps(mainGap, cfg.moduleGap);
     });
   }
 

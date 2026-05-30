@@ -5,24 +5,24 @@ const LayoutManager = (() => {
   const MODULE_IDS = ["arrange", "sequencer", "mixer"];
 
   const DEFAULTS = {
-    order: ["arrange", "sequencer", "mixer"],
+    order: ["mixer", "sequencer", "arrange"],
     visible: { arrange: true, sequencer: true, mixer: true },
     autoGap: true,
-    moduleGap: 6,
-    mainGap: 6,
+    moduleGap: 0,
+    mainGap: 15,
     columns: 1,
-    appMaxWidth: 920,
-    chromeModulePadX: 4,
-    chromeModulePadB: 2,
-    chromeLegendSize: 0.6,
-    chromeToolbarGap: 2,
-    moduleRadius: 3,
-    contentSeqStep: 0.95,
+    appMaxWidth: 1120,
+    chromeModulePadX: 16,
+    chromeModulePadB: 11,
+    chromeLegendSize: 0.75,
+    chromeToolbarGap: 7,
+    moduleRadius: 8,
+    contentSeqStep: 1.3,
     contentSeqLabel: 3.25,
     contentArrangeSlotW: 40,
-    contentArrangeSlotH: 30,
-    contentMixerTrackW: 3.35,
-    compactHeader: false,
+    contentArrangeSlotH: 55,
+    contentMixerTrackW: "3.25rem",
+    compactHeader: true,
   };
 
   const PRESETS = {
@@ -86,7 +86,7 @@ const LayoutManager = (() => {
     s.columns = s.columns === 2 ? 2 : 1;
     s.appMaxWidth = clamp(Number(s.appMaxWidth) || DEFAULTS.appMaxWidth, 640, 1400);
     s.moduleGap = clamp(Number(s.moduleGap) ?? DEFAULTS.moduleGap, 0, 24);
-    s.mainGap = clamp(Number(s.mainGap) ?? DEFAULTS.mainGap, 0, 24);
+    s.mainGap = clamp(Number(s.mainGap) ?? DEFAULTS.mainGap, 0, 48);
     return s;
   }
 
@@ -100,12 +100,9 @@ const LayoutManager = (() => {
 
   function applyCssVars() {
     const r = document.documentElement;
-    const gap = state.autoGap ? null : state.moduleGap;
-    if (!state.autoGap) {
-      r.style.setProperty("--chrome-module-gap", `${state.moduleGap}px`);
-      r.style.setProperty("--main-module-gap", `${state.mainGap}px`);
-    }
-    r.style.setProperty("--layout-manual-gap", state.autoGap ? "" : `${state.moduleGap}px`);
+    /* 模块间距仅由 .main 的 gap（mainGap）控制；moduleGap 保留兼容，默认 0 */
+    r.style.setProperty("--chrome-module-gap", `${state.moduleGap}px`);
+    r.style.setProperty("--main-module-gap", `${state.mainGap}px`);
     r.style.setProperty("--chrome-module-pad-x", `${state.chromeModulePadX}px`);
     r.style.setProperty("--chrome-module-pad-b", `${state.chromeModulePadB}px`);
     r.style.setProperty("--chrome-legend-size", remPx(state.chromeLegendSize));
@@ -154,6 +151,7 @@ const LayoutManager = (() => {
   function setState(partial, silent) {
     state = normalizeState({ ...state, ...partial });
     apply();
+    if (typeof window.syncModuleSpacing === "function") window.syncModuleSpacing();
     if (!silent) notifyChange();
   }
 
@@ -679,6 +677,14 @@ const LayoutManager = (() => {
     return !!state.autoGap;
   }
 
+  function getSpacingConfig() {
+    return {
+      autoGap: !!state.autoGap,
+      moduleGap: state.moduleGap,
+      mainGap: state.mainGap,
+    };
+  }
+
   function getManualGaps() {
     return { moduleGap: state.moduleGap, mainGap: state.mainGap };
   }
@@ -692,6 +698,7 @@ const LayoutManager = (() => {
     setState,
     setEditMode,
     isAutoGap,
+    getSpacingConfig,
     getManualGaps,
     formatLayoutReport,
     formatLayoutCode,

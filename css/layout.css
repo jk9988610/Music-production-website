@@ -75,8 +75,8 @@
    CONTENT 内容 — 只改 --content-*（格子与滑条尺寸）
    ============================================================ */
 :root {
-  --chrome-module-gap: 4px;
-  --main-module-gap: 4px;
+  --chrome-module-gap: 0px;
+  --main-module-gap: 15px;
   --chrome-module-pad-x: 4px;
   --chrome-module-pad-b: 2px;
   --chrome-legend-size: 0.6rem;
@@ -92,7 +92,7 @@
 fieldset.module {
   border: 1px solid var(--border) !important;
   border-radius: 3px;
-  margin: 0 0 var(--chrome-module-gap) !important;
+  margin: 0 !important;
   padding: 0 var(--chrome-module-pad-x) var(--chrome-module-pad-b) !important;
   min-width: 0;
   width: 100%;
