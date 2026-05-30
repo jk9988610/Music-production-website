@@ -2,14 +2,16 @@
 
 基于 Web Audio 的在线音乐编曲网页，核心功能是**多轨步进音序**与**编曲时间轴**。
 
+**线上地址**：https://jk9988610.github.io/Music-production-website/
+
 ## 功能
 
-- **步进音序器**：底鼓、军鼓、镲、贝斯、和弦、主旋律共 7 轨，16 步/小节
-- **Pattern 库**：A–D 四个 Pattern，可独立编辑
-- **编曲时间轴**：将 Pattern 编排为完整段落，播放时按顺序循环
+- **步进音序器**：7 轨，步数可 ±4 调整（4–64 步），超出宽度可横向滚动
+- **Pattern 库**：默认 4 个，可 ± 增减（1–16 个），编曲栏与时间轴分配
+- **编曲时间轴**：多段编排，± 段增减，末尾「+段」；播放按段循环
 - **调性与音阶**：大调、小调、五声、多利亚；旋律轨按音阶选音
 - **混音**：每轨独立音量
-- **保存/加载**：项目数据保存在浏览器 `localStorage`
+- **草稿 / 存读**：自动保存草稿；顶栏存、读、清
 
 ## 本地预览
 
@@ -21,23 +23,66 @@ python3 -m http.server 8080
 
 然后访问 http://localhost:8080
 
-## GitHub Pages
+## GitHub Pages 与发布流程
 
-推送到 `main` 分支后，GitHub Actions 会自动将站点根目录部署到 Pages。
+站点由 **GitHub Actions** 在 **`main` 分支有 push 时**自动部署到 Pages（workflow：`.github/workflows/deploy-pages.yml`）。
 
-1. 仓库 **Settings → Pages → Build and deployment** 选择 **GitHub Actions**
-2. 首次部署完成后，站点地址一般为：  
-   `https://<用户名>.github.io/Music-production-website/`
+### 仓库首次配置
+
+1. **Settings → Pages → Build and deployment** 选择 **GitHub Actions**
+2. 部署完成后访问：`https://jk9988610.github.io/Music-production-website/`
+
+### 更新后默认必做一步（重要）
+
+> **仅推送到功能分支不会更新线上站点。**  
+> 功能开发、修 bug、改版本号之后，**默认必须合并进 `main` 并推送**，才会触发 Pages 重新部署。
+
+推荐流程：
+
+1. 修改代码，并更新根目录 **`VERSION`**（如 `1.4.5`）
+2. 提交到功能分支（可选）或直接在 `main` 上提交
+3. **合并到 `main`**（本地或 GitHub PR 合并均可）
+4. **推送 `main`**：
+   ```bash
+   git checkout main
+   git pull origin main
+   git merge <你的功能分支>   # 若已在 main 开发可跳过
+   git push origin main
+   ```
+5. 在 GitHub **Actions** 中确认 `Deploy to GitHub Pages` 成功（约 1–2 分钟）
+6. 验证线上版本（应显示新版本号与新的 build）：
+   ```bash
+   curl -s "https://jk9988610.github.io/Music-production-website/version.json"
+   ```
+7. 浏览器打开站点后使用 **Ctrl+F5**（Mac：**Cmd+Shift+R**）强刷，避免旧 JS/CSS 缓存
+
+**给 Cursor / Cloud Agent 的约定**：每次完成用户请求的代码更新后，若无特别说明，应默认执行「合并到 `main` + `git push origin main` + 确认 Pages 部署」，而不仅是推功能分支或只开 PR。
+
+部署时会自动：
+
+- 根据 `VERSION` 生成 `version.json` 与内嵌的 `js/version.js`（`BUNDLED_VERSION` / `BUNDLED_BUILD`）
+- 为 `index.html` 引用的 CSS/JS 追加 `?v=<build>` 缓存破坏参数
+
+### 用户端「更新」按钮
+
+- 顶栏显示的是**当前页面实际运行**的版本（内嵌 `BUNDLED_*`）
+- 「更新」会拉取线上 `version.json`，与运行版本对比；有新版本时确认后强制刷新
+- 若已部署新版本但界面仍像旧版，请先 **强刷** 再点「更新」
 
 ## 文件结构
 
 ```
 index.html          # 主页面
-css/styles.css      # 界面样式
+css/styles.css      # 基础样式
+css/layout.css      # 布局与模块外壳
 js/audio-engine.js  # Web Audio 合成
 js/sequencer.js     # Pattern 与音序数据
 js/arranger.js      # 编曲时间轴
 js/app.js           # 应用逻辑与 UI
+js/version.js       # 版本检测与更新
+js/app-logger.js    # 运行日志
+VERSION             # 发布版本号（部署时同步到 version.json）
+version.json        # 本地占位；线上由 CI 生成
 ```
 
 ## 快捷键
@@ -45,13 +90,4 @@ js/app.js           # 应用逻辑与 UI
 | 按键 | 功能 |
 |------|------|
 | Space | 播放 / 暂停 |
-| 1–4 | 切换 Pattern A–D |
-
-
-## 版本与更新
-
-- 主页页脚显示当前版本号（如 `v1.2.0`）
-- **日志**：查看运行日志，并可一键打印到浏览器控制台
-- **检查更新**：拉取线上 `version.json` 对比版本与构建号，有新版本时确认后自动刷新加载
-
-发布新版本时修改根目录 `VERSION` 文件并推送到 `main`，部署后用户点击「检查更新」即可获取。
+| 1–9 | 切换前 9 个 Pattern |
