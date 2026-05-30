@@ -37,6 +37,7 @@ const HelpGuide = (() => {
         <p><strong>时间轴：</strong>每个格子 = 播放时的一个小节。格上大字（A/B/C…）表示该段播放哪一型 Pattern。点击格子会在 A→B→C→… 间轮换，不会删除节奏。</p>
         <p><strong>与音序的关系：</strong>你在音序里编辑的是「某一型的 7 轨数据」；时间轴只负责「第几小节播放哪一型」。例如 §1–§4 用 A（主歌），§5–§8 用 B（副歌）。</p>
         <p>点击时间轴上的段落格，会弹出类型选择窗（A/B/C…），可自由选择该段使用的 Pattern。</p>
+        <p><strong>音序跟随：</strong>勾选后播放编曲时，音序会自动切换到当前段落对应的类型；手动切换类型标签或调整模块显示时会自动取消跟随。播放时仅在「正在播放的类型」音序页显示步进黄框。</p>
         <p><strong>典型曲式示例：</strong></p>
         <ul class="help-list">
           <li>§1–§2 → A（前奏 / 主歌节奏）</li>
@@ -68,7 +69,7 @@ const HelpGuide = (() => {
       html: `
         <h4>程序音高基础</h4>
         <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。顶栏「调」「阶」以网格弹窗选择（与选音弹窗同款样式），决定选音弹窗里有哪些音（约 C2–C6）。</p>
-        <p>选音弹窗可勾选 <strong>试听</strong>：点击音高会用该轨对应乐器预听一次，满意后点「选用」写入格子；不勾选时点击即写入。</p>
+        <p>选音弹窗默认勾选 <strong>试听</strong>：点击音高会用该轨对应乐器预听一次，满意后点「选用」写入格子；取消勾选后点击音高将直接写入。</p>
 
         <h4>底鼓 · 军鼓 · 镲</h4>
         <p><strong>无音高。</strong>只负责节奏框架。</p>
@@ -147,7 +148,7 @@ const HelpGuide = (() => {
         <ul class="help-list">
           <li><strong>自动草稿</strong>：改动后约 0.6 秒写入浏览器</li>
           <li><strong>存 / 读</strong>：浏览器内项目槽</li>
-          <li><strong>导出 / 导入</strong>：<code>.hfproj</code> JSON 文件，可备份或换设备</li>
+          <li><strong>导出 / 导入</strong>：导出可选 JSON（默认）、WAV、MP3；导入仍为 <code>.hfproj</code> JSON 工程文件</li>
           <li><strong>清</strong>：重置演示数据（慎用）</li>
         </ul>
         <h4>布局</h4>

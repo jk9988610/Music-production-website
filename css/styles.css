@@ -607,6 +607,52 @@ kbd {
   font-size: 0.72rem;
   line-height: 1.4;
   color: var(--text-muted);
+  min-height: 2.1rem;
+}
+
+.export-dialog .export-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.export-dialog .export-field span {
+  flex: 0 0 2.5rem;
+}
+
+.export-dialog .export-basename {
+  flex: 1 1 auto;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.export-dialog .export-hint {
+  min-height: 2.2rem;
+}
+
+.arrange-follow-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.arrange-follow-toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .control-pick .pitch-pick-btn {

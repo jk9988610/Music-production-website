@@ -77,6 +77,10 @@
               <button type="button" class="btn btn-sm" id="btnAddSection" title="在末尾增加一个编曲段落">+段</button>
             </div>
             <span class="arrange-info" id="arrangeInfo">8段</span>
+            <label class="arrange-follow-toggle" title="播放编曲时音序自动切换到当前段落的类型">
+              <input type="checkbox" id="chkSeqFollow">
+              <span>音序跟随</span>
+            </label>
           </div>
         </div>
         <div class="module-body arrange-scroll">
@@ -234,15 +238,38 @@
     <form method="dialog">
       <h3 id="noteDialogTitle">选择音高</h3>
       <label class="note-preview-toggle">
-        <input type="checkbox" id="notePreview">
+        <input type="checkbox" id="notePreview" checked>
         <span>试听</span>
       </label>
-      <p class="note-dialog-hint" id="noteDialogHint">勾选「试听」后点击音高可预听；再点「选用」写入格子。</p>
+      <p class="note-dialog-hint" id="noteDialogHint">点击音高可预听；点「选用」写入格子。关闭试听后点击音高将直接写入。</p>
       <div class="note-grid" id="noteGrid"></div>
       <menu>
         <button type="submit" value="cancel" class="btn btn-ghost">取消</button>
         <button type="button" id="noteClear" class="btn btn-ghost">清除</button>
         <button type="button" id="noteApply" class="btn btn-sm">选用</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="exportDialog" class="note-dialog export-dialog">
+    <form method="dialog" id="exportForm">
+      <h3>导出</h3>
+      <label class="export-field">
+        <span>格式</span>
+        <select id="exportFormat" class="pitch-select">
+          <option value="json" selected>JSON 项目 (.hfproj)</option>
+          <option value="wav">WAV 音频</option>
+          <option value="mp3">MP3 音频</option>
+        </select>
+      </label>
+      <label class="export-field">
+        <span>文件名</span>
+        <input type="text" id="exportBasename" class="export-basename" placeholder="留空则用时间戳" autocomplete="off">
+      </label>
+      <p class="note-dialog-hint export-hint">JSON 为完整工程；WAV/MP3 导出当前编曲时间轴混音（一段循环）。</p>
+      <menu>
+        <button type="submit" value="cancel" class="btn btn-ghost">取消</button>
+        <button type="submit" value="ok" class="btn btn-sm" id="btnExportConfirm">导出</button>
       </menu>
     </form>
   </dialog>
@@ -260,6 +287,7 @@
   <script src="js/app-logger.js"></script>
   <script src="js/version.js"></script>
   <script src="js/audio-engine.js"></script>
+  <script src="js/audio-export.js"></script>
   <script src="js/sequencer.js"></script>
   <script src="js/arranger.js"></script>
   <script src="js/layout.js"></script>

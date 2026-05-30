@@ -8,42 +8,11 @@ const AudioEngine = (() => {
 
   const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-  function ensureContext() {
-    if (!ctx) {
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
-      masterGain = ctx.createGain();
-      masterGain.gain.value = 0.85;
-      masterGain.connect(ctx.destination);
-    }
-    if (ctx.state === "suspended") {
-      ctx.resume();
-    }
-    return ctx;
-  }
-
-  function getTrackGain(trackId, defaultVol = 0.8) {
-    ensureContext();
-    if (!trackGains[trackId]) {
-      const g = ctx.createGain();
-      g.gain.value = defaultVol;
-      g.connect(masterGain);
-      trackGains[trackId] = g;
-    }
-    return trackGains[trackId];
-  }
-
-  function setTrackVolume(trackId, vol) {
-    const g = getTrackGain(trackId);
-    g.gain.setTargetAtTime(vol, ctx.currentTime, 0.02);
-  }
-
   function midiToFreq(midi) {
     return 440 * Math.pow(2, (midi - 69) / 12);
   }
 
-  function playKick(time, gain = 0.9) {
-    const c = ensureContext();
-    const out = getTrackGain("kick", 0.9);
+  function playKickOn(c, out, time, gain = 0.9) {
     const osc = c.createOscillator();
     const env = c.createGain();
     osc.type = "sine";
@@ -57,9 +26,7 @@ const AudioEngine = (() => {
     osc.stop(time + 0.4);
   }
 
-  function playSnare(time, gain = 0.75) {
-    const c = ensureContext();
-    const out = getTrackGain("snare", 0.8);
+  function playSnareOn(c, out, time, gain = 0.75) {
     const bufferSize = c.sampleRate * 0.2;
     const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
     const data = buffer.getChannelData(0);
@@ -91,9 +58,7 @@ const AudioEngine = (() => {
     tone.stop(time + 0.1);
   }
 
-  function playHat(time, open = false, gain = 0.5) {
-    const c = ensureContext();
-    const out = getTrackGain(open ? "openhat" : "hihat", 0.65);
+  function playHatOn(c, out, time, open = false, gain = 0.5) {
     const dur = open ? 0.25 : 0.05;
     const bufferSize = Math.floor(c.sampleRate * dur);
     const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
@@ -116,9 +81,7 @@ const AudioEngine = (() => {
     noise.stop(time + dur + 0.02);
   }
 
-  function playSynth(time, midi, type, duration, gain, trackId) {
-    const c = ensureContext();
-    const out = getTrackGain(trackId, 0.7);
+  function playSynthOn(c, out, time, midi, type, duration, gain) {
     const freq = midiToFreq(midi);
     const osc = c.createOscillator();
     const env = c.createGain();
@@ -141,39 +104,87 @@ const AudioEngine = (() => {
     osc.stop(time + release + 0.05);
   }
 
-  function playChord(time, rootMidi, duration, gain) {
-    const intervals = [0, 4, 7];
-    intervals.forEach((semi, i) => {
-      playSynth(time, rootMidi + semi, "chord", duration, gain * (i === 0 ? 0.5 : 0.35), "chord");
+  function playChordOn(c, out, time, rootMidi, duration, gain) {
+    [0, 4, 7].forEach((semi, i) => {
+      playSynthOn(
+        c,
+        out,
+        time,
+        rootMidi + semi,
+        "chord",
+        duration,
+        gain * (i === 0 ? 0.5 : 0.35)
+      );
     });
   }
 
-  function playTrackSound(trackId, time, noteMidi, stepDuration) {
+  function playTrackSoundOn(c, outGetter, trackId, time, noteMidi, stepDuration) {
+    const out = outGetter(trackId);
     switch (trackId) {
       case "kick":
-        playKick(time);
+        playKickOn(c, out, time);
         break;
       case "snare":
-        playSnare(time);
+        playSnareOn(c, out, time);
         break;
       case "hihat":
-        playHat(time, false);
+        playHatOn(c, out, time, false);
         break;
       case "openhat":
-        playHat(time, true, 0.55);
+        playHatOn(c, out, time, true, 0.55);
         break;
       case "bass":
-        if (noteMidi != null) playSynth(time, noteMidi, "bass", stepDuration * 0.95, 0.65, "bass");
+        if (noteMidi != null) {
+          playSynthOn(c, out, time, noteMidi, "bass", stepDuration * 0.95, 0.65);
+        }
         break;
       case "chord":
-        if (noteMidi != null) playChord(time, noteMidi, stepDuration * 0.9, 0.45);
+        if (noteMidi != null) {
+          playChordOn(c, out, time, noteMidi, stepDuration * 0.9, 0.45);
+        }
         break;
       case "lead":
-        if (noteMidi != null) playSynth(time, noteMidi, "lead", stepDuration * 0.85, 0.4, "lead");
+        if (noteMidi != null) {
+          playSynthOn(c, out, time, noteMidi, "lead", stepDuration * 0.85, 0.4);
+        }
         break;
       default:
         break;
     }
+  }
+
+  function ensureContext() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = ctx.createGain();
+      masterGain.gain.value = 0.85;
+      masterGain.connect(ctx.destination);
+    }
+    if (ctx.state === "suspended") {
+      ctx.resume();
+    }
+    return ctx;
+  }
+
+  function getTrackGain(trackId, defaultVol = 0.8) {
+    ensureContext();
+    if (!trackGains[trackId]) {
+      const g = ctx.createGain();
+      g.gain.value = defaultVol;
+      g.connect(masterGain);
+      trackGains[trackId] = g;
+    }
+    return trackGains[trackId];
+  }
+
+  function setTrackVolume(trackId, vol) {
+    const g = getTrackGain(trackId);
+    g.gain.setTargetAtTime(vol, ctx.currentTime, 0.02);
+  }
+
+  function playTrackSound(trackId, time, noteMidi, stepDuration) {
+    const c = ensureContext();
+    playTrackSoundOn(c, (id) => getTrackGain(id), trackId, time, noteMidi, stepDuration);
   }
 
   function previewTrackNote(trackId, midi, duration = 0.28) {
@@ -182,12 +193,33 @@ const AudioEngine = (() => {
     playTrackSound(trackId, time, midi, duration);
   }
 
+  function createOfflineScheduler(volumes) {
+    const gains = {};
+    return {
+      schedule(c, master, trackId, time, noteMidi, stepDuration) {
+        if (!gains[trackId]) {
+          const g = c.createGain();
+          const def =
+            volumes[trackId] ??
+            (trackId === "kick" || trackId === "snare" ? 0.85 : 0.75);
+          g.gain.value = def;
+          g.connect(master);
+          gains[trackId] = g;
+        }
+        const outGetter = (id) => gains[id];
+        playTrackSoundOn(c, outGetter, trackId, time, noteMidi, stepDuration);
+      },
+    };
+  }
+
   return {
     NOTE_NAMES,
     ensureContext,
     setTrackVolume,
     playTrackSound,
+    playTrackSoundOn,
     previewTrackNote,
+    createOfflineScheduler,
     midiToFreq,
     getContext: () => ctx,
   };

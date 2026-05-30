@@ -43,7 +43,7 @@ jobs:
           sed -i 's|<meta name="hf-app-version" content="[^"]*"|<meta name="hf-app-version" content="'"${VERSION}"'"|' _site/index.html
           sed -i 's|<meta name="hf-app-build" content="[^"]*"|<meta name="hf-app-build" content="'"${BUILD}"'"|' _site/index.html
           sed -i 's|class="app-version-value">[^<]*<|class="app-version-value">'"${VERSION}"'<|' _site/index.html
-          for f in app-logger.js version.js layout.js project-io.js help-guide.js history.js audio-engine.js sequencer.js arranger.js app.js; do
+          for f in app-logger.js version.js layout.js project-io.js help-guide.js history.js audio-engine.js audio-export.js sequencer.js arranger.js app.js; do
             sed -i "s|src=\"js/${f}\"|src=\"js/${f}?v=${BUILD}\"|" _site/index.html
           done
 

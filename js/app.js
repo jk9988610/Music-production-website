@@ -10,6 +10,8 @@
   let playMode = "pattern";
   let currentStep = -1;
   let currentArrangeSection = -1;
+  let playingPatternIndex = -1;
+  let seqFollowEnabled = false;
   let schedulerTimer = null;
   let nextStepTime = 0;
   let stepCounter = 0;
@@ -43,6 +45,11 @@
     mixer: $("#mixer"),
     statusText: $("#statusText"),
     btnExport: $("#btnExport"),
+    exportDialog: $("#exportDialog"),
+    exportForm: $("#exportForm"),
+    exportFormat: $("#exportFormat"),
+    exportBasename: $("#exportBasename"),
+    chkSeqFollow: $("#chkSeqFollow"),
     btnImport: $("#btnImport"),
     projectFileInput: $("#projectFileInput"),
     btnSave: $("#btnSave"),
@@ -287,6 +294,7 @@
     LayoutManager.init({
       onChange: () => scheduleAutosave(),
     });
+    wireSeqFollowLayoutHooks();
     updateKeyScalePickers();
     if (!loadDraft()) {
       Sequencer.loadDemoPatterns();
@@ -322,7 +330,7 @@
       btn.setAttribute("role", "tab");
       btn.setAttribute("aria-selected", i === Sequencer.currentPattern());
       btn.dataset.pattern = i;
-      btn.addEventListener("click", () => selectPattern(i));
+      btn.addEventListener("click", () => selectPattern(i, { userInitiated: true }));
       els.patternTabs.appendChild(btn);
     }
     if (els.btnAddPattern) {
@@ -334,10 +342,47 @@
     updateTypeCountUI();
   }
 
-  function selectPattern(index) {
+  function setSeqFollowEnabled(on, reason) {
+    seqFollowEnabled = !!on;
+    if (els.chkSeqFollow) els.chkSeqFollow.checked = seqFollowEnabled;
+    if (!seqFollowEnabled) {
+      updatePlayhead(currentStep, currentArrangeSection);
+    }
+    if (reason && !seqFollowEnabled) {
+      setStatus(reason);
+    }
+  }
+
+  function onLayoutOrViewChanged() {
+    if (seqFollowEnabled) {
+      setSeqFollowEnabled(false, "已切换模块显示，音序跟随已关闭");
+    }
+  }
+
+  function wireSeqFollowLayoutHooks() {
+    ["arrange", "sequencer", "mixer"].forEach((id) => {
+      const cb = document.getElementById(`layoutVis_${id}`);
+      if (cb) cb.addEventListener("change", onLayoutOrViewChanged);
+    });
+  }
+
+  function followPlaybackPattern(patternIndex) {
+    if (!seqFollowEnabled || playMode !== "arrange" || !playing) return;
+    if (Sequencer.currentPattern() !== patternIndex) {
+      Sequencer.setCurrentPattern(patternIndex);
+      renderPatternTabs();
+      renderSequencer();
+    }
+  }
+
+  function selectPattern(index, options = {}) {
+    if (options.userInitiated && seqFollowEnabled) {
+      setSeqFollowEnabled(false, "已切换类型，音序跟随已关闭");
+    }
     Sequencer.setCurrentPattern(index);
     renderPatternTabs();
     renderSequencer();
+    if (playing) updatePlayhead(currentStep, currentArrangeSection);
     setStatus(`类型 ${patternLabel(index)}`);
     scheduleAutosave();
   }
@@ -456,8 +501,7 @@
     if (els.noteDialogTitle && track) {
       els.noteDialogTitle.textContent = `选择音高 · ${track.name}`;
     }
-    if (els.notePreview) els.notePreview.checked = false;
-    updateNoteDialogHint();
+    if (els.notePreview) els.notePreview.checked = true;
 
     const notes = Sequencer.getScaleNotes();
     els.noteGrid.innerHTML = "";
@@ -482,14 +526,6 @@
       els.noteGrid.appendChild(btn);
     });
     els.noteDialog.showModal();
-  }
-
-  function updateNoteDialogHint() {
-    if (!els.noteDialogHint) return;
-    const previewOn = els.notePreview && els.notePreview.checked;
-    els.noteDialogHint.textContent = previewOn
-      ? "已开启试听：点击音高预听一次，满意后点「选用」写入格子。"
-      : "未开启试听：点击音高直接写入格子。";
   }
 
   function renderArrangement() {
@@ -567,9 +603,21 @@
     if (els.btnScalePick) {
       els.btnScalePick.addEventListener("click", openScalePicker);
     }
-    if (els.notePreview) {
-      els.notePreview.addEventListener("change", updateNoteDialogHint);
+    if (els.chkSeqFollow) {
+      els.chkSeqFollow.addEventListener("change", () => {
+        if (els.chkSeqFollow.checked) {
+          setSeqFollowEnabled(true);
+          if (playing && playMode === "arrange" && playingPatternIndex >= 0) {
+            followPlaybackPattern(playingPatternIndex);
+          }
+          setStatus("音序跟随已开启");
+        } else {
+          setSeqFollowEnabled(false);
+          setStatus("音序跟随已关闭");
+        }
+      });
     }
+
     if (els.noteApply) {
       els.noteApply.addEventListener("click", () => {
         if (notePendingMidi != null) {
@@ -696,16 +744,29 @@
 
 
 
-    if (els.btnExport) {
+    if (els.btnExport && els.exportDialog) {
       els.btnExport.addEventListener("click", () => {
+        if (els.exportFormat) els.exportFormat.value = "json";
+        if (els.exportBasename) els.exportBasename.value = "";
+        els.exportDialog.showModal();
+      });
+    }
+    if (els.exportForm && els.exportDialog) {
+      els.exportForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const submitter = e.submitter;
+        if (!submitter || submitter.value !== "ok") {
+          els.exportDialog.close();
+          return;
+        }
+        const format = els.exportFormat?.value || "json";
+        const name = els.exportBasename?.value?.trim() || undefined;
+        els.exportDialog.close();
         try {
-          const suggested = prompt("导出文件名（不含扩展名，留空用时间戳）", "");
-          if (suggested === null) return;
-          const { filename } = ProjectIO.exportToFile(getProjectData(), {
-            name: suggested.trim() || undefined,
-          });
-          AppLogger.info("项目已导出", filename);
-          setStatus(`已导出 ${filename}`);
+          setStatus(format === "json" ? "正在导出项目…" : "正在渲染并导出音频，请稍候…");
+          const result = await ProjectIO.exportProject(getProjectData(), { format, name });
+          AppLogger.info("已导出", result.filename);
+          setStatus(`已导出 ${result.filename}`);
         } catch (err) {
           AppLogger.error("导出失败", err.message);
           setStatus("导出失败：" + err.message);
@@ -792,7 +853,7 @@
       }
       if (e.key >= "1" && e.key <= "9") {
         const pi = Number(e.key) - 1;
-        if (pi < Sequencer.patternCount) selectPattern(pi);
+        if (pi < Sequencer.patternCount) selectPattern(pi, { userInitiated: true });
       }
     });
   }
@@ -825,6 +886,12 @@
     stepCounter = 0;
     currentStep = -1;
     currentArrangeSection = 0;
+    playingPatternIndex = -1;
+    if (mode === "arrange" && seqFollowEnabled) {
+      const sections = Arranger.getSections();
+      const pi = sections[0]?.patternIndex ?? 0;
+      followPlaybackPattern(pi);
+    }
     nextStepTime = AudioEngine.getContext().currentTime + 0.05;
     els.btnPlay.classList.add("playing");
     els.btnPlay.textContent = "⏸";
@@ -841,6 +908,7 @@
     els.btnPlay.classList.remove("playing");
     els.btnPlay.textContent = "▶";
     clearPlayhead();
+    playingPatternIndex = -1;
     setStatus("已暂停");
   }
 
@@ -849,6 +917,7 @@
     pause();
     currentStep = -1;
     currentArrangeSection = -1;
+    playingPatternIndex = -1;
     stepCounter = 0;
     setStatus("已停止");
   }
@@ -885,6 +954,10 @@
     }
 
     currentStep = step;
+    playingPatternIndex = patternIndex;
+    if (playMode === "arrange") {
+      followPlaybackPattern(patternIndex);
+    }
     updatePlayhead(step, currentArrangeSection);
 
     const pattern = Sequencer.getPattern(patternIndex);
@@ -909,11 +982,20 @@
     $$(".step-cell.current").forEach((el) => el.classList.remove("current"));
     $$(".arrange-slot.playing").forEach((el) => el.classList.remove("playing"));
 
-    const rows = els.tracks.querySelectorAll(".track-row");
-    rows.forEach((row) => {
-      const cells = row.querySelectorAll(".step-cell");
-      if (cells[step]) cells[step].classList.add("current");
-    });
+    const showSeqPlayhead =
+      playing &&
+      step >= 0 &&
+      (playMode !== "arrange" ||
+        (playingPatternIndex >= 0 &&
+          Sequencer.currentPattern() === playingPatternIndex));
+
+    if (showSeqPlayhead) {
+      const rows = els.tracks.querySelectorAll(".track-row");
+      rows.forEach((row) => {
+        const cells = row.querySelectorAll(".step-cell");
+        if (cells[step]) cells[step].classList.add("current");
+      });
+    }
 
     if (playMode === "arrange" && sectionIndex >= 0) {
       const slots = els.arrangeTimeline.querySelectorAll(".arrange-slot:not(.arrange-slot-add)");
@@ -924,6 +1006,7 @@
   function clearPlayhead() {
     $$(".step-cell.current").forEach((el) => el.classList.remove("current"));
     $$(".arrange-slot.playing").forEach((el) => el.classList.remove("playing"));
+    playingPatternIndex = -1;
   }
 
   function getProjectData() {

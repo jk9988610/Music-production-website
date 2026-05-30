@@ -1,10 +1,16 @@
 /**
- * 编曲项目文件导入 / 导出（.hfproj JSON）
+ * 编曲项目文件导入 / 导出（.hfproj JSON · WAV · MP3）
  */
 const ProjectIO = (() => {
   const FORMAT_VERSION = 2;
   const FILE_EXT = ".hfproj";
   const ACCEPT = ".hfproj,.json,application/json";
+
+  const EXPORT_FORMATS = [
+    { id: "json", label: "JSON 项目 (.hfproj)", ext: FILE_EXT },
+    { id: "wav", label: "WAV 音频", ext: ".wav" },
+    { id: "mp3", label: "MP3 音频", ext: ".mp3" },
+  ];
 
   function buildBundle(project, extraMeta = {}) {
     const appVer =
@@ -41,21 +47,29 @@ const ProjectIO = (() => {
     throw new Error("不是 HarmonyForge 项目文件");
   }
 
-  function defaultFilename() {
+  function defaultBasename() {
     const d = new Date();
     const pad = (n) => String(n).padStart(2, "0");
-    const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
-    return `harmonyforge-${stamp}${FILE_EXT}`;
+    return `harmonyforge-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
   }
 
-  function exportToFile(project, options = {}) {
-    const name =
-      (options.name && String(options.name).trim()) ||
-      defaultFilename().replace(FILE_EXT, "");
-    const filename = name.endsWith(FILE_EXT) ? name : `${name}${FILE_EXT}`;
-    const bundle = buildBundle(project, { title: options.title || name });
+  function resolveBasename(options = {}) {
+    const raw =
+      (options.name && String(options.name).trim()) || defaultBasename();
+    return raw.replace(/\.(hfproj|json|wav|mp3)$/i, "");
+  }
+
+  function exportJsonToFile(project, options = {}) {
+    const base = resolveBasename(options);
+    const filename = base.endsWith(FILE_EXT) ? base : `${base}${FILE_EXT}`;
+    const bundle = buildBundle(project, { title: options.title || base });
     const json = JSON.stringify(bundle, null, 2);
     const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+    downloadBlob(blob, filename);
+    return { filename, bytes: json.length };
+  }
+
+  function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -65,7 +79,27 @@ const ProjectIO = (() => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    return { filename, bytes: json.length };
+  }
+
+  async function exportProject(project, options = {}) {
+    const format = (options.format || "json").toLowerCase();
+    const base = resolveBasename(options);
+
+    if (format === "json") {
+      return exportJsonToFile(project, options);
+    }
+    if (format === "wav" || format === "mp3") {
+      if (typeof AudioExport === "undefined") {
+        throw new Error("音频导出模块未加载");
+      }
+      return AudioExport.exportAudio(project, format, base);
+    }
+    throw new Error(`不支持的导出格式：${format}`);
+  }
+
+  /** @deprecated 使用 exportProject */
+  function exportToFile(project, options = {}) {
+    return exportProject(project, { ...options, format: "json" });
   }
 
   function readFileAsText(file) {
@@ -93,8 +127,10 @@ const ProjectIO = (() => {
     FORMAT_VERSION,
     FILE_EXT,
     ACCEPT,
+    EXPORT_FORMATS,
     buildBundle,
     extractProject,
+    exportProject,
     exportToFile,
     importFromFile,
   };
