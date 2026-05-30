@@ -13,7 +13,7 @@
 <body>
   <div class="app" id="app">
     <header class="header">
-      <div class="header-line">
+      <div class="header-row header-row-top">
         <div class="brand">
           <span class="brand-icon" aria-hidden="true">◈</span>
           <h1>HarmonyForge</h1>
@@ -33,30 +33,30 @@
             <output id="swingValue">0</output>
           </label>
         </div>
-        <div class="header-actions">
-          <label class="control-inline">
-            <span>调</span>
-            <select id="keySelect"></select>
-          </label>
-          <label class="control-inline">
-            <span>阶</span>
-            <select id="scaleSelect">
-              <option value="major">大调</option>
-              <option value="minor">小调</option>
-              <option value="pentatonic">五声</option>
-              <option value="dorian">多利亚</option>
-            </select>
-          </label>
-          <span class="header-divider" aria-hidden="true"></span>
-          <button type="button" class="btn btn-ghost btn-compact" id="btnSave">存</button>
-          <button type="button" class="btn btn-ghost btn-compact" id="btnLoad">读</button>
-          <button type="button" class="btn btn-ghost btn-compact" id="btnClear">清</button>
-          <span class="header-divider" aria-hidden="true"></span>
-          <button type="button" class="btn btn-ghost btn-compact" id="btnHelp" title="帮助">帮助</button>
-          <button type="button" class="btn btn-ghost btn-compact" id="btnLogs" title="日志">日志</button>
-          <button type="button" class="btn btn-ghost btn-compact" id="btnDebugLog" title="调试日志">调试</button>
-          <button type="button" class="btn btn-ghost btn-compact" id="btnUpdate" title="检查更新">更新</button>
-        </div>
+      </div>
+      <div class="header-row header-row-sub">
+        <label class="control-inline">
+          <span>调</span>
+          <select id="keySelect"></select>
+        </label>
+        <label class="control-inline">
+          <span>阶</span>
+          <select id="scaleSelect">
+            <option value="major">大调</option>
+            <option value="minor">小调</option>
+            <option value="pentatonic">五声</option>
+            <option value="dorian">多利亚</option>
+          </select>
+        </label>
+        <span class="header-divider" aria-hidden="true"></span>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnSave">存</button>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnLoad">读</button>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnClear">清</button>
+        <span class="header-divider" aria-hidden="true"></span>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnHelp" title="帮助">帮助</button>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnLogs" title="日志">日志</button>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnDebugLog" title="调试日志">调试</button>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnUpdate" title="检查更新">更新</button>
       </div>
     </header>
 
@@ -74,7 +74,7 @@
       </section>
 
       <section class="panel panel-sequencer" aria-label="步进音序器">
-        <div class="sequencer-bar"><h2>音序</h2></div>
+        <h2 class="panel-title">音序</h2>
         <div class="sequencer-wrap">
           <div class="step-labels" id="stepLabels"></div>
           <div class="tracks" id="tracks"></div>
@@ -82,10 +82,8 @@
       </section>
 
       <section class="panel panel-mixer" aria-label="混音">
-        <div class="mixer-bar">
-          <h2>混音</h2>
-          <div class="mixer-tracks mixer-horizontal" id="mixer"></div>
-        </div>
+        <h2 class="panel-title">混音</h2>
+        <div class="mixer-tracks mixer-horizontal" id="mixer"></div>
       </section>
     </main>
 
