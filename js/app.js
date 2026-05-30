@@ -199,7 +199,7 @@
       els.arrangeTimeline.appendChild(slot);
     });
 
-    els.arrangeInfo.textContent = `${sections.length} 段 · 每段 1 小节 (16 步)`;
+    els.arrangeInfo.textContent = `${sections.length}段`;
   }
 
   function renderMixer() {

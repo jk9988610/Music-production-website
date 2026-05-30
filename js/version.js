@@ -2,7 +2,7 @@
  * 版本管理与在线更新检测
  */
 const AppVersion = (() => {
-  const CURRENT = "1.3.1";
+  const CURRENT = "1.3.2";
   const BUILD = "dev";
   const STORAGE_BUILD = "hf-last-build";
 
@@ -91,7 +91,7 @@ const AppVersion = (() => {
       if (logContent) logContent.textContent = AppLogger.formatAll();
       if (logDialog && !logDialog.open) logDialog.showModal();
     };
-    ["btnDebugLog", "btnDebugLogFooter"].forEach((id) => {
+    ["btnDebugLog"].forEach((id) => {
       const btn = document.getElementById(id);
       if (btn) btn.addEventListener("click", handler);
     });

@@ -758,3 +758,216 @@ kbd {
   color: var(--text-muted);
   line-height: 1.4;
 }
+
+/* === Compact layout overrides === */
+:root {
+  --seq-label-col: 3.25rem;
+  --seq-step-size: 1.05rem;
+  --radius: 6px;
+}
+
+.header {
+  padding: 0.3rem 0;
+}
+
+.header-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+
+.brand {
+  gap: 0.35rem;
+}
+
+.brand-icon {
+  font-size: 1.1rem;
+}
+
+.brand h1 {
+  font-size: 0.95rem;
+}
+
+.brand-tag {
+  display: none;
+}
+
+.transport,
+.header-actions {
+  gap: 0.3rem 0.4rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.transport {
+  flex: 1 1 auto;
+}
+
+.header-actions {
+  justify-content: flex-end;
+}
+
+.header-divider {
+  width: 1px;
+  height: 0.9rem;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.btn-icon-sm {
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 0.7rem;
+}
+
+.btn-compact {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.68rem;
+}
+
+.control-inline {
+  gap: 0.25rem;
+  font-size: 0.68rem;
+}
+
+.control-inline input[type="range"] {
+  width: 52px;
+}
+
+.btn {
+  font-size: 0.75rem;
+}
+
+.btn-sm {
+  padding: 0.15rem 0.4rem;
+  font-size: 0.65rem;
+}
+
+.home-version {
+  font-size: 0.62rem;
+  padding: 0.1rem 0.35rem;
+}
+
+.main {
+  gap: 0.3rem;
+  padding-top: 0.25rem;
+  grid-template-columns: 1fr !important;
+}
+
+.panel {
+  padding: 0.35rem 0.45rem;
+  margin-bottom: 0.25rem;
+}
+
+.arrange-bar,
+.sequencer-bar,
+.mixer-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.arrange-bar h2,
+.sequencer-bar h2,
+.mixer-bar h2 {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.arrange-bar .pattern-tabs {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-head,
+.panel-head-row,
+.arrange-toolbar {
+  display: none;
+}
+
+.arrange-info {
+  font-size: 0.65rem;
+  white-space: nowrap;
+}
+
+.arrange-slot {
+  width: 42px;
+  min-height: 34px;
+  padding: 0.2rem 0.25rem;
+}
+
+.arrange-slot-pattern {
+  font-size: 0.9rem;
+  margin-top: 0.1rem;
+}
+
+.arrange-slot-index {
+  font-size: 0.55rem;
+}
+
+.arrange-scroll,
+.sequencer-wrap {
+  padding: 0.1rem 0.2rem 0.2rem;
+  margin: 0;
+}
+
+.pattern-tab {
+  padding: 0.15rem 0.45rem;
+  font-size: 0.68rem;
+}
+
+.track-name {
+  font-size: 0.68rem;
+}
+
+.mixer-horizontal {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 0.05rem;
+}
+
+.mixer-horizontal .mixer-track {
+  flex: 0 0 4.25rem;
+  min-width: 4.25rem;
+}
+
+.mixer-horizontal .mixer-track label {
+  font-size: 0.6rem;
+  margin-bottom: 0.05rem;
+}
+
+.mixer-horizontal .mixer-track input[type="range"] {
+  height: 0.3rem;
+}
+
+.sidebar {
+  display: none;
+}
+
+.footer-meta,
+.footer-credit,
+.version-badge {
+  display: none !important;
+}
+
+.footer-slim {
+  padding: 0.15rem 0;
+  font-size: 0.62rem;
+  border-top: 1px solid var(--border);
+}
+
+#statusText {
+  color: var(--accent-dim);
+}

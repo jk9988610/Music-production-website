@@ -13,56 +13,60 @@
 <body>
   <div class="app" id="app">
     <header class="header">
-      <div class="brand">
-        <span class="brand-icon" aria-hidden="true">◈</span>
-        <h1>HarmonyForge</h1>
-        <span class="brand-tag">编曲工作站</span>
-        <span class="home-version" title="当前版本">v<span class="app-version-value">—</span></span>
-      </div>
-      <div class="transport">
-        <button type="button" class="btn btn-icon" id="btnPlay" title="播放 (Space)" aria-label="播放">▶</button>
-        <button type="button" class="btn btn-icon" id="btnStop" title="停止" aria-label="停止">■</button>
-        <label class="control-inline">
-          <span>BPM</span>
-          <input type="range" id="bpm" min="60" max="180" value="120">
-          <output id="bpmValue">120</output>
-        </label>
-        <label class="control-inline">
-          <span>摇摆</span>
-          <input type="range" id="swing" min="0" max="60" value="0">
-          <output id="swingValue">0%</output>
-        </label>
-      </div>
-      <div class="header-actions">
-        <label class="control-inline">
-          <span>调性</span>
-          <select id="keySelect"></select>
-        </label>
-        <label class="control-inline">
-          <span>音阶</span>
-          <select id="scaleSelect">
-            <option value="major">大调</option>
-            <option value="minor">自然小调</option>
-            <option value="pentatonic">五声音阶</option>
-            <option value="dorian">多利亚</option>
-          </select>
-        </label>
-        <button type="button" class="btn btn-ghost" id="btnSave">保存</button>
-        <button type="button" class="btn btn-ghost" id="btnLoad">加载</button>
-        <button type="button" class="btn btn-ghost" id="btnClear">清空</button>
-        <button type="button" class="btn btn-ghost" id="btnDebugLog" title="打印调试日志到控制台（含版本号）">调试日志</button>
+      <div class="header-line">
+        <div class="brand">
+          <span class="brand-icon" aria-hidden="true">◈</span>
+          <h1>HarmonyForge</h1>
+          <span class="home-version" title="当前版本">v<span class="app-version-value">—</span></span>
+        </div>
+        <div class="transport">
+          <button type="button" class="btn btn-icon btn-icon-sm" id="btnPlay" title="播放 (Space)" aria-label="播放">▶</button>
+          <button type="button" class="btn btn-icon btn-icon-sm" id="btnStop" title="停止" aria-label="停止">■</button>
+          <label class="control-inline">
+            <span>BPM</span>
+            <input type="range" id="bpm" min="60" max="180" value="120">
+            <output id="bpmValue">120</output>
+          </label>
+          <label class="control-inline">
+            <span>摆</span>
+            <input type="range" id="swing" min="0" max="60" value="0">
+            <output id="swingValue">0</output>
+          </label>
+        </div>
+        <div class="header-actions">
+          <label class="control-inline">
+            <span>调</span>
+            <select id="keySelect"></select>
+          </label>
+          <label class="control-inline">
+            <span>阶</span>
+            <select id="scaleSelect">
+              <option value="major">大调</option>
+              <option value="minor">小调</option>
+              <option value="pentatonic">五声</option>
+              <option value="dorian">多利亚</option>
+            </select>
+          </label>
+          <span class="header-divider" aria-hidden="true"></span>
+          <button type="button" class="btn btn-ghost btn-compact" id="btnSave">存</button>
+          <button type="button" class="btn btn-ghost btn-compact" id="btnLoad">读</button>
+          <button type="button" class="btn btn-ghost btn-compact" id="btnClear">清</button>
+          <span class="header-divider" aria-hidden="true"></span>
+          <button type="button" class="btn btn-ghost btn-compact" id="btnHelp" title="帮助">帮助</button>
+          <button type="button" class="btn btn-ghost btn-compact" id="btnLogs" title="日志">日志</button>
+          <button type="button" class="btn btn-ghost btn-compact" id="btnDebugLog" title="调试日志">调试</button>
+          <button type="button" class="btn btn-ghost btn-compact" id="btnUpdate" title="检查更新">更新</button>
+        </div>
       </div>
     </header>
 
     <main class="main">
       <section class="panel panel-arrange" aria-label="编曲时间轴">
-        <div class="panel-head panel-head-row">
+        <div class="arrange-bar">
           <h2>编曲</h2>
           <div class="pattern-tabs" id="patternTabs" role="tablist"></div>
-        </div>
-        <div class="arrange-toolbar">
-          <button type="button" class="btn btn-sm" id="btnAddSection">+ 段</button>
-          <span class="arrange-info" id="arrangeInfo">8 段</span>
+          <button type="button" class="btn btn-sm" id="btnAddSection">+段</button>
+          <span class="arrange-info" id="arrangeInfo">8段</span>
         </div>
         <div class="arrange-scroll">
           <div class="arrange-timeline" id="arrangeTimeline"></div>
@@ -70,33 +74,23 @@
       </section>
 
       <section class="panel panel-sequencer" aria-label="步进音序器">
-        <div class="panel-head">
-          <h2>音序</h2>
-        </div>
+        <div class="sequencer-bar"><h2>音序</h2></div>
         <div class="sequencer-wrap">
           <div class="step-labels" id="stepLabels"></div>
           <div class="tracks" id="tracks"></div>
         </div>
       </section>
 
-      <aside class="sidebar">
-        <section class="panel panel-mixer">
+      <section class="panel panel-mixer" aria-label="混音">
+        <div class="mixer-bar">
           <h2>混音</h2>
-          <div class="mixer-tracks" id="mixer"></div>
-        </section>
-      </aside>
+          <div class="mixer-tracks mixer-horizontal" id="mixer"></div>
+        </div>
+      </section>
     </main>
 
-    <footer class="footer">
-      <span id="statusText">就绪 — 点击播放开始编曲预览</span>
-      <div class="footer-meta">
-        <span class="version-badge" title="当前版本">v<span class="app-version-value">—</span></span>
-        <button type="button" class="btn btn-ghost btn-xs" id="btnHelp" title="快捷键与使用说明">帮助</button>
-        <button type="button" class="btn btn-ghost btn-xs" id="btnLogs" title="查看运行日志">日志</button>
-        <button type="button" class="btn btn-ghost btn-xs" id="btnDebugLogFooter" title="打印调试日志到控制台">调试</button>
-        <button type="button" class="btn btn-ghost btn-xs" id="btnUpdate" title="检测并更新到最新版本">更新</button>
-        <span class="footer-credit">HarmonyForge</span>
-      </div>
+    <footer class="footer footer-slim">
+      <span id="statusText">就绪</span>
     </footer>
   </div>
 
@@ -109,31 +103,24 @@
       <h4>模块使用指导</h4>
       <dl class="help-modules">
         <dt>编曲时间轴</dt>
-        <dd>每个格子代表 1 小节（16 步）。点击格子可切换该段使用的 Pattern（A–D），播放时按从左到右顺序循环整首。点「+ 段」可增加小节数。</dd>
+        <dd>每个格子 1 小节（16 步），点击切换 Pattern（A–D），「+段」增加小节。</dd>
         <dt>Pattern 库</dt>
-        <dd>顶部 A–D 标签切换当前编辑的 Pattern。每个 Pattern 有独立的鼓组与旋律，便于做主歌 / 副歌等不同段落。</dd>
+        <dd>编曲栏 A–D 切换当前编辑 Pattern，各段可分配不同 Pattern。</dd>
         <dt>步进音序器</dt>
-        <dd>7 轨 × 16 步。鼓轨（底鼓、军鼓、镲）点击开关；贝斯 / 和弦 / 主旋律点击后从音阶中选音高。每 4 步为一拍，共 4 拍。</dd>
+        <dd>7 轨 × 16 步；鼓轨点击开关，旋律轨点击选音高。</dd>
         <dt>混音</dt>
-        <dd>右侧滑条调节各轨音量，影响播放与预览响度，随草稿一并保存。</dd>
+        <dd>底部横条调节各轨音量，随草稿保存。</dd>
         <dt>调性 / 音阶</dt>
-        <dd>顶部选择根音与音阶类型，旋律轨选音时仅显示音阶内音符。</dd>
+        <dd>顶栏选择根音与音阶，旋律选音仅在音阶内。</dd>
         <dt>保存与草稿</dt>
-        <dd>编辑后约 0.6 秒自动保存草稿；刷新页面自动恢复。「保存」写入正式存档，「加载」读取存档，「清空」恢复演示曲。</dd>
+        <dd>自动保存草稿；顶栏「存/读/清」管理项目。</dd>
         <dt>版本与更新</dt>
-        <dd>页眉与页脚显示当前版本。点「更新」检测线上新版本；点「调试日志」将带版本号的日志输出到浏览器控制台（F12）。</dd>
+        <dd>顶栏显示版本号；「更新」检测新版本，「调试」打印含版本的日志到控制台（F12）。</dd>
       </dl>
       <h4>快捷键</h4>
       <ul class="help-list">
         <li><kbd>Space</kbd> 播放 / 暂停</li>
-        <li><kbd>1</kbd>–<kbd>4</kbd> 切换 Pattern A–D</li>
-      </ul>
-      <h4>操作说明</h4>
-      <ul class="help-list help-list-plain">
-        <li>编曲格：点击切换该段使用的 Pattern</li>
-        <li>鼓轨：点击开关音符</li>
-        <li>旋律轨：点击选择 / 修改音高</li>
-        <li>草稿会自动保存，刷新页面后恢复</li>
+        <li><kbd>1</kbd>–<kbd>4</kbd> 切换 Pattern</li>
       </ul>
     </div>
   </dialog>
@@ -145,8 +132,8 @@
     </div>
     <pre class="log-content" id="logContent" aria-live="polite"></pre>
     <menu class="log-dialog-actions">
-      <button type="button" class="btn btn-ghost btn-xs" id="btnPrintLogs">调试日志打印</button>
-      <button type="button" class="btn btn-ghost btn-xs" id="btnClearLogs">清空日志</button>
+      <button type="button" class="btn btn-ghost btn-xs" id="btnPrintLogs">打印</button>
+      <button type="button" class="btn btn-ghost btn-xs" id="btnClearLogs">清空</button>
     </menu>
   </dialog>
 
@@ -156,7 +143,7 @@
       <div class="note-grid" id="noteGrid"></div>
       <menu>
         <button type="submit" value="cancel" class="btn btn-ghost">取消</button>
-        <button type="button" id="noteClear" class="btn btn-ghost">清除音符</button>
+        <button type="button" id="noteClear" class="btn btn-ghost">清除</button>
       </menu>
     </form>
   </dialog>
