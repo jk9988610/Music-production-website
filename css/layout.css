@@ -53,8 +53,8 @@
 }
 
 .main {
-  gap: 0.25rem;
-  padding-top: 0.2rem;
+  gap: 0;
+  padding-top: 0.12rem;
   grid-template-columns: 1fr !important;
 }
 
@@ -75,7 +75,7 @@
    CONTENT 内容 — 只改 --content-*（格子与滑条尺寸）
    ============================================================ */
 :root {
-  --chrome-module-gap: 3px;
+  --chrome-module-gap: 0px;
   --chrome-module-pad-x: 4px;
   --chrome-module-pad-b: 2px;
   --chrome-legend-size: 0.6rem;

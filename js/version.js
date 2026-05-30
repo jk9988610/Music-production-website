@@ -3,7 +3,7 @@
  * 运行版本以 version.json 为准（避免 JS 文件被缓存后版本号不更新）
  */
 const AppVersion = (() => {
-  let activeVersion = "1.4.0";
+  let activeVersion = "1.4.1";
   let activeBuild = "dev";
   const STORAGE_BUILD = "hf-last-build";
   const STORAGE_VERSION = "hf-last-version";
