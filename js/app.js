@@ -3,6 +3,8 @@
  */
 (() => {
   const STORAGE_KEY = "harmonyforge-project";
+  const DRAFT_KEY = "harmonyforge-draft";
+  let autosaveTimer = null;
 
   let playing = false;
   let playMode = "pattern";
@@ -48,7 +50,9 @@
     AppLogger.info("HarmonyForge 启动", `v${AppVersion.CURRENT}`);
     AppVersion.initUI();
     populateKeySelect();
-    Sequencer.loadDemoPatterns();
+    if (!loadDraft()) {
+      Sequencer.loadDemoPatterns();
+    }
     renderPatternTabs();
     renderStepLabels();
     renderSequencer();
@@ -56,7 +60,8 @@
     renderMixer();
     bindEvents();
     applyVolumesToEngine();
-    setStatus("就绪 — 点击播放预览当前 Pattern，或编排后播放整曲");
+    setStatus("就绪 — 草稿将自动保存");
+    scheduleAutosave();
   }
 
   function populateKeySelect() {
@@ -88,7 +93,8 @@
     Sequencer.setCurrentPattern(index);
     renderPatternTabs();
     renderSequencer();
-    setStatus(`编辑 Pattern ${String.fromCharCode(65 + index)}`);
+    setStatus(`Pattern ${String.fromCharCode(65 + index)}`);
+    scheduleAutosave();
   }
 
   function renderStepLabels() {
@@ -149,6 +155,7 @@
     } else {
       Sequencer.toggleStep(pi, track.id, step);
       renderSequencer();
+      scheduleAutosave();
     }
   }
 
@@ -165,6 +172,7 @@
         Sequencer.toggleStep(patternIndex, trackId, step, midi);
         els.noteDialog.close();
         renderSequencer();
+        scheduleAutosave();
       });
       els.noteGrid.appendChild(btn);
     });
@@ -186,6 +194,7 @@
       slot.addEventListener("click", () => {
         Arranger.cycleSectionPattern(i, Sequencer.PATTERN_COUNT);
         renderArrangement();
+        scheduleAutosave();
       });
       els.arrangeTimeline.appendChild(slot);
     });
@@ -213,6 +222,7 @@
         Sequencer.setVolume(track.id, v);
         AudioEngine.setTrackVolume(track.id, v);
         wrap.querySelector(`[data-vol-display="${track.id}"]`).textContent = `${range.value}%`;
+        scheduleAutosave();
       });
       els.mixer.appendChild(wrap);
     });
@@ -230,20 +240,25 @@
     els.bpm.addEventListener("input", () => {
       bpm = Number(els.bpm.value);
       els.bpmValue.textContent = bpm;
+      scheduleAutosave();
     });
     els.swing.addEventListener("input", () => {
       swing = Number(els.swing.value);
       els.swingValue.textContent = `${swing}%`;
+      scheduleAutosave();
     });
     els.keySelect.addEventListener("change", () => {
       Sequencer.setRootKey(Number(els.keySelect.value));
+      scheduleAutosave();
     });
     els.scaleSelect.addEventListener("change", () => {
       Sequencer.setScaleName(els.scaleSelect.value);
+      scheduleAutosave();
     });
     els.btnAddSection.addEventListener("click", () => {
       Arranger.addSection();
       renderArrangement();
+      scheduleAutosave();
     });
     els.btnSave.addEventListener("click", saveProject);
     els.btnLoad.addEventListener("click", loadProject);
@@ -256,8 +271,21 @@
         cell.note = null;
         els.noteDialog.close();
         renderSequencer();
+        scheduleAutosave();
       }
     });
+
+    const btnHelp = document.getElementById("btnHelp");
+    const helpDialog = document.getElementById("helpDialog");
+    const btnHelpClose = document.getElementById("btnHelpClose");
+    if (btnHelp && helpDialog) {
+      btnHelp.addEventListener("click", () => helpDialog.showModal());
+    }
+    if (btnHelpClose && helpDialog) {
+      btnHelpClose.addEventListener("click", () => helpDialog.close());
+    }
+
+    window.addEventListener("beforeunload", saveDraftNow);
 
     document.addEventListener("keydown", (e) => {
       if (e.target.matches("input, select, textarea")) return;
@@ -400,17 +428,82 @@
     $$(".arrange-slot.playing").forEach((el) => el.classList.remove("playing"));
   }
 
-  function saveProject() {
-    const data = {
+  function getProjectData() {
+    return {
       version: 1,
+      savedAt: Date.now(),
       sequencer: Sequencer.exportState(),
       arranger: Arranger.exportState(),
       bpm: Number(els.bpm.value),
       swing: Number(els.swing.value),
     };
+  }
+
+  function applyProjectData(data, silent) {
+    if (!data) return false;
+    if (data.sequencer) Sequencer.importState(data.sequencer);
+    if (data.arranger) Arranger.importState(data.arranger);
+    if (data.bpm) {
+      els.bpm.value = data.bpm;
+      bpm = data.bpm;
+      els.bpmValue.textContent = bpm;
+    }
+    if (data.swing != null) {
+      els.swing.value = data.swing;
+      swing = data.swing;
+      els.swingValue.textContent = `${swing}%`;
+    }
+    els.keySelect.value = String(Sequencer.rootKey());
+    els.scaleSelect.value = Sequencer.scaleName();
+    renderPatternTabs();
+    renderSequencer();
+    renderArrangement();
+    renderMixer();
+    applyVolumesToEngine();
+    if (!silent) AppLogger.info("项目数据已应用");
+    return true;
+  }
+
+  function scheduleAutosave() {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(getProjectData()));
+        AppLogger.info("草稿已自动保存");
+      } catch (err) {
+        AppLogger.error("草稿保存失败", err.message);
+      }
+    }, 600);
+  }
+
+  function saveDraftNow() {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(getProjectData()));
+    } catch (err) {
+      AppLogger.error("草稿保存失败", err.message);
+    }
+  }
+
+  function loadDraft() {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY) || localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      applyProjectData(data, true);
+      AppLogger.info("已恢复草稿");
+      return true;
+    } catch (err) {
+      AppLogger.warn("草稿恢复失败", err.message);
+      return false;
+    }
+  }
+
+  function saveProject() {
+    const data = getProjectData();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
     AppLogger.info("项目已保存");
-    setStatus("项目已保存到浏览器本地");
+    setStatus("已保存（含草稿）");
   }
 
   function loadProject() {
@@ -420,26 +513,8 @@
         setStatus("没有已保存的项目");
         return;
       }
-      const data = JSON.parse(raw);
-      Sequencer.importState(data.sequencer);
-      Arranger.importState(data.arranger);
-      if (data.bpm) {
-        els.bpm.value = data.bpm;
-        bpm = data.bpm;
-        els.bpmValue.textContent = bpm;
-      }
-      if (data.swing != null) {
-        els.swing.value = data.swing;
-        swing = data.swing;
-        els.swingValue.textContent = `${swing}%`;
-      }
-      els.keySelect.value = String(Sequencer.rootKey());
-      els.scaleSelect.value = Sequencer.scaleName();
-      renderPatternTabs();
-      renderSequencer();
-      renderArrangement();
-      renderMixer();
-      applyVolumesToEngine();
+      applyProjectData(JSON.parse(raw));
+      scheduleAutosave();
       AppLogger.info("项目已加载");
       setStatus("项目已加载");
     } catch (err) {
@@ -453,8 +528,10 @@
     Sequencer.importState({ patterns: Sequencer.createEmptyPatterns() });
     Arranger.init(Sequencer.PATTERN_COUNT);
     Sequencer.loadDemoPatterns();
+    localStorage.removeItem(DRAFT_KEY);
     renderSequencer();
     renderArrangement();
+    scheduleAutosave();
     setStatus("已重置为演示 Pattern");
   }
 

@@ -1,6 +1,6 @@
 :root {
-  --seq-label-col: 4.5rem;
-  --seq-step-size: 1.375rem;
+  --seq-label-col: 3.75rem;
+  --seq-step-size: 1.2rem;
   --bg-deep: #0a0c10;
   --bg-panel: #12151c;
   --bg-elevated: #1a1f2a;
@@ -29,7 +29,7 @@
 }
 
 html {
-  font-size: 14px;
+  font-size: 13px;
   overflow-x: hidden;
 }
 
@@ -52,7 +52,7 @@ body {
   width: 100%;
   max-width: 920px;
   margin: 0 auto;
-  padding: 0 0.75rem 1rem;
+  padding: 0 0.6rem 0.5rem;
   overflow-x: hidden;
 }
 
@@ -62,7 +62,7 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.65rem 0.85rem;
-  padding: 0.75rem 0;
+  padding: 0.45rem 0;
   border-bottom: 1px solid var(--border);
   min-width: 0;
 }
@@ -80,7 +80,7 @@ body {
 
 .brand h1 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -200,9 +200,9 @@ select {
 .main {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex: 1;
-  padding-top: 0.75rem;
+  padding-top: 0.4rem;
   min-width: 0;
 }
 
@@ -224,19 +224,19 @@ select {
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 0.85rem;
-  margin-bottom: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  margin-bottom: 0.45rem;
   min-width: 0;
   max-width: 100%;
 }
 
 .panel-head {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.4rem;
 }
 
 .panel-head h2 {
-  margin: 0 0 0.25rem;
-  font-size: 0.95rem;
+  margin: 0;
+  font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -282,8 +282,8 @@ select {
 .arrange-slot {
   position: relative;
   flex: 0 0 auto;
-  width: 64px;
-  min-height: 58px;
+  width: 52px;
+  min-height: 46px;
   padding: 0.5rem;
   background: var(--bg-elevated);
   border: 2px solid var(--border);
@@ -331,7 +331,7 @@ select {
 }
 
 .pattern-tab {
-  padding: 0.45rem 1rem;
+  padding: 0.35rem 0.75rem;
   font-family: var(--mono);
   font-size: 0.85rem;
   font-weight: 600;
@@ -465,7 +465,7 @@ select {
 .mixer-tracks {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.4rem;
 }
 
 .mixer-track label {
@@ -483,7 +483,7 @@ select {
 
 /* Sidebar */
 .sidebar .panel {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
 }
 
 .help-list {
@@ -519,8 +519,8 @@ kbd {
   justify-content: space-between;
   align-items: center;
   gap: 0.35rem 0.75rem;
-  padding: 0.75rem 0;
-  font-size: 0.75rem;
+  padding: 0.4rem 0;
+  font-size: 0.7rem;
   color: var(--text-muted);
   border-top: 1px solid var(--border);
   min-width: 0;
@@ -663,4 +663,66 @@ kbd {
   margin: 0;
   padding: 0.65rem 1rem;
   border-top: 1px solid var(--border);
+}
+
+.panel-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.panel-head-row h2 {
+  flex-shrink: 0;
+}
+
+.panel-head-row .pattern-tabs {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.panel-mixer h2 {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.help-dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--text);
+  padding: 0;
+  width: min(400px, calc(100vw - 2rem));
+}
+
+.help-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.help-body {
+  padding: 0.5rem 1rem 0.85rem;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.help-body h4 {
+  margin: 0.65rem 0 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.help-body h4:first-child {
+  margin-top: 0;
+}
+
+.help-list-plain li {
+  border-bottom: none;
+  padding: 0.2rem 0;
 }

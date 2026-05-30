@@ -54,30 +54,22 @@
 
     <main class="main">
       <section class="panel panel-arrange" aria-label="编曲时间轴">
-        <div class="panel-head">
-          <h2>编曲时间轴</h2>
-          <p class="hint">点击格子选择段落使用的 Pattern，播放时将按顺序循环整首</p>
+        <div class="panel-head panel-head-row">
+          <h2>编曲</h2>
+          <div class="pattern-tabs" id="patternTabs" role="tablist"></div>
         </div>
         <div class="arrange-toolbar">
-          <button type="button" class="btn btn-sm" id="btnAddSection">+ 增加段落</button>
-          <span class="arrange-info" id="arrangeInfo">8 段 · 每段 1 小节</span>
+          <button type="button" class="btn btn-sm" id="btnAddSection">+ 段</button>
+          <span class="arrange-info" id="arrangeInfo">8 段</span>
         </div>
         <div class="arrange-scroll">
           <div class="arrange-timeline" id="arrangeTimeline"></div>
         </div>
       </section>
 
-      <section class="panel panel-patterns" aria-label="Pattern 选择">
-        <div class="panel-head">
-          <h2>Pattern 库</h2>
-          <div class="pattern-tabs" id="patternTabs" role="tablist"></div>
-        </div>
-      </section>
-
       <section class="panel panel-sequencer" aria-label="步进音序器">
         <div class="panel-head">
-          <h2>步进音序器</h2>
-          <p class="hint">点击格子开关音符；旋律轨可点击选择音高</p>
+          <h2>音序</h2>
         </div>
         <div class="sequencer-wrap">
           <div class="step-labels" id="stepLabels"></div>
@@ -90,14 +82,6 @@
           <h2>混音</h2>
           <div class="mixer-tracks" id="mixer"></div>
         </section>
-        <section class="panel panel-help">
-          <h2>快捷键</h2>
-          <ul class="help-list">
-            <li><kbd>Space</kbd> 播放 / 暂停</li>
-            <li><kbd>1</kbd>–<kbd>4</kbd> 切换 Pattern</li>
-            <li>点击旋律格设置音高</li>
-          </ul>
-        </section>
       </aside>
     </main>
 
@@ -105,12 +89,34 @@
       <span id="statusText">就绪 — 点击播放开始编曲预览</span>
       <div class="footer-meta">
         <span class="version-badge" title="当前版本">v<span id="appVersion">—</span></span>
+        <button type="button" class="btn btn-ghost btn-xs" id="btnHelp" title="快捷键与使用说明">帮助</button>
         <button type="button" class="btn btn-ghost btn-xs" id="btnLogs" title="查看并打印日志">日志</button>
-        <button type="button" class="btn btn-ghost btn-xs" id="btnUpdate" title="检测并更新到最新版本">检查更新</button>
+        <button type="button" class="btn btn-ghost btn-xs" id="btnUpdate" title="检测并更新到最新版本">更新</button>
         <span class="footer-credit">HarmonyForge</span>
       </div>
     </footer>
   </div>
+
+  <dialog id="helpDialog" class="help-dialog">
+    <div class="log-dialog-head">
+      <h3>帮助</h3>
+      <button type="button" class="btn btn-ghost btn-xs" id="btnHelpClose" aria-label="关闭">关闭</button>
+    </div>
+    <div class="help-body">
+      <h4>快捷键</h4>
+      <ul class="help-list">
+        <li><kbd>Space</kbd> 播放 / 暂停</li>
+        <li><kbd>1</kbd>–<kbd>4</kbd> 切换 Pattern A–D</li>
+      </ul>
+      <h4>操作说明</h4>
+      <ul class="help-list help-list-plain">
+        <li>编曲格：点击切换该段使用的 Pattern</li>
+        <li>鼓轨：点击开关音符</li>
+        <li>旋律轨：点击选择 / 修改音高</li>
+        <li>草稿会自动保存，刷新页面后恢复</li>
+      </ul>
+    </div>
+  </dialog>
 
   <dialog id="logDialog" class="log-dialog">
     <div class="log-dialog-head">
