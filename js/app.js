@@ -45,6 +45,8 @@
   let noteEditContext = null;
 
   function init() {
+    AppLogger.info("HarmonyForge 启动", `v${AppVersion.CURRENT}`);
+    AppVersion.initUI();
     populateKeySelect();
     Sequencer.loadDemoPatterns();
     renderPatternTabs();
@@ -285,6 +287,7 @@
     if (playing) {
       pause();
     } else {
+      AppLogger.info("开始播放编曲");
       startPlay("arrange");
     }
   }
@@ -316,6 +319,7 @@
   }
 
   function stop() {
+    AppLogger.info("停止播放");
     pause();
     currentStep = -1;
     currentArrangeSection = -1;
@@ -405,6 +409,7 @@
       swing: Number(els.swing.value),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    AppLogger.info("项目已保存");
     setStatus("项目已保存到浏览器本地");
   }
 
@@ -435,8 +440,10 @@
       renderArrangement();
       renderMixer();
       applyVolumesToEngine();
+      AppLogger.info("项目已加载");
       setStatus("项目已加载");
     } catch (err) {
+      AppLogger.error("加载失败", err.message);
       setStatus("加载失败：" + err.message);
     }
   }

@@ -103,9 +103,26 @@
 
     <footer class="footer">
       <span id="statusText">就绪 — 点击播放开始编曲预览</span>
-      <span class="footer-credit">HarmonyForge · Web Audio 编曲</span>
+      <div class="footer-meta">
+        <span class="version-badge" title="当前版本">v<span id="appVersion">—</span></span>
+        <button type="button" class="btn btn-ghost btn-xs" id="btnLogs" title="查看并打印日志">日志</button>
+        <button type="button" class="btn btn-ghost btn-xs" id="btnUpdate" title="检测并更新到最新版本">检查更新</button>
+        <span class="footer-credit">HarmonyForge</span>
+      </div>
     </footer>
   </div>
+
+  <dialog id="logDialog" class="log-dialog">
+    <div class="log-dialog-head">
+      <h3>运行日志</h3>
+      <button type="button" class="btn btn-ghost btn-xs" id="btnLogClose" aria-label="关闭">关闭</button>
+    </div>
+    <pre class="log-content" id="logContent" aria-live="polite"></pre>
+    <menu class="log-dialog-actions">
+      <button type="button" class="btn btn-ghost btn-xs" id="btnPrintLogs">打印到控制台</button>
+      <button type="button" class="btn btn-ghost btn-xs" id="btnClearLogs">清空日志</button>
+    </menu>
+  </dialog>
 
   <dialog id="noteDialog" class="note-dialog">
     <form method="dialog">
@@ -118,6 +135,8 @@
     </form>
   </dialog>
 
+  <script src="js/app-logger.js"></script>
+  <script src="js/version.js"></script>
   <script src="js/audio-engine.js"></script>
   <script src="js/sequencer.js"></script>
   <script src="js/arranger.js"></script>
