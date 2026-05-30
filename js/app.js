@@ -14,8 +14,7 @@
   let seqFollowEnabled = false;
   let typeLoopEnabled = false;
   let stepLoopEnabled = false;
-  /** @type {{ patternIndex: number, trackId: string, step: number }} */
-  let lastEditedCell = { patternIndex: 0, trackId: "kick", step: 0 };
+  let loopStepIndex = 0;
   let schedulerTimer = null;
   let nextStepTime = 0;
   let stepCounter = 0;
@@ -68,6 +67,8 @@
     noteGrid: $("#noteGrid"),
     noteClear: $("#noteClear"),
     noteApply: $("#noteApply"),
+    btnNoteKeyPick: $("#btnNoteKeyPick"),
+    btnNoteScalePick: $("#btnNoteScalePick"),
     choiceDialog: $("#choiceDialog"),
     choiceDialogTitle: $("#choiceDialogTitle"),
     choiceGrid: $("#choiceGrid"),
@@ -372,29 +373,21 @@
     });
   }
 
-  function markLastEdited(patternIndex, trackId, step) {
-    lastEditedCell = { patternIndex, trackId, step };
+  function setLoopStepIndex(step) {
+    loopStepIndex = Math.max(0, Math.min(Sequencer.steps - 1, step));
+    renderStepLabels();
     if (stepLoopEnabled && playing && playMode === "step") {
       setStatus(stepLoopStatusText());
+    } else {
+      setStatus(`循环步进：第 ${loopStepIndex + 1} 步`);
     }
   }
 
-  function getLastEditedCellContent() {
-    const { patternIndex, trackId, step } = lastEditedCell;
-    const pattern = Sequencer.getPattern(patternIndex);
-    const cell = pattern?.[trackId]?.[step];
-    if (!cell || !cell.on) return null;
-    const track = Sequencer.TRACKS.find((t) => t.id === trackId);
-    return { cell, track, patternIndex, trackId, step };
-  }
-
   function stepLoopStatusText() {
-    const info = getLastEditedCellContent();
-    if (!info) return "单步循环：请先在音序格中设置内容";
-    const { track, step } = info;
-    const note =
-      info.cell.note != null ? ` ${Sequencer.noteLabel(info.cell.note)}` : "";
-    return `单步循环：${track.name} 第 ${step + 1} 步${note}`;
+    const pi = Sequencer.currentPattern();
+    const has = Sequencer.stepColumnHasContent(pi, loopStepIndex);
+    const hint = has ? "" : "（该列为空）";
+    return `单步循环：类型 ${patternLabel(pi)} 第 ${loopStepIndex + 1} 步${hint}`;
   }
 
   function interruptPlaybackForPreview() {
@@ -450,6 +443,9 @@
   }
 
   function updateStepCountUI() {
+    if (loopStepIndex >= Sequencer.steps) {
+      loopStepIndex = Math.max(0, Sequencer.steps - 1);
+    }
     if (els.stepCountInfo) {
       els.stepCountInfo.textContent = `${Sequencer.steps}步`;
     }
@@ -462,12 +458,18 @@
   }
 
   function renderStepLabels() {
-    els.stepLabels.innerHTML = '<span class="step-label"></span>';
+    els.stepLabels.innerHTML = '<span class="step-label" aria-hidden="true"></span>';
     for (let s = 0; s < Sequencer.steps; s++) {
-      const span = document.createElement("span");
-      span.className = "step-label" + (s % 4 === 0 ? " beat" : "");
-      span.textContent = s + 1;
-      els.stepLabels.appendChild(span);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      let cls = "step-label";
+      if (s % 4 === 0) cls += " beat";
+      if (s === loopStepIndex) cls += " loop-step-target";
+      btn.className = cls;
+      btn.textContent = s + 1;
+      btn.title = `选择为单步循环列（第 ${s + 1} 步）`;
+      btn.addEventListener("click", () => setLoopStepIndex(s));
+      els.stepLabels.appendChild(btn);
     }
     syncSequencerLayout();
   }
@@ -512,15 +514,21 @@
 
   function onStepClick(track, step) {
     const pi = Sequencer.currentPattern();
-    markLastEdited(pi, track.id, step);
     if (track.type === "melodic") {
       openNoteDialog(track.id, step, pi);
     } else {
+      const pattern = Sequencer.getPattern(pi);
+      const cell = pattern[track.id][step];
+      const wasOn = cell.on;
       runEdit(() => {
         Sequencer.toggleStep(pi, track.id, step);
         renderSequencer();
-        markLastEdited(pi, track.id, step);
       });
+      if (!wasOn && cell.on) {
+        AudioEngine.ensureContext();
+        const t = AudioEngine.getContext().currentTime + 0.02;
+        AudioEngine.playTrackSound(track.id, t, null, getStepDuration());
+      }
     }
   }
 
@@ -540,24 +548,29 @@
     const { trackId, step, patternIndex } = noteEditContext;
     runEdit(() => {
       Sequencer.toggleStep(patternIndex, trackId, step, midi);
-      markLastEdited(patternIndex, trackId, step);
       els.noteDialog.close();
       renderSequencer();
     });
     scheduleAutosave();
   }
 
-  function openNoteDialog(trackId, step, patternIndex) {
-    noteEditContext = { trackId, step, patternIndex };
-    const cell = Sequencer.getPattern(patternIndex)[trackId][step];
-    notePendingMidi = cell.on && cell.note != null ? cell.note : null;
-    const track = Sequencer.TRACKS.find((t) => t.id === trackId);
-    if (els.noteDialogTitle && track) {
-      els.noteDialogTitle.textContent = `选择音高 · ${track.name}`;
+  function updateNoteDialogTonalityButtons() {
+    if (!noteEditContext) return;
+    const { trackId, step, patternIndex } = noteEditContext;
+    const t = Sequencer.getCellTonality(patternIndex, trackId, step);
+    if (els.btnNoteKeyPick) {
+      els.btnNoteKeyPick.textContent = Sequencer.KEYS[t.rootKey] ?? "C";
     }
-    if (els.notePreview) els.notePreview.checked = true;
+    if (els.btnNoteScalePick) {
+      els.btnNoteScalePick.textContent = scaleLabel(t.scaleName);
+    }
+  }
 
-    const notes = Sequencer.getScaleNotes();
+  function rebuildNoteGrid() {
+    if (!noteEditContext || !els.noteGrid) return;
+    const { trackId, step, patternIndex } = noteEditContext;
+    const track = Sequencer.TRACKS.find((t) => t.id === trackId);
+    const notes = Sequencer.getScaleNotesForCell(patternIndex, trackId, step);
     els.noteGrid.innerHTML = "";
     notes.forEach((midi) => {
       const btn = document.createElement("button");
@@ -580,6 +593,61 @@
       });
       els.noteGrid.appendChild(btn);
     });
+  }
+
+  function openKeyPickerForNoteCell() {
+    if (!noteEditContext) return;
+    const { trackId, step, patternIndex } = noteEditContext;
+    const ton = Sequencer.getCellTonality(patternIndex, trackId, step);
+    openChoiceDialog({
+      title: "本格调",
+      columns: 4,
+      currentValue: ton.rootKey,
+      items: Sequencer.KEYS.map((key, i) => ({ value: i, label: key })),
+      onPick: (value) => {
+        runEdit(() => {
+          Sequencer.setCellTonality(patternIndex, trackId, step, Number(value), null);
+          updateNoteDialogTonalityButtons();
+          rebuildNoteGrid();
+        });
+        scheduleAutosave();
+        setStatus(`本格调：${Sequencer.KEYS[Number(value)]}`);
+      },
+    });
+  }
+
+  function openScalePickerForNoteCell() {
+    if (!noteEditContext) return;
+    const { trackId, step, patternIndex } = noteEditContext;
+    const ton = Sequencer.getCellTonality(patternIndex, trackId, step);
+    openChoiceDialog({
+      title: "本格音阶",
+      columns: 2,
+      currentValue: ton.scaleName,
+      items: Sequencer.SCALE_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
+      onPick: (value) => {
+        runEdit(() => {
+          Sequencer.setCellTonality(patternIndex, trackId, step, null, value);
+          updateNoteDialogTonalityButtons();
+          rebuildNoteGrid();
+        });
+        scheduleAutosave();
+        setStatus(`本格音阶：${scaleLabel(value)}`);
+      },
+    });
+  }
+
+  function openNoteDialog(trackId, step, patternIndex) {
+    noteEditContext = { trackId, step, patternIndex };
+    const cell = Sequencer.getPattern(patternIndex)[trackId][step];
+    notePendingMidi = cell.on && cell.note != null ? cell.note : null;
+    const track = Sequencer.TRACKS.find((t) => t.id === trackId);
+    if (els.noteDialogTitle && track) {
+      els.noteDialogTitle.textContent = `选择音高 · ${track.name} · 第 ${step + 1} 步`;
+    }
+    if (els.notePreview) els.notePreview.checked = true;
+    updateNoteDialogTonalityButtons();
+    rebuildNoteGrid();
     els.noteDialog.showModal();
   }
 
@@ -674,15 +742,22 @@
       });
     }
 
+    if (els.btnNoteKeyPick) {
+      els.btnNoteKeyPick.addEventListener("click", (e) => {
+        e.preventDefault();
+        openKeyPickerForNoteCell();
+      });
+    }
+    if (els.btnNoteScalePick) {
+      els.btnNoteScalePick.addEventListener("click", (e) => {
+        e.preventDefault();
+        openScalePickerForNoteCell();
+      });
+    }
+
     if (els.chkStepLoop) {
       els.chkStepLoop.addEventListener("change", () => {
         if (els.chkStepLoop.checked) {
-          const info = getLastEditedCellContent();
-          if (!info) {
-            els.chkStepLoop.checked = false;
-            setStatus("请先在音序格中设置鼓点或音高，再开启单步循环");
-            return;
-          }
           setTypeLoopEnabled(false);
           if (playing) pause({ keepLoopFlags: true });
           setStepLoopEnabled(true);
@@ -988,19 +1063,8 @@
       followPlaybackPattern(pi);
     }
     if (mode === "step") {
-      const info = getLastEditedCellContent();
-      if (info) {
-        lastEditedCell = {
-          patternIndex: info.patternIndex,
-          trackId: info.trackId,
-          step: info.step,
-        };
-        if (Sequencer.currentPattern() !== info.patternIndex) {
-          Sequencer.setCurrentPattern(info.patternIndex);
-          renderPatternTabs();
-          renderSequencer();
-        }
-      }
+      loopStepIndex = Math.min(loopStepIndex, Sequencer.steps - 1);
+      renderStepLabels();
     }
     nextStepTime = AudioEngine.getContext().currentTime + 0.05;
     if (mode === "arrange") {
@@ -1058,7 +1122,7 @@
       playStepAt(nextStepTime);
       let delayStep;
       if (playMode === "step") {
-        delayStep = lastEditedCell.step;
+        delayStep = loopStepIndex;
       } else {
         delayStep = stepCounter % Sequencer.steps;
       }
@@ -1081,8 +1145,8 @@
       step = globalStep % Sequencer.steps;
       patternIndex = sections[currentArrangeSection]?.patternIndex ?? 0;
     } else if (playMode === "step") {
-      patternIndex = lastEditedCell.patternIndex;
-      step = lastEditedCell.step;
+      patternIndex = Sequencer.currentPattern();
+      step = loopStepIndex;
     } else {
       patternIndex = Sequencer.currentPattern();
       step = stepCounter % Sequencer.steps;
@@ -1098,15 +1162,13 @@
     const stepDur = getStepDuration();
 
     if (playMode === "step") {
-      const info = getLastEditedCellContent();
-      if (info) {
-        AudioEngine.playTrackSound(
-          info.trackId,
-          time,
-          info.cell.note,
-          stepDur
-        );
-      }
+      const pattern = Sequencer.getPattern(patternIndex);
+      Sequencer.TRACKS.forEach((track) => {
+        const cell = pattern[track.id][step];
+        if (cell.on) {
+          AudioEngine.playTrackSound(track.id, time, cell.note, stepDur);
+        }
+      });
     } else {
       const pattern = Sequencer.getPattern(patternIndex);
       Sequencer.TRACKS.forEach((track) => {
@@ -1137,9 +1199,7 @@
           Sequencer.currentPattern() === playingPatternIndex));
 
     if (playMode === "step" && playing) {
-      showSeqPlayhead =
-        Sequencer.currentPattern() === lastEditedCell.patternIndex &&
-        step === lastEditedCell.step;
+      showSeqPlayhead = step === loopStepIndex;
     }
 
     if (showSeqPlayhead) {

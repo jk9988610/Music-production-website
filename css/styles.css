@@ -407,6 +407,22 @@ select.pitch-select:focus {
   text-align: center;
   color: var(--text-muted);
   padding: 2px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.step-label:hover {
+  color: var(--text);
+  background: var(--bg-elevated);
+}
+
+.step-label.loop-step-target {
+  color: var(--accent);
+  font-weight: 700;
+  box-shadow: 0 0 0 1px var(--accent-dim);
+  background: rgba(110, 231, 183, 0.1);
 }
 
 .step-label.beat {
@@ -584,6 +600,25 @@ kbd {
 .note-dialog h3 {
   margin: 0 0 0.75rem;
   font-size: 1rem;
+}
+
+.note-dialog-tonality {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.note-dialog-tonality-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.note-dialog-tonality .pitch-pick-btn {
+  min-width: 2.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
 }
 
 .note-preview-toggle {

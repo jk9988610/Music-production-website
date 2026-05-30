@@ -62,7 +62,7 @@ const HelpGuide = (() => {
         <p><strong>播放头：</strong>播放时当前步会高亮；编曲播放模式下时间轴对应段也会亮。</p>
         <p><strong>Pattern 切换：</strong>音序模块点类型标签 A/B/C，或快捷键 <kbd>1</kbd>–<kbd>9</kbd>，编辑的是不同 Pattern 副本；编曲时间轴点段落格可选该段类型。</p>
         <p><strong>类型循环：</strong>勾选后按 BPM 循环播放当前类型的完整 7 轨音序，并停止顶栏编曲播放。</p>
-        <p><strong>单步循环：</strong>勾选后按 BPM 循环播放<strong>最近编辑</strong>的那一格（鼓点或旋律音高）；顶栏摆拍同样生效。</p>
+        <p><strong>单步循环：</strong>先点步进号（1、2、3…）选定列，勾选后按 BPM 循环播放该<strong>整列</strong>上已填内容。鼓轨点选时只响一次，取消不发声。</p>
       `,
     },
     {
@@ -70,7 +70,7 @@ const HelpGuide = (() => {
       label: "音高与配器",
       html: `
         <h4>程序音高基础</h4>
-        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。顶栏「调」「阶」以网格弹窗选择（与选音弹窗同款样式），决定选音弹窗里有哪些音（约 C2–C6）。</p>
+        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。顶栏「调」「阶」为<strong>默认</strong>；选音弹窗内「本格」调/阶可单独设置该格子的音阶（不同步覆盖全曲）。</p>
         <p>选音弹窗默认勾选 <strong>试听</strong>：点击音高会用该轨对应乐器预听一次，并会停止编曲 / 类型循环 / 单步循环播放；满意后点「选用」写入格子。</p>
 
         <h4>底鼓 · 军鼓 · 镲</h4>

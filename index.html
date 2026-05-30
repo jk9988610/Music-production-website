@@ -121,7 +121,7 @@
               <button type="button" class="btn btn-sm" id="btnAddSteps" title="增加 4 个步进（最多 64 步）">+4步</button>
             </div>
             <span class="step-count-info" id="stepCountInfo">16步</span>
-            <label class="seq-loop-toggle" title="按顶栏 BPM 循环播放最近编辑的格子内容">
+            <label class="seq-loop-toggle" title="按顶栏 BPM 循环播放所选步进列（点步进号选择）">
               <input type="checkbox" id="chkStepLoop">
               <span>单步循环</span>
             </label>
@@ -245,6 +245,11 @@
   <dialog id="noteDialog" class="note-dialog">
     <form method="dialog">
       <h3 id="noteDialogTitle">选择音高</h3>
+      <div class="note-dialog-tonality">
+        <span class="note-dialog-tonality-label">本格</span>
+        <button type="button" class="note-btn pitch-pick-btn" id="btnNoteKeyPick" title="本格选调（覆盖顶栏默认）">C</button>
+        <button type="button" class="note-btn pitch-pick-btn" id="btnNoteScalePick" title="本格选阶（覆盖顶栏默认）">大调</button>
+      </div>
       <label class="note-preview-toggle">
         <input type="checkbox" id="notePreview" checked>
         <span>试听</span>

@@ -45,7 +45,38 @@ const Sequencer = (() => {
   TRACKS.forEach((t) => { volumes[t.id] = t.type === "drum" ? 0.85 : 0.75; });
 
   function emptyCell() {
-    return { on: false, note: null };
+    return { on: false, note: null, rootKey: null, scaleName: null };
+  }
+
+  function resolveTonality(cell) {
+    return {
+      rootKey: cell?.rootKey != null ? cell.rootKey : rootKey,
+      scaleName: cell?.scaleName || scaleName,
+    };
+  }
+
+  function getCellTonality(patternIndex, trackId, step) {
+    const cell = patterns[patternIndex]?.[trackId]?.[step];
+    return resolveTonality(cell);
+  }
+
+  function setCellTonality(patternIndex, trackId, step, rk, sn) {
+    const cell = patterns[patternIndex][trackId][step];
+    if (rk != null) cell.rootKey = rk;
+    if (sn != null) cell.scaleName = sn;
+  }
+
+  function getScaleNotesFor(rootK, scaleN, octaves = 3) {
+    const scale = SCALES[scaleN] || SCALES.major;
+    const rk = rootK;
+    const notes = [];
+    for (let oct = 2; oct < 2 + octaves; oct++) {
+      scale.forEach((semi) => {
+        const midi = (oct + 1) * 12 + rk + semi;
+        if (midi >= 36 && midi <= 84) notes.push(midi);
+      });
+    }
+    return [...new Set(notes)].sort((a, b) => a - b);
   }
 
   function createEmptyPattern() {
@@ -121,15 +152,18 @@ const Sequencer = (() => {
   }
 
   function getScaleNotes(octaves = 3) {
-    const scale = SCALES[scaleName] || SCALES.major;
-    const notes = [];
-    for (let oct = 2; oct < 2 + octaves; oct++) {
-      scale.forEach((semi) => {
-        const midi = (oct + 1) * 12 + rootKey + semi;
-        if (midi >= 36 && midi <= 84) notes.push(midi);
-      });
-    }
-    return [...new Set(notes)].sort((a, b) => a - b);
+    return getScaleNotesFor(rootKey, scaleName, octaves);
+  }
+
+  function getScaleNotesForCell(patternIndex, trackId, step, octaves = 3) {
+    const t = getCellTonality(patternIndex, trackId, step);
+    return getScaleNotesFor(t.rootKey, t.scaleName, octaves);
+  }
+
+  function stepColumnHasContent(patternIndex, step) {
+    const pattern = patterns[patternIndex];
+    if (!pattern) return false;
+    return TRACKS.some((track) => pattern[track.id]?.[step]?.on);
   }
 
   function noteLabel(midi) {
@@ -253,6 +287,11 @@ const Sequencer = (() => {
     volumes: () => volumes,
     setVolume: (id, v) => { volumes[id] = v; },
     getScaleNotes,
+    getScaleNotesFor,
+    getScaleNotesForCell,
+    getCellTonality,
+    setCellTonality,
+    stepColumnHasContent,
     noteLabel,
     toggleStep,
     clearPattern,
