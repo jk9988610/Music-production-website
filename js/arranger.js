@@ -35,6 +35,29 @@ const Arranger = (() => {
     return { ok: true, count: sections.length };
   }
 
+  function getSection(index) {
+    const s = sections[index];
+    return s ? { patternIndex: s.patternIndex } : null;
+  }
+
+  function insertSectionAt(index, sectionData) {
+    const data = sectionData || { patternIndex: 0 };
+    const i = Math.max(0, Math.min(index, sections.length));
+    sections.splice(i, 0, { patternIndex: data.patternIndex ?? 0 });
+    return { ok: true, count: sections.length, index: i };
+  }
+
+  function removeSectionAt(index) {
+    if (sections.length <= MIN_SECTIONS) {
+      return { ok: false, count: sections.length };
+    }
+    if (index < 0 || index >= sections.length) {
+      return { ok: false, count: sections.length };
+    }
+    sections.splice(index, 1);
+    return { ok: true, count: sections.length };
+  }
+
   function cycleSectionPattern(sectionIndex, patternCount) {
     const s = sections[sectionIndex];
     if (s) {
@@ -69,6 +92,9 @@ const Arranger = (() => {
     init,
     addSection,
     removeSection,
+    getSection,
+    insertSectionAt,
+    removeSectionAt,
     MIN_SECTIONS,
     setSectionPattern,
     cycleSectionPattern,

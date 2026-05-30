@@ -15,6 +15,9 @@
   let typeLoopEnabled = false;
   let stepLoopEnabled = false;
   let loopStepIndex = 0;
+  let selectedArrangeSection = -1;
+  let arrangeSectionClipboard = null;
+  let arrangeClipboardFromCut = false;
   let schedulerTimer = null;
   let nextStepTime = 0;
   let stepCounter = 0;
@@ -152,6 +155,103 @@
         setStatus(`音阶：${scaleLabel(Sequencer.scaleName())}`);
       },
     });
+  }
+
+  function setSelectedArrangeSection(index) {
+    selectedArrangeSection = index;
+    els.arrangeTimeline
+      ?.querySelectorAll(".arrange-slot")
+      .forEach((el, i) => {
+        el.classList.toggle("active", i === index);
+      });
+    if (index >= 0) {
+      setStatus(`已选中 §${index + 1}`);
+    }
+  }
+
+  function openTrackRatePicker(trackId) {
+    const track = Sequencer.TRACKS.find((t) => t.id === trackId);
+    const current = Sequencer.getTrackRate(trackId);
+    openChoiceDialog({
+      title: `${track?.name ?? "轨"} · 步进密度`,
+      columns: 4,
+      currentValue: current,
+      items: TrackTiming.RATE_OPTIONS.map((o) => ({
+        value: o.value,
+        label: o.label,
+      })),
+      onPick: (value) => {
+        runEdit(() => {
+          Sequencer.setTrackRate(trackId, Number(value));
+          renderSequencer();
+        });
+        scheduleAutosave();
+        setStatus(
+          `${track?.name ?? "轨"} 步进密度 ${TrackTiming.rateLabel(Sequencer.getTrackRate(trackId))}`
+        );
+      },
+    });
+  }
+
+  function copyArrangeSection() {
+    if (selectedArrangeSection < 0) {
+      setStatus("请先单击选中一个段落");
+      return;
+    }
+    const sec = Arranger.getSection(selectedArrangeSection);
+    if (!sec) return;
+    arrangeSectionClipboard = { ...sec };
+    arrangeClipboardFromCut = false;
+    setStatus(`已复制 §${selectedArrangeSection + 1}（类型 ${patternLabel(sec.patternIndex)}）`);
+  }
+
+  function cutArrangeSection() {
+    if (selectedArrangeSection < 0) {
+      setStatus("请先单击选中一个段落");
+      return;
+    }
+    const idx = selectedArrangeSection;
+    const sec = Arranger.getSection(idx);
+    if (!sec) return;
+    runEdit(() => {
+      arrangeSectionClipboard = { ...sec };
+      arrangeClipboardFromCut = true;
+      const r = Arranger.removeSectionAt(idx);
+      if (!r.ok) {
+        arrangeSectionClipboard = null;
+        arrangeClipboardFromCut = false;
+        setStatus("至少保留 1 个编曲段");
+        return;
+      }
+      selectedArrangeSection = Math.min(idx, r.count - 1);
+      renderArrangement();
+      setStatus(`已剪切 §${idx + 1}（类型 ${patternLabel(sec.patternIndex)}）`);
+    });
+    scheduleAutosave();
+  }
+
+  function insertArrangeSection(before) {
+    if (!arrangeSectionClipboard) {
+      setStatus("请先复制或剪切段落");
+      return;
+    }
+    let insertAt = before ? 0 : Arranger.getSectionCount();
+    if (selectedArrangeSection >= 0) {
+      insertAt = before ? selectedArrangeSection : selectedArrangeSection + 1;
+    }
+    const fromCut = arrangeClipboardFromCut;
+    runEdit(() => {
+      const r = Arranger.insertSectionAt(insertAt, arrangeSectionClipboard);
+      if (fromCut) {
+        arrangeSectionClipboard = null;
+        arrangeClipboardFromCut = false;
+      }
+      selectedArrangeSection = r.index;
+      renderArrangement();
+      const pos = before ? "前" : "后";
+      setStatus(`已在 §${insertAt + 1} ${pos}插入段落`);
+    });
+    scheduleAutosave();
   }
 
   function openPatternPickerForSection(sectionIndex) {
@@ -482,10 +582,25 @@
       const row = document.createElement("div");
       row.className = "track-row";
 
+      const labelCol = document.createElement("div");
+      labelCol.className = "track-label-col";
+
       const name = document.createElement("span");
       name.className = `track-name ${track.type === "drum" ? "drum" : track.class}`;
       name.textContent = track.name;
-      row.appendChild(name);
+      labelCol.appendChild(name);
+
+      const rateBtn = document.createElement("button");
+      rateBtn.type = "button";
+      rateBtn.className = "note-btn pitch-pick-btn track-rate-btn";
+      rateBtn.title = "步进密度（相对主 BPM）";
+      rateBtn.textContent = TrackTiming.rateLabel(Sequencer.getTrackRate(track.id));
+      rateBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openTrackRatePicker(track.id);
+      });
+      labelCol.appendChild(rateBtn);
+      row.appendChild(labelCol);
 
       for (let step = 0; step < Sequencer.steps; step++) {
         const cell = pattern[track.id][step];
@@ -653,18 +768,34 @@
 
   function renderArrangement() {
     const sections = Arranger.getSections();
+    if (selectedArrangeSection >= sections.length) {
+      selectedArrangeSection = sections.length ? sections.length - 1 : -1;
+    }
     els.arrangeTimeline.innerHTML = "";
 
     sections.forEach((sec, i) => {
       const slot = document.createElement("button");
       slot.type = "button";
-      slot.className = "arrange-slot";
-      slot.title = "点击选择该段使用的类型";
+      slot.className =
+        "arrange-slot" + (i === selectedArrangeSection ? " active" : "");
+      slot.title = "单击选中；双击选择类型";
       slot.innerHTML = `
         <span class="arrange-slot-index">§${i + 1}</span>
         <span class="arrange-slot-pattern">${patternLabel(sec.patternIndex)}</span>
       `;
-      slot.addEventListener("click", () => openPatternPickerForSection(i));
+      let clickTimer = null;
+      slot.addEventListener("click", () => {
+        clearTimeout(clickTimer);
+        clickTimer = setTimeout(() => {
+          setSelectedArrangeSection(i);
+        }, 220);
+      });
+      slot.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        clearTimeout(clickTimer);
+        setSelectedArrangeSection(i);
+        openPatternPickerForSection(i);
+      });
       els.arrangeTimeline.appendChild(slot);
     });
 
@@ -678,36 +809,17 @@
   function renderMixer() {
     els.mixer.innerHTML = "";
     const vols = Sequencer.volumes();
-    const rateOpts = TrackTiming.RATE_OPTIONS.map(
-      (o) =>
-        `<option value="${o.value}">${o.label}</option>`
-    ).join("");
     Sequencer.TRACKS.forEach((track) => {
       const wrap = document.createElement("div");
       wrap.className = "mixer-track";
       const pct = Math.round((vols[track.id] ?? 0.8) * 100);
-      const rate = Sequencer.getTrackRate(track.id);
       wrap.innerHTML = `
         <label>
           <span>${track.name}</span>
           <span data-vol-display="${track.id}">${pct}%</span>
         </label>
-        <label class="mixer-rate-label" title="相对主 BPM 的步进密度">
-          <span>密度</span>
-          <select class="mixer-track-rate pitch-select" data-track-rate="${track.id}">${rateOpts}</select>
-        </label>
         <input type="range" min="0" max="100" value="${pct}" data-track="${track.id}">
       `;
-      const rateSel = wrap.querySelector(`[data-track-rate="${track.id}"]`);
-      if (rateSel) {
-        rateSel.value = String(rate);
-        rateSel.addEventListener("change", () => {
-          const r = Number(rateSel.value);
-          Sequencer.setTrackRate(track.id, r);
-          scheduleAutosave();
-          setStatus(`${track.name} 步进密度 ${TrackTiming.rateLabel(Sequencer.getTrackRate(track.id))}`);
-        });
-      }
       const range = wrap.querySelector("input[type=range]");
       range.addEventListener("input", () => {
         const v = range.value / 100;
@@ -839,6 +951,19 @@
         });
         scheduleAutosave();
       });
+    }
+
+    const btnSectionCopy = document.getElementById("btnSectionCopy");
+    if (btnSectionCopy) btnSectionCopy.addEventListener("click", copyArrangeSection);
+    const btnSectionCut = document.getElementById("btnSectionCut");
+    if (btnSectionCut) btnSectionCut.addEventListener("click", cutArrangeSection);
+    const btnSectionInsertBefore = document.getElementById("btnSectionInsertBefore");
+    if (btnSectionInsertBefore) {
+      btnSectionInsertBefore.addEventListener("click", () => insertArrangeSection(true));
+    }
+    const btnSectionInsertAfter = document.getElementById("btnSectionInsertAfter");
+    if (btnSectionInsertAfter) {
+      btnSectionInsertAfter.addEventListener("click", () => insertArrangeSection(false));
     }
 
     document.querySelectorAll(".btn-history-undo").forEach((btn) => {

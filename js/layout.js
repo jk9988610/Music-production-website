@@ -84,6 +84,14 @@ const LayoutManager = (() => {
       if (s.visible[id] == null) s.visible[id] = true;
     });
     s.columns = s.columns === 2 ? 2 : 1;
+    if (typeof s.contentMixerTrackW === "number") {
+      s.contentMixerTrackW = `${s.contentMixerTrackW}rem`;
+    } else if (typeof s.contentMixerTrackW === "string") {
+      const n = parseFloat(s.contentMixerTrackW);
+      if (Number.isFinite(n) && !s.contentMixerTrackW.includes("rem")) {
+        s.contentMixerTrackW = `${n}rem`;
+      }
+    }
     s.appMaxWidth = clamp(Number(s.appMaxWidth) || DEFAULTS.appMaxWidth, 640, 1400);
     s.moduleGap = clamp(Number(s.moduleGap) ?? DEFAULTS.moduleGap, 0, 48);
     s.mainGap = clamp(Number(s.mainGap) ?? DEFAULTS.mainGap, 0, 48);
@@ -267,7 +275,10 @@ const LayoutManager = (() => {
     Object.entries(map).forEach(([id, cfg]) => {
       const el = document.getElementById(id);
       if (!el) return;
-      const v = state[cfg.key];
+      let v = state[cfg.key];
+      if (cfg.key === "contentMixerTrackW" && typeof v === "string") {
+        v = v.replace(/rem$/, "");
+      }
       if (cfg.type === "checkbox") el.checked = !!v;
       else el.value = String(v);
       const out = document.getElementById(`${id}Val`);

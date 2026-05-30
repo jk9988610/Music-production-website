@@ -396,6 +396,7 @@ select.pitch-select:focus {
   grid-template-columns: var(--seq-label-col) repeat(var(--seq-step-count, 16), var(--seq-step-size));
   gap: 3px;
   margin-bottom: 3px;
+  padding: 0.2rem 0 0;
   padding-left: 0;
   width: max-content;
   min-width: min-content;
@@ -406,11 +407,12 @@ select.pitch-select:focus {
   font-size: 0.65rem;
   text-align: center;
   color: var(--text-muted);
-  padding: 2px;
+  padding: 2px 1px;
   border: none;
   background: transparent;
   cursor: pointer;
   border-radius: 4px;
+  line-height: 1.2;
 }
 
 .step-label:hover {
@@ -426,7 +428,7 @@ select.pitch-select:focus {
 }
 
 .step-label.beat {
-  color: var(--accent);
+  color: var(--text-muted);
   font-weight: 600;
 }
 
@@ -443,6 +445,26 @@ select.pitch-select:focus {
   align-items: center;
   width: max-content;
   min-width: min-content;
+}
+
+.track-label-col {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+  padding-right: 0.15rem;
+}
+
+.track-label-col .track-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.track-rate-btn {
+  flex: 0 0 auto;
+  padding: 0.05rem 0.25rem !important;
+  font-size: 0.55rem !important;
+  min-width: 1.65rem;
 }
 
 .track-name {
@@ -510,6 +532,12 @@ select.pitch-select:focus {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+}
+
+.mixer-tracks.mixer-horizontal {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
 }
 
 .mixer-track label {
