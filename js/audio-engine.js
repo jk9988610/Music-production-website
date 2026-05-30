@@ -81,33 +81,6 @@ const AudioEngine = (() => {
     noise.stop(time + dur + 0.02);
   }
 
-  function playWoodOn(c, out, time, gain = 0.7) {
-    const osc = c.createOscillator();
-    const env = c.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(880, time);
-    osc.frequency.exponentialRampToValueAtTime(520, time + 0.02);
-    env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
-    osc.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(time + 0.14);
-  }
-
-  function playTriOn(c, out, time, gain = 0.55) {
-    const osc = c.createOscillator();
-    const env = c.createGain();
-    osc.type = "sine";
-    osc.frequency.value = 1800;
-    env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
-    osc.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(time + 0.4);
-  }
-
   function playTomOn(c, out, time, gain = 0.8) {
     const osc = c.createOscillator();
     const env = c.createGain();
@@ -122,36 +95,33 @@ const AudioEngine = (() => {
     osc.stop(time + 0.3);
   }
 
-  function playPercOn(c, out, time, gain = 0.55) {
-    playHatOn(c, out, time, false, gain, 4500);
-  }
-
   function playSynthOn(c, out, time, midi, type, duration, gain) {
     const freq = midiToFreq(midi);
     const osc = c.createOscillator();
     const env = c.createGain();
     const filter = c.createBiquadFilter();
     const cfg = {
-      bass: { wave: "sawtooth", lp: 600, attack: 0.005 },
-      chord: { wave: "triangle", lp: 2000, attack: 0.02 },
-      lead: { wave: "square", lp: 3200, attack: 0.02 },
-      pluck: { wave: "triangle", lp: 2800, attack: 0.002 },
-      pad: { wave: "sine", lp: 1400, attack: 0.08 },
-      organ: { wave: "square", lp: 2400, attack: 0.01 },
-      bells: { wave: "sine", lp: 4000, attack: 0.005 },
-      flute: { wave: "sine", lp: 3600, attack: 0.04 },
-      harp: { wave: "triangle", lp: 4200, attack: 0.002 },
-      brass: { wave: "sawtooth", lp: 1800, attack: 0.03 },
-      strings: { wave: "sawtooth", lp: 2400, attack: 0.06 },
-      synth: { wave: "square", lp: 3000, attack: 0.01 },
+      bass: { wave: "sawtooth", lp: 600, attack: 0.005, release: 0.85 },
+      chord: { wave: "triangle", lp: 2000, attack: 0.02, release: 0.85 },
+      lead: { wave: "square", lp: 3200, attack: 0.02, release: 0.85 },
+      piano: { wave: "triangle", lp: 5200, attack: 0.004, release: 0.75 },
+      violin: { wave: "sawtooth", lp: 4600, attack: 0.025, release: 0.8 },
+      viola: { wave: "sawtooth", lp: 4000, attack: 0.03, release: 0.82 },
+      cello: { wave: "sawtooth", lp: 2400, attack: 0.04, release: 0.9 },
+      clarinet: { wave: "square", lp: 2900, attack: 0.05, release: 0.8 },
+      sax: { wave: "sawtooth", lp: 2700, attack: 0.04, release: 0.82 },
+      oboe: { wave: "square", lp: 3100, attack: 0.05, release: 0.78 },
+      eguitar: { wave: "sawtooth", lp: 3500, attack: 0.008, release: 0.7 },
+      pipeorgan: { wave: "square", lp: 2500, attack: 0.02, release: 0.95 },
+      synth: { wave: "square", lp: 3000, attack: 0.01, release: 0.85 },
     };
     const p = cfg[type] || cfg.lead;
     osc.type = p.wave;
     osc.frequency.value = freq;
     filter.type = "lowpass";
     filter.frequency.value = p.lp;
-    filter.Q.value = type === "bells" ? 8 : 2;
-    const release = duration * (type === "pad" ? 1.1 : 0.85);
+    filter.Q.value = type === "piano" ? 1.5 : 2;
+    const release = duration * p.release;
     env.gain.setValueAtTime(0, time);
     env.gain.linearRampToValueAtTime(gain, time + p.attack);
     env.gain.setValueAtTime(gain * 0.7, time + duration * 0.3);
@@ -177,16 +147,22 @@ const AudioEngine = (() => {
     return trackId;
   }
 
+  function playMelodicVoice(c, out, voice, time, noteMidi, stepDuration, gain) {
+    if (noteMidi == null) return;
+    let midi = noteMidi;
+    if (voice === "viola") midi -= 5;
+    if (voice === "cello") midi -= 12;
+    playSynthOn(c, out, time, midi, voice, stepDuration, gain);
+  }
+
   function playVoiceOn(c, out, voice, time, noteMidi, stepDuration) {
     switch (voice) {
       case "kick":
         playKickOn(c, out, time);
         break;
       case "snare":
-        playSnareOn(c, out, time);
-        break;
       case "clap":
-        playSnareOn(c, out, time, 0.65);
+        playSnareOn(c, out, time, voice === "clap" ? 0.65 : 0.75);
         break;
       case "hihat":
         playHatOn(c, out, time, false);
@@ -198,22 +174,17 @@ const AudioEngine = (() => {
       case "ride":
         playHatOn(c, out, time, true, 0.42, 5500);
         break;
-      case "wood":
-        playWoodOn(c, out, time);
-        break;
-      case "tri":
-        playTriOn(c, out, time);
+      case "splash":
+        playHatOn(c, out, time, true, 0.48, 9000);
         break;
       case "tom":
+      case "perc":
+      case "wood":
+      case "tri":
         playTomOn(c, out, time);
         break;
-      case "perc":
-        playPercOn(c, out, time);
-        break;
       case "bass":
-        if (noteMidi != null) {
-          playSynthOn(c, out, time, noteMidi, "bass", stepDuration * 0.95, 0.65);
-        }
+        playMelodicVoice(c, out, "bass", time, noteMidi, stepDuration * 0.95, 0.65);
         break;
       case "chord":
         if (noteMidi != null) {
@@ -221,54 +192,45 @@ const AudioEngine = (() => {
         }
         break;
       case "lead":
-        if (noteMidi != null) {
-          playSynthOn(c, out, time, noteMidi, "lead", stepDuration * 0.85, 0.4);
-        }
+        playMelodicVoice(c, out, "lead", time, noteMidi, stepDuration * 0.85, 0.4);
         break;
-      case "pluck":
-        if (noteMidi != null) {
-          playSynthOn(c, out, time, noteMidi, "pluck", stepDuration * 0.5, 0.5);
-        }
+      case "piano":
+        playMelodicVoice(c, out, "piano", time, noteMidi, stepDuration * 0.7, 0.5);
         break;
-      case "pad":
-        if (noteMidi != null) {
-          playSynthOn(c, out, time, noteMidi, "pad", stepDuration * 1.2, 0.38);
-        }
+      case "violin":
+        playMelodicVoice(c, out, "violin", time, noteMidi, stepDuration * 0.82, 0.42);
         break;
+      case "viola":
+        playMelodicVoice(c, out, "viola", time, noteMidi, stepDuration * 0.88, 0.4);
+        break;
+      case "cello":
+        playMelodicVoice(c, out, "cello", time, noteMidi, stepDuration * 0.95, 0.44);
+        break;
+      case "clarinet":
+        playMelodicVoice(c, out, "clarinet", time, noteMidi, stepDuration * 0.85, 0.42);
+        break;
+      case "sax":
+        playMelodicVoice(c, out, "sax", time, noteMidi, stepDuration * 0.8, 0.45);
+        break;
+      case "oboe":
+        playMelodicVoice(c, out, "oboe", time, noteMidi, stepDuration * 0.82, 0.4);
+        break;
+      case "eguitar":
+        playMelodicVoice(c, out, "eguitar", time, noteMidi, stepDuration * 0.65, 0.48);
+        break;
+      case "pipeorgan":
       case "organ":
-        if (noteMidi != null) {
-          playSynthOn(c, out, time, noteMidi, "organ", stepDuration * 0.9, 0.42);
-        }
-        break;
-      case "bells":
-        if (noteMidi != null) {
-          playSynthOn(c, out, time, noteMidi, "bells", stepDuration * 0.75, 0.45);
-        }
-        break;
-      case "flute":
-        if (noteMidi != null) {
-          playSynthOn(c, out, time, noteMidi, "flute", stepDuration * 0.8, 0.42);
-        }
-        break;
-      case "harp":
-        if (noteMidi != null) {
-          playSynthOn(c, out, time, noteMidi, "harp", stepDuration * 0.45, 0.48);
-        }
-        break;
-      case "brass":
-        if (noteMidi != null) {
-          playSynthOn(c, out, time, noteMidi, "brass", stepDuration * 0.88, 0.5);
-        }
-        break;
-      case "strings":
-        if (noteMidi != null) {
-          playSynthOn(c, out, time, noteMidi, "strings", stepDuration * 1.0, 0.4);
-        }
+        playMelodicVoice(c, out, "pipeorgan", time, noteMidi, stepDuration * 0.95, 0.4);
         break;
       case "synth":
-        if (noteMidi != null) {
-          playSynthOn(c, out, time, noteMidi, "synth", stepDuration * 0.7, 0.44);
-        }
+      case "pad":
+      case "bells":
+      case "pluck":
+      case "flute":
+      case "harp":
+      case "brass":
+      case "strings":
+        playMelodicVoice(c, out, "synth", time, noteMidi, stepDuration * 0.75, 0.42);
         break;
       default:
         break;
