@@ -214,70 +214,133 @@ const AudioEngine = (() => {
    * - 各泛音独立衰减（高音更快），经低通扫频模拟音板
    * 参考思路：Fletcher 弦乐/钢琴物理概要、Web Audio 加法击弦合成常见做法
    */
+  function addPianoStringPair(c, body, time, stopAt, freq, partialGain, detuneCents) {
+    [-detuneCents, detuneCents].forEach((cents) => {
+      const osc = c.createOscillator();
+      const env = c.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, time);
+      osc.detune.setValueAtTime(cents, time);
+      env.gain.setValueAtTime(0, time);
+      env.gain.linearRampToValueAtTime(partialGain * 0.5, time + 0.0015);
+      env.gain.exponentialRampToValueAtTime(partialGain * 0.18, time + 0.035);
+      env.gain.exponentialRampToValueAtTime(0.001, time + stopAt - time - 0.02);
+      osc.connect(env);
+      env.connect(body);
+      osc.start(time);
+      osc.stop(stopAt);
+    });
+  }
+
   function playPianoOn(c, out, time, midi, duration, gain = 0.5) {
     const freq = midiToFreq(midi);
-    const inharmonicB = 0.0006;
-    const stopAt = time + duration + 0.35;
+    const inharmonicB = 0.00085;
+    const stopAt = time + duration + 0.45;
 
     const body = c.createGain();
-    body.gain.value = 1;
+    body.gain.value = 1.15;
     const lp = c.createBiquadFilter();
     lp.type = "lowpass";
-    const lpStart = Math.min(1200, freq * 3.5);
-    const lpPeak = Math.min(5200, freq * 10 + 600);
+    const lpStart = Math.min(900, freq * 2.8);
+    const lpPeak = Math.min(6800, freq * 14 + 900);
     lp.frequency.setValueAtTime(lpStart, time);
-    lp.frequency.exponentialRampToValueAtTime(Math.max(lpStart + 80, lpPeak), time + 0.018);
-    lp.frequency.exponentialRampToValueAtTime(lpStart * 0.85, time + duration * 0.55);
-    lp.Q.value = 0.65;
+    lp.frequency.exponentialRampToValueAtTime(Math.max(lpStart + 120, lpPeak), time + 0.012);
+    lp.frequency.exponentialRampToValueAtTime(Math.max(700, lpStart * 0.9), time + duration * 0.65);
+    lp.Q.value = 0.55;
     body.connect(lp);
     lp.connect(out);
 
-    const hammerLen = Math.max(8, Math.floor(c.sampleRate * 0.006));
+    const hammerLen = Math.max(12, Math.floor(c.sampleRate * 0.009));
     const hammer = c.createBuffer(1, hammerLen, c.sampleRate);
     const hData = hammer.getChannelData(0);
     for (let i = 0; i < hammerLen; i++) {
-      hData[i] = (Math.random() * 2 - 1) * (1 - i / hammerLen) ** 1.6;
+      hData[i] = (Math.random() * 2 - 1) * (1 - i / hammerLen) ** 1.4;
     }
     const hammerSrc = c.createBufferSource();
     hammerSrc.buffer = hammer;
     const hammerF = c.createBiquadFilter();
     hammerF.type = "bandpass";
-    hammerF.frequency.value = Math.min(4200, freq * 6 + 400);
-    hammerF.Q.value = 1.1;
+    hammerF.frequency.value = Math.min(5200, freq * 8 + 500);
+    hammerF.Q.value = 0.95;
     const hammerE = c.createGain();
-    hammerE.gain.setValueAtTime(gain * 0.22, time);
-    hammerE.gain.exponentialRampToValueAtTime(0.001, time + 0.012);
+    hammerE.gain.setValueAtTime(gain * 0.38, time);
+    hammerE.gain.exponentialRampToValueAtTime(0.001, time + 0.018);
     hammerSrc.connect(hammerF);
     hammerF.connect(hammerE);
     hammerE.connect(body);
     hammerSrc.start(time);
-    hammerSrc.stop(time + 0.02);
+    hammerSrc.stop(time + 0.03);
 
     const partials = [
-      { n: 1, amp: 1, decayMul: 1 },
-      { n: 2, amp: 0.48, decayMul: 0.78 },
-      { n: 3, amp: 0.3, decayMul: 0.6 },
-      { n: 4, amp: 0.18, decayMul: 0.48 },
-      { n: 5, amp: 0.11, decayMul: 0.38 },
-      { n: 6, amp: 0.065, decayMul: 0.3 },
+      { n: 1, amp: 1, decayMul: 1.05, detune: 5 },
+      { n: 2, amp: 0.52, decayMul: 0.88, detune: 4 },
+      { n: 3, amp: 0.34, decayMul: 0.72, detune: 4 },
+      { n: 4, amp: 0.22, decayMul: 0.58, detune: 3 },
+      { n: 5, amp: 0.14, decayMul: 0.48, detune: 3 },
+      { n: 6, amp: 0.09, decayMul: 0.38, detune: 2 },
+      { n: 7, amp: 0.055, decayMul: 0.3, detune: 2 },
+      { n: 8, amp: 0.035, decayMul: 0.24, detune: 2 },
     ];
 
-    partials.forEach(({ n, amp, decayMul }) => {
+    partials.forEach(({ n, amp, decayMul, detune }) => {
       const f = freq * n * Math.sqrt(1 + inharmonicB * n * n);
+      const rel = Math.max(0.12, duration * decayMul);
+      const peak = gain * amp * (n === 1 ? 0.58 : 0.5 / Math.sqrt(n));
+      addPianoStringPair(c, body, time, time + rel, f, peak, detune);
+    });
+  }
+
+  /** 和弦轨：管风琴式垫音（慢起音、偏暗），与钢琴击弦模型区分 */
+  function playChordPadTone(c, out, time, midi, duration, noteGain, detuneCents) {
+    const freq = midiToFreq(midi);
+    const bus = c.createGain();
+    bus.gain.value = 1;
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(720, time);
+    lp.frequency.exponentialRampToValueAtTime(1100, time + 0.12);
+    lp.frequency.exponentialRampToValueAtTime(850, time + duration * 0.7);
+    lp.Q.value = 1.2;
+
+    const drawbars = [
+      { mult: 1, wave: "sawtooth", amp: 0.55 },
+      { mult: 2, wave: "square", amp: 0.22 },
+      { mult: 3, wave: "sine", amp: 0.12 },
+    ];
+
+    drawbars.forEach(({ mult, wave, amp }) => {
       const osc = c.createOscillator();
       const env = c.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(f, time);
-      const rel = Math.max(0.08, duration * decayMul);
-      const peak = gain * amp * (n === 1 ? 0.42 : 0.36 / Math.sqrt(n));
+      osc.type = wave;
+      osc.frequency.setValueAtTime(freq * mult, time);
+      osc.detune.setValueAtTime(detuneCents, time);
+      const rel = duration * 0.92;
       env.gain.setValueAtTime(0, time);
-      env.gain.linearRampToValueAtTime(peak, time + 0.002);
-      env.gain.exponentialRampToValueAtTime(peak * 0.35, time + 0.04);
+      env.gain.linearRampToValueAtTime(noteGain * amp, time + 0.07);
+      env.gain.setValueAtTime(noteGain * amp * 0.82, time + duration * 0.35);
       env.gain.exponentialRampToValueAtTime(0.001, time + rel);
       osc.connect(env);
-      env.connect(body);
+      env.connect(bus);
       osc.start(time);
-      osc.stop(stopAt);
+      osc.stop(time + rel + 0.08);
+    });
+
+    bus.connect(lp);
+    lp.connect(out);
+  }
+
+  function playChordOn(c, out, time, rootMidi, duration, gain) {
+    const detunes = [-9, 0, 7];
+    [0, 4, 7].forEach((semi, i) => {
+      playChordPadTone(
+        c,
+        out,
+        time,
+        rootMidi + semi,
+        duration,
+        gain * (i === 0 ? 0.38 : 0.3),
+        detunes[i]
+      );
     });
   }
 
@@ -376,17 +439,6 @@ const AudioEngine = (() => {
     osc.stop(time + duration + 0.12);
   }
 
-  function playChordOn(c, out, time, rootMidi, duration, gain) {
-    [0, 4, 7].forEach((semi, i) => {
-      playMono(c, out, time, rootMidi + semi, duration, gain * (i === 0 ? 0.48 : 0.32), {
-        wave: "triangle",
-        lp: 1900,
-        attack: 0.025,
-        releaseMul: 0.85,
-      });
-    });
-  }
-
   function resolveVoice(trackId) {
     if (typeof Sequencer !== "undefined" && Sequencer.getTrack) {
       const t = Sequencer.getTrack(trackId);
@@ -417,7 +469,7 @@ const AudioEngine = (() => {
         });
         break;
       case "piano":
-        playPianoOn(c, out, time, noteMidi, d * 0.72, gain);
+        playPianoOn(c, out, time, noteMidi, d * 0.92, gain);
         break;
       case "eguitar":
         playMono(c, out, time, noteMidi, d * 0.62, gain, {

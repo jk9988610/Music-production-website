@@ -59,7 +59,8 @@ const HelpGuide = (() => {
           <li><strong>鼓组</strong>：底鼓、军鼓、闭镲、开镲、通鼓、吊镲</li>
           <li><strong>旋律</strong>：贝斯、钢琴、电吉他、和弦、领奏、萨克斯、小号、长号、小提琴、大提琴</li>
           <li><strong>弓弦</strong>：小提琴 / 大提琴 — 锯齿激励 + 起弓噪声 + 体腔扫频 + 延迟揉弦</li>
-          <li><strong>钢琴</strong>：非谐泛音 + 琴槌噪声 + 音板低通（非五正弦叠加）</li>
+          <li><strong>钢琴</strong>：非谐泛音 + 双弦失调 + 琴槌 + 音板</li>
+          <li><strong>和弦</strong>：管风琴式垫音（慢起、偏暗），非钢琴音色</li>
           <li><strong>换乐器</strong>：点左侧轨名</li>
           <li><strong>密度</strong>：倍率按钮（½×～4×），弹窗选择。</li>
           <li><strong>±轨 / ±4步</strong>：增减轨道数与 Pattern 长度。</li>
