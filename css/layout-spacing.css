@@ -45,7 +45,8 @@ body {
 .app {
   min-height: 0 !important;
   height: auto !important;
-  flex: none !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .main {
