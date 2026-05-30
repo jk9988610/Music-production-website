@@ -17,6 +17,7 @@
         <span class="brand-icon" aria-hidden="true">◈</span>
         <h1>HarmonyForge</h1>
         <span class="brand-tag">编曲工作站</span>
+        <span class="home-version" title="当前版本">v<span class="app-version-value">—</span></span>
       </div>
       <div class="transport">
         <button type="button" class="btn btn-icon" id="btnPlay" title="播放 (Space)" aria-label="播放">▶</button>
@@ -49,6 +50,7 @@
         <button type="button" class="btn btn-ghost" id="btnSave">保存</button>
         <button type="button" class="btn btn-ghost" id="btnLoad">加载</button>
         <button type="button" class="btn btn-ghost" id="btnClear">清空</button>
+        <button type="button" class="btn btn-ghost" id="btnDebugLog" title="打印调试日志到控制台（含版本号）">调试日志</button>
       </div>
     </header>
 
@@ -88,9 +90,10 @@
     <footer class="footer">
       <span id="statusText">就绪 — 点击播放开始编曲预览</span>
       <div class="footer-meta">
-        <span class="version-badge" title="当前版本">v<span id="appVersion">—</span></span>
+        <span class="version-badge" title="当前版本">v<span class="app-version-value">—</span></span>
         <button type="button" class="btn btn-ghost btn-xs" id="btnHelp" title="快捷键与使用说明">帮助</button>
-        <button type="button" class="btn btn-ghost btn-xs" id="btnLogs" title="查看并打印日志">日志</button>
+        <button type="button" class="btn btn-ghost btn-xs" id="btnLogs" title="查看运行日志">日志</button>
+        <button type="button" class="btn btn-ghost btn-xs" id="btnDebugLogFooter" title="打印调试日志到控制台">调试</button>
         <button type="button" class="btn btn-ghost btn-xs" id="btnUpdate" title="检测并更新到最新版本">更新</button>
         <span class="footer-credit">HarmonyForge</span>
       </div>
@@ -103,6 +106,23 @@
       <button type="button" class="btn btn-ghost btn-xs" id="btnHelpClose" aria-label="关闭">关闭</button>
     </div>
     <div class="help-body">
+      <h4>模块使用指导</h4>
+      <dl class="help-modules">
+        <dt>编曲时间轴</dt>
+        <dd>每个格子代表 1 小节（16 步）。点击格子可切换该段使用的 Pattern（A–D），播放时按从左到右顺序循环整首。点「+ 段」可增加小节数。</dd>
+        <dt>Pattern 库</dt>
+        <dd>顶部 A–D 标签切换当前编辑的 Pattern。每个 Pattern 有独立的鼓组与旋律，便于做主歌 / 副歌等不同段落。</dd>
+        <dt>步进音序器</dt>
+        <dd>7 轨 × 16 步。鼓轨（底鼓、军鼓、镲）点击开关；贝斯 / 和弦 / 主旋律点击后从音阶中选音高。每 4 步为一拍，共 4 拍。</dd>
+        <dt>混音</dt>
+        <dd>右侧滑条调节各轨音量，影响播放与预览响度，随草稿一并保存。</dd>
+        <dt>调性 / 音阶</dt>
+        <dd>顶部选择根音与音阶类型，旋律轨选音时仅显示音阶内音符。</dd>
+        <dt>保存与草稿</dt>
+        <dd>编辑后约 0.6 秒自动保存草稿；刷新页面自动恢复。「保存」写入正式存档，「加载」读取存档，「清空」恢复演示曲。</dd>
+        <dt>版本与更新</dt>
+        <dd>页眉与页脚显示当前版本。点「更新」检测线上新版本；点「调试日志」将带版本号的日志输出到浏览器控制台（F12）。</dd>
+      </dl>
       <h4>快捷键</h4>
       <ul class="help-list">
         <li><kbd>Space</kbd> 播放 / 暂停</li>
@@ -125,7 +145,7 @@
     </div>
     <pre class="log-content" id="logContent" aria-live="polite"></pre>
     <menu class="log-dialog-actions">
-      <button type="button" class="btn btn-ghost btn-xs" id="btnPrintLogs">打印到控制台</button>
+      <button type="button" class="btn btn-ghost btn-xs" id="btnPrintLogs">调试日志打印</button>
       <button type="button" class="btn btn-ghost btn-xs" id="btnClearLogs">清空日志</button>
     </menu>
   </dialog>

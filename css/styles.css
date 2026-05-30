@@ -726,3 +726,35 @@ kbd {
   border-bottom: none;
   padding: 0.2rem 0;
 }
+
+.home-version {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 0.15rem 0.45rem;
+  background: rgba(110, 231, 183, 0.1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.help-modules {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+}
+
+.help-modules dt {
+  color: var(--accent-dim);
+  font-weight: 600;
+  margin-top: 0.45rem;
+}
+
+.help-modules dt:first-child {
+  margin-top: 0;
+}
+
+.help-modules dd {
+  margin: 0.15rem 0 0 0;
+  color: var(--text-muted);
+  line-height: 1.4;
+}

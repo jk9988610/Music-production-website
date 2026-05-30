@@ -47,7 +47,7 @@
   let noteEditContext = null;
 
   function init() {
-    AppLogger.info("HarmonyForge 启动", `v${AppVersion.CURRENT}`);
+    AppLogger.info("HarmonyForge 启动", `v${AppVersion.CURRENT} · build ${AppVersion.BUILD}`);
     AppVersion.initUI();
     populateKeySelect();
     if (!loadDraft()) {

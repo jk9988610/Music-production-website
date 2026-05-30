@@ -40,9 +40,18 @@ const AppLogger = (() => {
     return `${e.time} [${e.level.toUpperCase()}] ${e.message}${extra}`;
   }
 
+  function versionLine() {
+    if (typeof AppVersion !== "undefined" && AppVersion.getInfo) {
+      const v = AppVersion.getInfo();
+      return `HarmonyForge v${v.version} · build ${v.build}`;
+    }
+    return "HarmonyForge (version unknown)";
+  }
+
   function formatAll() {
-    if (!entries.length) return "（暂无日志）";
-    return entries.map(formatEntry).join("\n");
+    const header = `=== ${versionLine()} ===`;
+    if (!entries.length) return header + "\n（暂无日志）";
+    return header + "\n" + entries.map(formatEntry).join("\n");
   }
 
   return {
@@ -51,7 +60,11 @@ const AppLogger = (() => {
     error: (msg, detail) => push("error", msg, detail),
     formatAll,
     printToConsole() {
-      console.group("[HarmonyForge] 应用日志");
+      const header = versionLine();
+      console.group(`[HarmonyForge] 调试日志 · ${header}`);
+      console.info("版本:", header);
+      console.info("UA:", navigator.userAgent);
+      console.info("URL:", location.href);
       entries.forEach((e) => {
         const line = formatEntry(e);
         if (e.level === "error") console.error(line);
@@ -59,7 +72,7 @@ const AppLogger = (() => {
         else console.log(line);
       });
       console.groupEnd();
-      push("info", "已打印全部日志到控制台");
+      push("info", `调试日志已打印 (${header})`);
     },
     clear() {
       entries.length = 0;
