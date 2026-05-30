@@ -85,7 +85,7 @@ const LayoutManager = (() => {
     });
     s.columns = s.columns === 2 ? 2 : 1;
     s.appMaxWidth = clamp(Number(s.appMaxWidth) || DEFAULTS.appMaxWidth, 640, 1400);
-    s.moduleGap = clamp(Number(s.moduleGap) ?? DEFAULTS.moduleGap, 0, 24);
+    s.moduleGap = clamp(Number(s.moduleGap) ?? DEFAULTS.moduleGap, 0, 48);
     s.mainGap = clamp(Number(s.mainGap) ?? DEFAULTS.mainGap, 0, 48);
     return s;
   }

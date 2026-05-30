@@ -201,16 +201,15 @@ select {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--main-module-gap, 15px);
-  flex: 1;
+  flex: 1 1 auto;
+  align-content: start;
+  grid-auto-rows: min-content;
   padding-top: 0.4rem;
   min-width: 0;
+  min-height: 0;
 }
 
-@media (min-width: 720px) {
-  .main {
-    grid-template-columns: 1fr 180px;
-  }
-}
+/* 宽屏双栏仅在有 sidebar 时生效 — 间距以 layout-spacing.css 为准 */
 
 .main > :not(.sidebar) {
   min-width: 0;

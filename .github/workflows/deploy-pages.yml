@@ -39,6 +39,7 @@ jobs:
           cp -r css js _site/
           sed -i "s|href=\"css/styles.css\"|href=\"css/styles.css?v=${BUILD}\"|" _site/index.html
           sed -i "s|href=\"css/layout.css\"|href=\"css/layout.css?v=${BUILD}\"|" _site/index.html
+          sed -i "s|href=\"css/layout-spacing.css\"|href=\"css/layout-spacing.css?v=${BUILD}\"|" _site/index.html
           sed -i 's|<meta name="hf-app-version" content="[^"]*"|<meta name="hf-app-version" content="'"${VERSION}"'"|' _site/index.html
           sed -i 's|<meta name="hf-app-build" content="[^"]*"|<meta name="hf-app-build" content="'"${BUILD}"'"|' _site/index.html
           sed -i 's|class="app-version-value">[^<]*<|class="app-version-value">'"${VERSION}"'<|' _site/index.html

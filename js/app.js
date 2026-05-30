@@ -72,41 +72,37 @@
         ? LayoutManager.getSpacingConfig()
         : { autoGap: true, moduleGap: 0, mainGap: 15 };
 
-  const applyGaps = (mainGapPx, moduleGapPx) => {
-      document.documentElement.style.setProperty("--main-module-gap", `${mainGapPx}px`);
-      document.documentElement.style.setProperty("--chrome-module-gap", `${moduleGapPx}px`);
-    };
+    const main = document.querySelector(".main");
+    const mainGapPx = Math.max(0, Number(cfg.mainGap) || 0);
+    const moduleGapPx = Math.max(0, Number(cfg.moduleGap) || 0);
+
+    document.documentElement.style.setProperty("--main-module-gap", `${mainGapPx}px`);
+    document.documentElement.style.setProperty("--chrome-module-gap", `${moduleGapPx}px`);
+
+    if (!main) return;
 
     if (!cfg.autoGap) {
-      applyGaps(cfg.mainGap, cfg.moduleGap);
+      main.style.removeProperty("padding-bottom");
+      document.documentElement.style.setProperty("--layout-main-pad-bottom", "0");
       return;
     }
-
-    applyGaps(cfg.mainGap, cfg.moduleGap);
 
     if (moduleSpacingRaf) cancelAnimationFrame(moduleSpacingRaf);
     moduleSpacingRaf = requestAnimationFrame(() => {
       moduleSpacingRaf = null;
-      const main = document.querySelector(".main");
-      const visible = main
-        ? [...main.querySelectorAll("fieldset.module[data-module]:not([hidden])")]
-        : [];
-      if (!visible.length) return;
-
-      const header = document.querySelector(".header");
-      const footer = document.querySelector(".footer");
-      const vh = window.innerHeight;
-      const chrome = (header?.offsetHeight || 0) + (footer?.offsetHeight || 0) + 12;
-      const contentH = visible.reduce((sum, el) => sum + el.offsetHeight, 0);
-      const gaps = Math.max(0, visible.length - 1);
-      const free = vh - chrome - contentH;
-
-      let mainGap = cfg.mainGap;
-      if (gaps > 0 && free > 4) {
-        const autoGrow = Math.floor(free / gaps);
-        mainGap = Math.min(48, Math.max(cfg.mainGap, autoGrow));
+      const visible = [...main.querySelectorAll("fieldset.module[data-module]:not([hidden])")];
+      if (!visible.length) {
+        main.style.paddingBottom = "0";
+        document.documentElement.style.setProperty("--layout-main-pad-bottom", "0");
+        return;
       }
-      applyGaps(mainGap, cfg.moduleGap);
+      const mainRect = main.getBoundingClientRect();
+      const last = visible[visible.length - 1];
+      const lastBottom = last.getBoundingClientRect().bottom;
+      const used = lastBottom - mainRect.top;
+      const pad = Math.max(0, Math.round(mainRect.height - used));
+      main.style.paddingBottom = `${pad}px`;
+      document.documentElement.style.setProperty("--layout-main-pad-bottom", `${pad}px`);
     });
   }
 

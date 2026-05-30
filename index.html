@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/layout-spacing.css">
 </head>
 <body>
   <div class="app" id="app">
@@ -151,9 +152,9 @@
       </div>
       <div class="layout-section">
         <h4>整体</h4>
-        <label class="layout-control"><input type="checkbox" id="layoutAutoGap" checked> 模块间距自适应视口</label>
-        <label class="layout-control">模块外边距(legacy) <input type="range" id="layoutModuleGap" min="0" max="48" value="6"><output id="layoutModuleGapVal">6</output> px</label>
-        <label class="layout-control">模块间距 <input type="range" id="layoutMainGap" min="0" max="48" value="6"><output id="layoutMainGapVal">6</output> px</label>
+        <label class="layout-control"><input type="checkbox" id="layoutAutoGap" checked> 余白填充底部（不拉大模块间距）</label>
+        <label class="layout-control">模块额外间距 <input type="range" id="layoutModuleGap" min="0" max="48" value="6"><output id="layoutModuleGapVal">6</output> px</label>
+        <label class="layout-control">主区域行距（grid gap）<input type="range" id="layoutMainGap" min="0" max="48" value="6"><output id="layoutMainGapVal">6</output> px</label>
         <label class="layout-control">页面最大宽度 <input type="range" id="layoutAppWidth" min="640" max="1400" step="20" value="920"><output id="layoutAppWidthVal">920</output> px</label>
         <label class="layout-control">分栏
           <select id="layoutColumns">
@@ -193,7 +194,7 @@
       <h4>模块使用指导</h4>
       <dl class="help-modules">
                 <dt>外壳与内容</dt>
-        <dd>模块间距随视口与内容高度自动调节（<code>--chrome-module-gap</code>）。灰框高度随 <code>.module-body</code> 内容撑开；URL 加 <code>?debug=layers</code> 可看外壳/内容分层。</dd>
+        <dd>「主区域行距」为模块之间的 grid 间距；「模块额外间距」为每块下边距。开启余白填充时只把空白留在底部，不会撑大行距。灰框高度随 <code>.module-body</code> 内容撑开；URL 加 <code>?debug=layers</code> 可看外壳/内容分层。</dd>
         <dt>编曲时间轴</dt>
         <dd>每个格子 1 小节（步数可扩展），点击切换 Pattern（A–D）；时间轴末尾「+段」增加小节。</dd>
         <dt>Pattern 库</dt>

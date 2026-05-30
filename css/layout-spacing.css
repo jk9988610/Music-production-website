@@ -1,0 +1,38 @@
+/* 模块栈间距 — 最高优先级，覆盖 styles.css / layout.css 冲突 */
+
+.main {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  grid-auto-rows: min-content !important;
+  align-content: start !important;
+  justify-content: stretch !important;
+  gap: var(--main-module-gap, 15px) !important;
+  row-gap: var(--main-module-gap, 15px) !important;
+  column-gap: 0 !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  padding-top: 0.12rem;
+  padding-bottom: var(--layout-main-pad-bottom, 0) !important;
+}
+
+/* 取消宽屏双栏遗留（无 sidebar 时会把模块塞进两列） */
+@media (min-width: 720px) {
+  .main {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+fieldset.module[data-module] {
+  margin: 0 !important;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 模块间距（moduleGap）= 每个模块额外下边距，与 grid gap（mainGap）叠加 */
+fieldset.module[data-module]:not(:last-child) {
+  margin-bottom: var(--chrome-module-gap, 0px) !important;
+}
+
+html[data-layout-columns="2"] .main {
+  column-gap: var(--main-module-gap, 15px) !important;
+}

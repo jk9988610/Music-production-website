@@ -52,11 +52,7 @@
   padding: 0.1rem 0.35rem;
 }
 
-.main {
-  gap: var(--main-module-gap, 4px);
-  padding-top: 0.12rem;
-  grid-template-columns: 1fr !important;
-}
+/* .main 间距见 layout-spacing.css */
 
 .footer-slim {
   padding: 0.15rem 0;
