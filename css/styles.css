@@ -363,14 +363,19 @@ select {
   -webkit-overflow-scrolling: touch;
 }
 
+.sequencer-wrap .tracks,
+.sequencer-wrap .step-labels {
+  flex-shrink: 0;
+}
+
 .step-labels {
   display: grid;
-  grid-template-columns: var(--seq-label-col) repeat(16, var(--seq-step-size));
+  grid-template-columns: var(--seq-label-col) repeat(var(--seq-step-count, 16), var(--seq-step-size));
   gap: 3px;
   margin-bottom: 3px;
   padding-left: 0;
   width: max-content;
-  min-width: 100%;
+  min-width: min-content;
 }
 
 .step-label {
@@ -394,11 +399,11 @@ select {
 
 .track-row {
   display: grid;
-  grid-template-columns: var(--seq-label-col) repeat(16, var(--seq-step-size));
+  grid-template-columns: var(--seq-label-col) repeat(var(--seq-step-count, 16), var(--seq-step-size));
   gap: 3px;
   align-items: center;
   width: max-content;
-  min-width: 100%;
+  min-width: min-content;
 }
 
 .track-name {

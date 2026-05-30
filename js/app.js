@@ -29,6 +29,7 @@
     keySelect: $("#keySelect"),
     scaleSelect: $("#scaleSelect"),
     patternTabs: $("#patternTabs"),
+    btnAddPattern: $("#btnAddPattern"),
     tracks: $("#tracks"),
     stepLabels: $("#stepLabels"),
     arrangeTimeline: $("#arrangeTimeline"),
@@ -46,6 +47,16 @@
   };
 
   let noteEditContext = null;
+
+  function patternLabel(index) {
+    if (index < 26) return String.fromCharCode(65 + index);
+    return `P${index + 1}`;
+  }
+
+  function syncSequencerLayout() {
+    const wrap = document.querySelector(".module-sequencer .sequencer-wrap");
+    if (wrap) wrap.style.setProperty("--seq-step-count", String(Sequencer.steps));
+  }
 
   function logModuleShellMetrics() {
     document.querySelectorAll("fieldset.module").forEach((fs) => {
@@ -82,6 +93,7 @@
     bindEvents();
     applyVolumesToEngine();
     updateStepCountUI();
+    syncSequencerLayout();
     setStatus("就绪 — 草稿将自动保存");
     scheduleAutosave();
   }
@@ -98,16 +110,19 @@
 
   function renderPatternTabs() {
     els.patternTabs.innerHTML = "";
-    for (let i = 0; i < Sequencer.PATTERN_COUNT; i++) {
+    for (let i = 0; i < Sequencer.patternCount; i++) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "pattern-tab" + (i === Sequencer.currentPattern() ? " active" : "");
-      btn.textContent = String.fromCharCode(65 + i);
+      btn.textContent = patternLabel(i);
       btn.setAttribute("role", "tab");
       btn.setAttribute("aria-selected", i === Sequencer.currentPattern());
       btn.dataset.pattern = i;
       btn.addEventListener("click", () => selectPattern(i));
       els.patternTabs.appendChild(btn);
+    }
+    if (els.btnAddPattern) {
+      els.btnAddPattern.disabled = Sequencer.patternCount >= Sequencer.MAX_PATTERNS;
     }
   }
 
@@ -115,7 +130,7 @@
     Sequencer.setCurrentPattern(index);
     renderPatternTabs();
     renderSequencer();
-    setStatus(`Pattern ${String.fromCharCode(65 + index)}`);
+    setStatus(`Pattern ${patternLabel(index)}`);
     scheduleAutosave();
   }
 
@@ -133,6 +148,7 @@
       span.textContent = s + 1;
       els.stepLabels.appendChild(span);
     }
+    syncSequencerLayout();
   }
 
   function renderSequencer() {
@@ -169,6 +185,7 @@
       }
       els.tracks.appendChild(row);
     });
+    syncSequencerLayout();
   }
 
   function onStepClick(track, step) {
@@ -217,10 +234,10 @@
       slot.className = "arrange-slot";
       slot.innerHTML = `
         <span class="arrange-slot-index">§${i + 1}</span>
-        <span class="arrange-slot-pattern">${String.fromCharCode(65 + sec.patternIndex)}</span>
+        <span class="arrange-slot-pattern">${patternLabel(sec.patternIndex)}</span>
       `;
       slot.addEventListener("click", () => {
-        Arranger.cycleSectionPattern(i, Sequencer.PATTERN_COUNT);
+        Arranger.cycleSectionPattern(i, Sequencer.patternCount);
         renderArrangement();
         scheduleAutosave();
       });
@@ -235,7 +252,7 @@
     addBtn.innerHTML = '<span class="arrange-slot-add-label">+段</span>';
     els.arrangeTimeline.appendChild(addBtn);
 
-    els.arrangeInfo.textContent = `${sections.length}段 · ${Sequencer.steps}步/段`;
+    els.arrangeInfo.textContent = `${sections.length}段 · ${Sequencer.patternCount}型 · ${Sequencer.steps}步/段`;
   }
 
   function renderMixer() {
@@ -315,6 +332,20 @@
         setStatus(`已增加至 ${Sequencer.steps} 步`);
       });
     }
+    if (els.btnAddPattern) {
+      els.btnAddPattern.addEventListener("click", () => {
+        const r = Sequencer.addPattern();
+        if (!r.ok) {
+          setStatus(`已达最大 ${Sequencer.MAX_PATTERNS} 个 Pattern`);
+          return;
+        }
+        renderPatternTabs();
+        renderArrangement();
+        scheduleAutosave();
+        setStatus(`已增加至 ${r.count} 个 Pattern（${patternLabel(r.count - 1)}）`);
+      });
+    }
+
     els.btnSave.addEventListener("click", saveProject);
     els.btnLoad.addEventListener("click", loadProject);
     els.btnClear.addEventListener("click", clearProject);
@@ -348,8 +379,9 @@
         e.preventDefault();
         togglePlay();
       }
-      if (e.key >= "1" && e.key <= "4") {
-        selectPattern(Number(e.key) - 1);
+      if (e.key >= "1" && e.key <= "9") {
+        const pi = Number(e.key) - 1;
+        if (pi < Sequencer.patternCount) selectPattern(pi);
       }
     });
   }
@@ -497,7 +529,7 @@
   function applyProjectData(data, silent) {
     if (!data) return false;
     if (data.sequencer) Sequencer.importState(data.sequencer);
-    if (data.arranger) Arranger.importState(data.arranger);
+    if (data.arranger) Arranger.importState(data.arranger, Sequencer.patternCount);
     if (data.bpm) {
       els.bpm.value = data.bpm;
       bpm = data.bpm;
@@ -515,6 +547,7 @@
     renderSequencer();
     renderArrangement();
     updateStepCountUI();
+    syncSequencerLayout();
     renderMixer();
     applyVolumesToEngine();
     if (!silent) AppLogger.info("项目数据已应用");
@@ -582,8 +615,8 @@
 
   function clearProject() {
     if (!confirm("确定清空所有 Pattern 与编曲？此操作不可撤销。")) return;
-    Sequencer.importState({ steps: 16, patterns: Sequencer.createEmptyPatterns() });
-    Arranger.init(Sequencer.PATTERN_COUNT);
+    Sequencer.importState({ steps: 16, patterns: Sequencer.createEmptyPatterns(Sequencer.DEFAULT_PATTERN_COUNT) });
+    Arranger.init(Sequencer.patternCount);
     Sequencer.loadDemoPatterns();
     localStorage.removeItem(DRAFT_KEY);
     renderStepLabels();

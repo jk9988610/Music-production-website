@@ -233,3 +233,33 @@ html[data-debug-layers] fieldset.module .module-chrome {
   font-size: 0.65rem;
   color: var(--text-muted);
 }
+
+
+.arrange-bar .pattern-tabs-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arrange-bar .pattern-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.2rem;
+  overflow-x: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+fieldset.module.module-sequencer .sequencer-wrap {
+  overflow-x: auto !important;
+  overflow-y: hidden;
+}
+
+fieldset.module.module-sequencer .sequencer-wrap .track-row,
+fieldset.module.module-sequencer .sequencer-wrap .step-labels {
+  width: max-content;
+  min-width: min-content;
+}

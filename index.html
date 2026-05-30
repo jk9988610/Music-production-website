@@ -64,7 +64,10 @@
       <fieldset class="module module-arrange" aria-label="编曲时间轴" data-shell="chrome">
         <legend>编曲</legend>
         <div class="module-chrome arrange-bar">
-          <div class="pattern-tabs" id="patternTabs" role="tablist"></div>
+          <div class="pattern-tabs-wrap">
+            <div class="pattern-tabs" id="patternTabs" role="tablist"></div>
+            <button type="button" class="btn btn-sm" id="btnAddPattern" title="增加 Pattern（最多 16 个）">+型</button>
+          </div>
           <span class="arrange-info" id="arrangeInfo">8段</span>
         </div>
         <div class="module-body arrange-scroll">
@@ -108,7 +111,7 @@
         <dt>编曲时间轴</dt>
         <dd>每个格子 1 小节（步数可扩展），点击切换 Pattern（A–D）；时间轴末尾「+段」增加小节。</dd>
         <dt>Pattern 库</dt>
-        <dd>编曲栏 A–D 切换当前编辑 Pattern，各段可分配不同 Pattern。</dd>
+        <dd>编曲栏切换当前编辑 Pattern；「+型」可增加 Pattern（最多 16，A–P…）；各段可分配不同 Pattern。</dd>
         <dt>步进音序器</dt>
         <dd>7 轨步进格；音序栏「+4步」增加步数（最多 64）；鼓轨点击开关，旋律轨点击选音高。</dd>
         <dt>混音</dt>
@@ -123,7 +126,7 @@
       <h4>快捷键</h4>
       <ul class="help-list">
         <li><kbd>Space</kbd> 播放 / 暂停</li>
-        <li><kbd>1</kbd>–<kbd>4</kbd> 切换 Pattern</li>
+        <li><kbd>1</kbd>–<kbd>9</kbd> 切换前 9 个 Pattern</li>
       </ul>
     </div>
   </dialog>

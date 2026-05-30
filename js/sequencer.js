@@ -5,7 +5,8 @@ const Sequencer = (() => {
   const DEFAULT_STEPS = 16;
   const MAX_STEPS = 64;
   const STEP_ADD = 4;
-  const PATTERN_COUNT = 4;
+  const DEFAULT_PATTERN_COUNT = 4;
+  const MAX_PATTERNS = 16;
 
   const TRACKS = [
     { id: "kick", name: "底鼓", type: "drum", class: "drum-kick" },
@@ -27,7 +28,7 @@ const Sequencer = (() => {
   };
 
   let steps = DEFAULT_STEPS;
-  let patterns = createEmptyPatterns();
+  let patterns = createEmptyPatterns(DEFAULT_PATTERN_COUNT);
   let currentPattern = 0;
   let rootKey = 0;
   let scaleName = "major";
@@ -46,9 +47,10 @@ const Sequencer = (() => {
     return pattern;
   }
 
-  function createEmptyPatterns() {
+  function createEmptyPatterns(count = DEFAULT_PATTERN_COUNT) {
+    const n = Math.min(MAX_PATTERNS, Math.max(1, count));
     const p = [];
-    for (let i = 0; i < PATTERN_COUNT; i++) {
+    for (let i = 0; i < n; i++) {
       p.push(createEmptyPattern());
     }
     return p;
@@ -80,6 +82,12 @@ const Sequencer = (() => {
       });
     });
     return { ok: true, steps, added: add };
+  }
+
+  function addPattern() {
+    if (patterns.length >= MAX_PATTERNS) return { ok: false, count: patterns.length };
+    patterns.push(createEmptyPattern());
+    return { ok: true, count: patterns.length };
   }
 
   function getScaleNotes(octaves = 3) {
@@ -134,6 +142,7 @@ const Sequencer = (() => {
       { kick: [0, 4, 8, 12], snare: [4, 12], hihat: [2, 6, 10, 14], openhat: [15], bass: [{ s: 0, n: 36 }, { s: 4, n: 38 }, { s: 8, n: 41 }, { s: 12, n: 43 }] },
     ];
     demo.forEach((d, pi) => {
+      if (pi >= patterns.length) return;
       clearPattern(pi);
       Object.entries(d).forEach(([trackId, data]) => {
         if (!patterns[pi][trackId]) return;
@@ -170,12 +179,17 @@ const Sequencer = (() => {
 
   function importState(state) {
     if (state.steps != null) steps = Math.min(MAX_STEPS, Math.max(4, Number(state.steps) || DEFAULT_STEPS));
-    if (state.patterns) patterns = state.patterns;
+    if (state.patterns) {
+      patterns = state.patterns;
+      if (patterns.length > MAX_PATTERNS) patterns = patterns.slice(0, MAX_PATTERNS);
+      if (patterns.length < 1) patterns = createEmptyPatterns(1);
+    }
     if (state.volumes) volumes = { ...volumes, ...state.volumes };
     if (state.rootKey != null) rootKey = state.rootKey;
     if (state.scaleName) scaleName = state.scaleName;
     if (state.currentPattern != null) currentPattern = state.currentPattern;
     normalizeAllPatterns();
+    if (currentPattern >= patterns.length) currentPattern = 0;
   }
 
   return {
@@ -185,9 +199,16 @@ const Sequencer = (() => {
     get steps() {
       return steps;
     },
+    get patternCount() {
+      return patterns.length;
+    },
+    get PATTERN_COUNT() {
+      return patterns.length;
+    },
     MAX_STEPS,
+    MAX_PATTERNS,
     STEP_ADD,
-    PATTERN_COUNT,
+    DEFAULT_PATTERN_COUNT,
     TRACKS,
     KEYS,
     patterns: () => patterns,
@@ -209,6 +230,7 @@ const Sequencer = (() => {
     importState,
     createEmptyPatterns,
     addSteps,
+    addPattern,
     normalizeAllPatterns,
   };
 })();

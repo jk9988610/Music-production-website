@@ -46,10 +46,11 @@ const Arranger = (() => {
     return { sections };
   }
 
-  function importState(state) {
+  function importState(state, patternCount = 4) {
     if (state.sections && Array.isArray(state.sections)) {
+      const max = Math.max(1, patternCount);
       sections = state.sections.map((s) => ({
-        patternIndex: s.patternIndex ?? 0,
+        patternIndex: Math.min(max - 1, Math.max(0, s.patternIndex ?? 0)),
       }));
     }
   }
