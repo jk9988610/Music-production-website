@@ -65,7 +65,6 @@
         <legend>编曲</legend>
         <div class="module-chrome arrange-bar">
           <div class="pattern-tabs" id="patternTabs" role="tablist"></div>
-          <button type="button" class="btn btn-sm" id="btnAddSection">+段</button>
           <span class="arrange-info" id="arrangeInfo">8段</span>
         </div>
         <div class="module-body arrange-scroll">
@@ -75,6 +74,10 @@
 
       <fieldset class="module module-sequencer" aria-label="步进音序器" data-shell="chrome">
         <legend>音序</legend>
+        <div class="module-chrome sequencer-bar">
+          <button type="button" class="btn btn-sm" id="btnAddSteps" title="增加 4 个步进（最多 64 步）">+4步</button>
+          <span class="step-count-info" id="stepCountInfo">16步</span>
+        </div>
         <div class="module-body sequencer-wrap">
           <div class="step-labels" id="stepLabels"></div>
           <div class="tracks" id="tracks"></div>
@@ -103,11 +106,11 @@
                 <dt>外壳与内容</dt>
         <dd>灰框（fieldset）高度随内容区 .module-body 自适应；格子与滑条在 <code>.module-body</code> 内。只改 CSS 中 <code>--chrome-*</code> 压缩框高，<code>--content-*</code> 控制内容。URL 加 <code>?debug=layers</code> 可橙框=外壳、青框=内容。</dd>
         <dt>编曲时间轴</dt>
-        <dd>每个格子 1 小节（16 步），点击切换 Pattern（A–D），「+段」增加小节。</dd>
+        <dd>每个格子 1 小节（步数可扩展），点击切换 Pattern（A–D）；时间轴末尾「+段」增加小节。</dd>
         <dt>Pattern 库</dt>
         <dd>编曲栏 A–D 切换当前编辑 Pattern，各段可分配不同 Pattern。</dd>
         <dt>步进音序器</dt>
-        <dd>7 轨 × 16 步；鼓轨点击开关，旋律轨点击选音高。</dd>
+        <dd>7 轨步进格；音序栏「+4步」增加步数（最多 64）；鼓轨点击开关，旋律轨点击选音高。</dd>
         <dt>混音</dt>
         <dd>底部横条调节各轨音量，随草稿保存。</dd>
         <dt>调性 / 音阶</dt>

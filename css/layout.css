@@ -198,3 +198,38 @@ html[data-debug-layers] fieldset.module .module-body {
 html[data-debug-layers] fieldset.module .module-chrome {
   outline: 1px dotted #a78bfa !important;
 }
+
+.arrange-slot-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed !important;
+  border-color: var(--accent-dim) !important;
+  background: transparent !important;
+  min-width: 42px;
+  min-height: 34px;
+}
+
+.arrange-slot-add:hover {
+  background: rgba(110, 231, 183, 0.08) !important;
+}
+
+.arrange-slot-add-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.sequencer-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 var(--chrome-toolbar-gap) !important;
+  padding: 0 !important;
+}
+
+.step-count-info {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}

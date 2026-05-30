@@ -2,7 +2,9 @@
  * 步进音序器 — Pattern 与多轨数据
  */
 const Sequencer = (() => {
-  const STEPS = 16;
+  const DEFAULT_STEPS = 16;
+  const MAX_STEPS = 64;
+  const STEP_ADD = 4;
   const PATTERN_COUNT = 4;
 
   const TRACKS = [
@@ -24,12 +26,25 @@ const Sequencer = (() => {
     dorian: [0, 2, 3, 5, 7, 9, 10],
   };
 
+  let steps = DEFAULT_STEPS;
   let patterns = createEmptyPatterns();
   let currentPattern = 0;
   let rootKey = 0;
   let scaleName = "major";
   let volumes = {};
   TRACKS.forEach((t) => { volumes[t.id] = t.type === "drum" ? 0.85 : 0.75; });
+
+  function emptyCell() {
+    return { on: false, note: null };
+  }
+
+  function createEmptyPattern() {
+    const pattern = {};
+    TRACKS.forEach((track) => {
+      pattern[track.id] = Array(steps).fill(null).map(() => emptyCell());
+    });
+    return pattern;
+  }
 
   function createEmptyPatterns() {
     const p = [];
@@ -39,15 +54,32 @@ const Sequencer = (() => {
     return p;
   }
 
-  function createEmptyPattern() {
-    const pattern = {};
-    TRACKS.forEach((track) => {
-      pattern[track.id] = Array(STEPS).fill(null).map(() => ({
-        on: false,
-        note: null,
-      }));
+  function normalizeAllPatterns() {
+    patterns.forEach((pattern) => {
+      TRACKS.forEach((track) => {
+        const row = pattern[track.id];
+        if (!row) {
+          pattern[track.id] = Array(steps).fill(null).map(() => emptyCell());
+          return;
+        }
+        while (row.length < steps) row.push(emptyCell());
+        if (row.length > steps) row.length = steps;
+      });
     });
-    return pattern;
+  }
+
+  function addSteps(count = STEP_ADD) {
+    const add = Math.min(count, MAX_STEPS - steps);
+    if (add <= 0) return { ok: false, steps };
+    steps += add;
+    patterns.forEach((pattern) => {
+      TRACKS.forEach((track) => {
+        for (let i = 0; i < add; i++) {
+          pattern[track.id].push(emptyCell());
+        }
+      });
+    });
+    return { ok: true, steps, added: add };
   }
 
   function getScaleNotes(octaves = 3) {
@@ -107,12 +139,14 @@ const Sequencer = (() => {
         if (!patterns[pi][trackId]) return;
         if (Array.isArray(data) && typeof data[0] === "number") {
           data.forEach((s) => {
-            patterns[pi][trackId][s].on = true;
+            if (s < steps) patterns[pi][trackId][s].on = true;
           });
         } else if (Array.isArray(data)) {
           data.forEach(({ s, n }) => {
-            patterns[pi][trackId][s].on = true;
-            patterns[pi][trackId][s].note = n;
+            if (s < steps) {
+              patterns[pi][trackId][s].on = true;
+              patterns[pi][trackId][s].note = n;
+            }
           });
         }
       });
@@ -125,6 +159,7 @@ const Sequencer = (() => {
 
   function exportState() {
     return {
+      steps,
       patterns,
       volumes,
       rootKey,
@@ -134,15 +169,24 @@ const Sequencer = (() => {
   }
 
   function importState(state) {
+    if (state.steps != null) steps = Math.min(MAX_STEPS, Math.max(4, Number(state.steps) || DEFAULT_STEPS));
     if (state.patterns) patterns = state.patterns;
     if (state.volumes) volumes = { ...volumes, ...state.volumes };
     if (state.rootKey != null) rootKey = state.rootKey;
     if (state.scaleName) scaleName = state.scaleName;
     if (state.currentPattern != null) currentPattern = state.currentPattern;
+    normalizeAllPatterns();
   }
 
   return {
-    STEPS,
+    get STEPS() {
+      return steps;
+    },
+    get steps() {
+      return steps;
+    },
+    MAX_STEPS,
+    STEP_ADD,
     PATTERN_COUNT,
     TRACKS,
     KEYS,
@@ -164,5 +208,7 @@ const Sequencer = (() => {
     exportState,
     importState,
     createEmptyPatterns,
+    addSteps,
+    normalizeAllPatterns,
   };
 })();

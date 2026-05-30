@@ -33,7 +33,8 @@
     stepLabels: $("#stepLabels"),
     arrangeTimeline: $("#arrangeTimeline"),
     arrangeInfo: $("#arrangeInfo"),
-    btnAddSection: $("#btnAddSection"),
+    btnAddSteps: $("#btnAddSteps"),
+    stepCountInfo: $("#stepCountInfo"),
     mixer: $("#mixer"),
     statusText: $("#statusText"),
     btnSave: $("#btnSave"),
@@ -80,6 +81,7 @@
     renderMixer();
     bindEvents();
     applyVolumesToEngine();
+    updateStepCountUI();
     setStatus("就绪 — 草稿将自动保存");
     scheduleAutosave();
   }
@@ -117,9 +119,15 @@
     scheduleAutosave();
   }
 
+  function updateStepCountUI() {
+    if (els.stepCountInfo) {
+      els.stepCountInfo.textContent = `${Sequencer.steps}步`;
+    }
+  }
+
   function renderStepLabels() {
     els.stepLabels.innerHTML = '<span class="step-label"></span>';
-    for (let s = 0; s < Sequencer.STEPS; s++) {
+    for (let s = 0; s < Sequencer.steps; s++) {
       const span = document.createElement("span");
       span.className = "step-label" + (s % 4 === 0 ? " beat" : "");
       span.textContent = s + 1;
@@ -140,7 +148,7 @@
       name.textContent = track.name;
       row.appendChild(name);
 
-      for (let step = 0; step < Sequencer.STEPS; step++) {
+      for (let step = 0; step < Sequencer.steps; step++) {
         const cell = pattern[track.id][step];
         const btn = document.createElement("button");
         btn.type = "button";
@@ -219,7 +227,15 @@
       els.arrangeTimeline.appendChild(slot);
     });
 
-    els.arrangeInfo.textContent = `${sections.length}段`;
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.id = "btnAddSection";
+    addBtn.className = "arrange-slot arrange-slot-add";
+    addBtn.title = "在末尾增加一个编曲段落";
+    addBtn.innerHTML = '<span class="arrange-slot-add-label">+段</span>';
+    els.arrangeTimeline.appendChild(addBtn);
+
+    els.arrangeInfo.textContent = `${sections.length}段 · ${Sequencer.steps}步/段`;
   }
 
   function renderMixer() {
@@ -275,11 +291,30 @@
       Sequencer.setScaleName(els.scaleSelect.value);
       scheduleAutosave();
     });
-    els.btnAddSection.addEventListener("click", () => {
-      Arranger.addSection();
-      renderArrangement();
-      scheduleAutosave();
-    });
+    if (els.arrangeTimeline) {
+      els.arrangeTimeline.addEventListener("click", (e) => {
+        if (e.target.closest("#btnAddSection")) {
+          Arranger.addSection();
+          renderArrangement();
+          scheduleAutosave();
+        }
+      });
+    }
+
+    if (els.btnAddSteps) {
+      els.btnAddSteps.addEventListener("click", () => {
+        const r = Sequencer.addSteps(Sequencer.STEP_ADD);
+        if (!r.ok) {
+          setStatus(`已达最大 ${Sequencer.MAX_STEPS} 步`);
+          return;
+        }
+        renderStepLabels();
+        renderSequencer();
+        updateStepCountUI();
+        scheduleAutosave();
+        setStatus(`已增加至 ${Sequencer.steps} 步`);
+      });
+    }
     els.btnSave.addEventListener("click", saveProject);
     els.btnLoad.addEventListener("click", loadProject);
     els.btnClear.addEventListener("click", clearProject);
@@ -382,7 +417,7 @@
 
     while (nextStepTime < ctx.currentTime + lookAhead) {
       playStepAt(nextStepTime);
-      const stepInPattern = stepCounter % Sequencer.STEPS;
+      const stepInPattern = stepCounter % Sequencer.steps;
       nextStepTime += getStepDelay(stepInPattern);
       stepCounter++;
     }
@@ -396,14 +431,14 @@
     const sections = Arranger.getSections();
 
     if (playMode === "arrange") {
-      const totalSteps = sections.length * Sequencer.STEPS;
+      const totalSteps = sections.length * Sequencer.steps;
       const globalStep = stepCounter % totalSteps;
-      currentArrangeSection = Math.floor(globalStep / Sequencer.STEPS);
-      step = globalStep % Sequencer.STEPS;
+      currentArrangeSection = Math.floor(globalStep / Sequencer.steps);
+      step = globalStep % Sequencer.steps;
       patternIndex = sections[currentArrangeSection]?.patternIndex ?? 0;
     } else {
       patternIndex = Sequencer.currentPattern();
-      step = stepCounter % Sequencer.STEPS;
+      step = stepCounter % Sequencer.steps;
     }
 
     currentStep = step;
@@ -419,7 +454,7 @@
       }
     });
 
-    if (playMode === "arrange" && step === Sequencer.STEPS - 1) {
+    if (playMode === "arrange" && step === Sequencer.steps - 1) {
       const nextSec = (currentArrangeSection + 1) % sections.length;
       if (nextSec === 0 && stepCounter > 0) {
         setStatus("编曲循环播放中…");
@@ -438,7 +473,7 @@
     });
 
     if (playMode === "arrange" && sectionIndex >= 0) {
-      const slots = els.arrangeTimeline.querySelectorAll(".arrange-slot");
+      const slots = els.arrangeTimeline.querySelectorAll(".arrange-slot:not(.arrange-slot-add)");
       if (slots[sectionIndex]) slots[sectionIndex].classList.add("playing");
     }
   }
@@ -476,8 +511,10 @@
     els.keySelect.value = String(Sequencer.rootKey());
     els.scaleSelect.value = Sequencer.scaleName();
     renderPatternTabs();
+    renderStepLabels();
     renderSequencer();
     renderArrangement();
+    updateStepCountUI();
     renderMixer();
     applyVolumesToEngine();
     if (!silent) AppLogger.info("项目数据已应用");
@@ -545,12 +582,14 @@
 
   function clearProject() {
     if (!confirm("确定清空所有 Pattern 与编曲？此操作不可撤销。")) return;
-    Sequencer.importState({ patterns: Sequencer.createEmptyPatterns() });
+    Sequencer.importState({ steps: 16, patterns: Sequencer.createEmptyPatterns() });
     Arranger.init(Sequencer.PATTERN_COUNT);
     Sequencer.loadDemoPatterns();
     localStorage.removeItem(DRAFT_KEY);
+    renderStepLabels();
     renderSequencer();
     renderArrangement();
+    updateStepCountUI();
     scheduleAutosave();
     setStatus("已重置为演示 Pattern");
   }
