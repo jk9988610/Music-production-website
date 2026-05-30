@@ -59,20 +59,27 @@ const AppLogger = (() => {
     warn: (msg, detail) => push("warn", msg, detail),
     error: (msg, detail) => push("error", msg, detail),
     formatAll,
-    printToConsole() {
+    async copyToClipboard() {
+      const text = formatAll();
       const header = versionLine();
-      console.group(`[HarmonyForge] 调试日志 · ${header}`);
-      console.info("版本:", header);
-      console.info("UA:", navigator.userAgent);
-      console.info("URL:", location.href);
-      entries.forEach((e) => {
-        const line = formatEntry(e);
-        if (e.level === "error") console.error(line);
-        else if (e.level === "warn") console.warn(line);
-        else console.log(line);
-      });
-      console.groupEnd();
-      push("info", `调试日志已打印 (${header})`);
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.cssText = "position:fixed;left:-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+        }
+        push("info", "日志已复制到剪贴板", header);
+        return true;
+      } catch (err) {
+        push("error", "复制日志失败", err.message);
+        return false;
+      }
     },
     clear() {
       entries.length = 0;

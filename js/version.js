@@ -1,10 +1,12 @@
 /**
  * 版本管理与在线更新检测
+ * 运行版本以 version.json 为准（避免 JS 文件被缓存后版本号不更新）
  */
 const AppVersion = (() => {
-  const CURRENT = "1.3.4";
-  const BUILD = "dev";
+  let activeVersion = "1.3.5";
+  let activeBuild = "dev";
   const STORAGE_BUILD = "hf-last-build";
+  const STORAGE_VERSION = "hf-last-version";
 
   function versionUrl() {
     return `version.json?t=${Date.now()}`;
@@ -20,8 +22,8 @@ const AppVersion = (() => {
   }
 
   function compareVersion(a, b) {
-    const pa = a.split(".").map(Number);
-    const pb = b.split(".").map(Number);
+    const pa = String(a).split(".").map(Number);
+    const pb = String(b).split(".").map(Number);
     for (let i = 0; i < 3; i++) {
       const d = (pa[i] || 0) - (pb[i] || 0);
       if (d !== 0) return d;
@@ -29,24 +31,57 @@ const AppVersion = (() => {
     return 0;
   }
 
+  function getLocalBuild() {
+    return sessionStorage.getItem(STORAGE_BUILD) || activeBuild;
+  }
+
+  function getLocalVersion() {
+    return sessionStorage.getItem(STORAGE_VERSION) || activeVersion;
+  }
+
+  function applyManifest(manifest) {
+    if (!manifest) return;
+    if (manifest.version) activeVersion = manifest.version;
+    if (manifest.build) activeBuild = manifest.build;
+    sessionStorage.setItem(STORAGE_VERSION, activeVersion);
+    sessionStorage.setItem(STORAGE_BUILD, activeBuild);
+    syncVersionLabels();
+  }
+
   function isNewer(remote) {
     if (!remote || !remote.version) return false;
-    if (compareVersion(remote.version, CURRENT) > 0) return true;
-    if (remote.version === CURRENT && remote.build && remote.build !== BUILD) return true;
+    const localVer = getLocalVersion();
+    const localBuild = getLocalBuild();
+    if (compareVersion(remote.version, localVer) > 0) return true;
+    if (remote.version === localVer && remote.build && remote.build !== localBuild) {
+      return true;
+    }
     return false;
+  }
+
+  async function hydrateFromManifest() {
+    try {
+      const remote = await fetchRemote();
+      applyManifest(remote);
+      return remote;
+    } catch (err) {
+      AppLogger.warn("无法读取 version.json", err.message);
+      return null;
+    }
   }
 
   async function checkUpdate() {
     AppLogger.info("开始检查更新…");
     try {
       const remote = await fetchRemote();
-      AppLogger.info("远端版本", remote);
+      AppLogger.info("远端版本", `${remote.version} · build ${remote.build}`);
+      AppLogger.info("本地记录", `v${getLocalVersion()} · build ${getLocalBuild()}`);
 
       if (isNewer(remote)) {
         AppLogger.warn(`发现新版本 v${remote.version} (build ${remote.build})`);
         return { status: "available", remote };
       }
-      AppLogger.info("当前已是最新版本");
+      AppLogger.info("当前已是最新版本", `v${getLocalVersion()}`);
       return { status: "latest", remote };
     } catch (err) {
       AppLogger.error("检查更新失败", err.message);
@@ -61,8 +96,18 @@ const AppVersion = (() => {
       remote = result.remote;
     }
 
-    AppLogger.info("正在更新到最新版本…", remote);
-    if (remote.build) sessionStorage.setItem(STORAGE_BUILD, remote.build);
+    AppLogger.info("正在更新到最新版本…", `${remote.version} · ${remote.build}`);
+    sessionStorage.setItem(STORAGE_VERSION, remote.version);
+    sessionStorage.setItem(STORAGE_BUILD, remote.build);
+
+    if (typeof caches !== "undefined") {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      } catch {
+        /* ignore */
+      }
+    }
 
     const url = new URL(location.href);
     url.searchParams.set("v", remote.build || remote.version);
@@ -71,39 +116,55 @@ const AppVersion = (() => {
     return { status: "reloading" };
   }
 
-  function markLoadedFromRemote(remote) {
-    if (remote && remote.build) {
-      sessionStorage.setItem(STORAGE_BUILD, remote.build);
-    }
-  }
-
   function syncVersionLabels() {
     document.querySelectorAll(".app-version-value").forEach((el) => {
-      el.textContent = CURRENT;
+      el.textContent = activeVersion;
     });
   }
 
   function initUI() {
-    syncVersionLabels();
-
     const btnUpdate = document.getElementById("btnUpdate");
     const btnLogs = document.getElementById("btnLogs");
-    const btnPrintLogs = document.getElementById("btnPrintLogs");
+    const btnCopyLogs = document.getElementById("btnCopyLogs");
     const logDialog = document.getElementById("logDialog");
     const logContent = document.getElementById("logContent");
+
+    hydrateFromManifest().then((remote) => {
+      if (remote) {
+        AppLogger.info("运行版本", `v${activeVersion} · build ${activeBuild}`);
+        const urlBuild = new URLSearchParams(location.search).get("v");
+        if (urlBuild && urlBuild !== activeBuild) {
+          AppLogger.warn(
+            "页面资源可能未完全刷新",
+            `建议 Ctrl+F5；线上 build=${activeBuild}`
+          );
+        }
+        if (isNewer(remote) && document.getElementById("statusText")) {
+          document.getElementById("statusText").textContent =
+            `有新版本 v${remote.version} 可用 — 点击「更新」`;
+        }
+      }
+    });
 
     if (btnLogs && logDialog) {
       btnLogs.addEventListener("click", () => {
         if (logContent) logContent.textContent = AppLogger.formatAll();
         logDialog.showModal();
-        AppLogger.info("打开日志面板", `v${CURRENT}`);
+        AppLogger.info("打开日志面板", `v${activeVersion}`);
       });
     }
 
-    if (btnPrintLogs) {
-      btnPrintLogs.addEventListener("click", () => {
-        AppLogger.printToConsole();
+    if (btnCopyLogs) {
+      btnCopyLogs.addEventListener("click", async () => {
+        const ok = await AppLogger.copyToClipboard();
         if (logContent) logContent.textContent = AppLogger.formatAll();
+        if (ok && logDialog) {
+          const prev = btnCopyLogs.textContent;
+          btnCopyLogs.textContent = "已复制";
+          setTimeout(() => {
+            btnCopyLogs.textContent = prev;
+          }, 1500);
+        }
       });
     }
 
@@ -129,13 +190,13 @@ const AppVersion = (() => {
           if (result.status === "available") {
             btnUpdate.textContent = "更新中…";
             const ok = confirm(
-              `发现新版本 v${result.remote.version}\n` +
-              `当前 v${CURRENT}\n\n是否立即更新？`
+              `发现新版本 v${result.remote.version} (build ${result.remote.build})\n` +
+                `当前 v${getLocalVersion()} (build ${getLocalBuild()})\n\n是否立即更新？`
             );
             if (ok) await applyUpdate(result.remote);
             else btnUpdate.textContent = prev;
           } else if (result.status === "latest") {
-            alert(`已是最新版本 v${CURRENT}`);
+            alert(`已是最新版本 v${getLocalVersion()}`);
             btnUpdate.textContent = prev;
           } else {
             alert(`检查更新失败：${result.message || "未知错误"}`);
@@ -149,29 +210,24 @@ const AppVersion = (() => {
         }
       });
     }
-
-    fetchRemote()
-      .then((remote) => {
-        markLoadedFromRemote(remote);
-        if (isNewer(remote) && document.getElementById("statusText")) {
-          document.getElementById("statusText").textContent =
-            `有新版本 v${remote.version} 可用 — 点击「检查更新」`;
-        }
-      })
-      .catch(() => {});
   }
 
   function getInfo() {
-    return { version: CURRENT, build: BUILD };
+    return { version: activeVersion, build: activeBuild };
   }
 
   return {
-    CURRENT,
-    BUILD,
+    get CURRENT() {
+      return activeVersion;
+    },
+    get BUILD() {
+      return activeBuild;
+    },
     getInfo,
     checkUpdate,
     applyUpdate,
     initUI,
     syncVersionLabels,
+    hydrateFromManifest,
   };
 })();

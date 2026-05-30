@@ -37,6 +37,10 @@ jobs:
           mkdir -p _site
           cp index.html .nojekyll version.json _site/
           cp -r css js _site/
+          sed -i "s|href=\"css/styles.css\"|href=\"css/styles.css?v=${BUILD}\"|" _site/index.html
+          for f in app-logger.js version.js audio-engine.js sequencer.js arranger.js app.js; do
+            sed -i "s|src=\"js/${f}\"|src=\"js/${f}?v=${BUILD}\"|" _site/index.html
+          done
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
