@@ -191,10 +191,7 @@
     if (!loadDraft()) {
       Sequencer.loadDemoPatterns();
     }
-    if (typeof EditHistory !== "undefined") {
-      EditHistory.reset(getProjectData());
-      updateHistoryButtons();
-    }
+    initEditHistory();
     renderPatternTabs();
     renderStepLabels();
     renderSequencer();
@@ -381,7 +378,7 @@
       els.arrangeTimeline.appendChild(slot);
     });
 
-    els.arrangeInfo.textContent = `${sections.length}段 · ${Sequencer.steps}步/段`;
+    els.arrangeInfo.textContent = `${sections.length}段`;
     if (els.btnRemoveSection) {
       els.btnRemoveSection.disabled = sections.length <= Arranger.MIN_SECTIONS;
     }
@@ -444,25 +441,46 @@
 
     if (els.btnRemoveSection) {
       els.btnRemoveSection.addEventListener("click", () => {
-        const r = Arranger.removeSection();
-        if (!r.ok) {
-          setStatus("至少保留 1 个编曲段");
-          return;
-        }
-        renderArrangement();
+        runEdit(() => {
+          const r = Arranger.removeSection();
+          if (!r.ok) {
+            setStatus("至少保留 1 个编曲段");
+            return;
+          }
+          renderArrangement();
+          setStatus(`已减少至 ${r.count} 段`);
+        });
         scheduleAutosave();
-        setStatus(`已减少至 ${r.count} 段`);
       });
     }
 
     const btnAddSection = document.getElementById("btnAddSection");
     if (btnAddSection) {
       btnAddSection.addEventListener("click", () => {
-        Arranger.addSection();
-        renderArrangement();
+        runEdit(() => {
+          Arranger.addSection();
+          renderArrangement();
+        });
         scheduleAutosave();
       });
     }
+
+    document.querySelectorAll(".btn-history-undo").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (typeof EditHistory !== "undefined" && EditHistory.undo()) {
+          scheduleAutosave();
+          setStatus("已撤销");
+        }
+      });
+    });
+    document.querySelectorAll(".btn-history-redo").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (typeof EditHistory !== "undefined" && EditHistory.redo()) {
+          scheduleAutosave();
+          setStatus("已重做");
+        }
+      });
+    });
 
     if (els.btnAddSteps) {
       els.btnAddSteps.addEventListener("click", () => {
@@ -608,6 +626,25 @@
 
     document.addEventListener("keydown", (e) => {
       if (e.target.matches("input, select, textarea")) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
+        e.preventDefault();
+        if (typeof EditHistory !== "undefined" && EditHistory.undo()) {
+          scheduleAutosave();
+          setStatus("已撤销");
+        }
+        return;
+      }
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey))
+      ) {
+        e.preventDefault();
+        if (typeof EditHistory !== "undefined" && EditHistory.redo()) {
+          scheduleAutosave();
+          setStatus("已重做");
+        }
+        return;
+      }
       if (e.code === "Space") {
         e.preventDefault();
         togglePlay();

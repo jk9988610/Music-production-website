@@ -196,6 +196,26 @@ select {
   border-radius: 6px;
 }
 
+select.pitch-select {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+select.pitch-select:hover,
+select.pitch-select:focus {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--accent-glow);
+}
+
 /* Main layout */
 .main {
   display: grid;

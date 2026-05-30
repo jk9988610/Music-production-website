@@ -41,11 +41,11 @@
       <div class="header-row header-row-sub">
         <label class="control-inline">
           <span>调</span>
-          <select id="keySelect"></select>
+          <select id="keySelect" class="pitch-select"></select>
         </label>
         <label class="control-inline">
           <span>阶</span>
-          <select id="scaleSelect">
+          <select id="scaleSelect" class="pitch-select">
             <option value="major">大调</option>
             <option value="minor">小调</option>
             <option value="pentatonic">五声</option>
@@ -114,8 +114,10 @@
               <button type="button" class="btn btn-sm" id="btnRemovePattern" title="减少一个类型">−型</button>
               <button type="button" class="btn btn-sm" id="btnAddPattern" title="增加一个类型（最多 16 个）">+型</button>
             </div>
-            <div class="pattern-tabs" id="patternTabs" role="tablist"></div>
             <span class="type-count-info" id="typeCountInfo">4型</span>
+          </div>
+          <div class="pattern-tabs-row" role="tablist" aria-label="类型标签">
+            <div class="pattern-tabs" id="patternTabs"></div>
           </div>
         </div>
         <div class="module-body sequencer-wrap">
