@@ -16,11 +16,16 @@ const Arranger = (() => {
 
   const MIN_SECTIONS = 1;
 
-  function addSection() {
+  function addSection(patternIndex) {
     const last = sections[sections.length - 1];
-    sections.push({
-      patternIndex: last ? last.patternIndex : 0,
-    });
+    const pi =
+      patternIndex != null
+        ? patternIndex
+        : last
+          ? last.patternIndex
+          : 0;
+    sections.push({ patternIndex: pi });
+    return { count: sections.length, index: sections.length - 1 };
   }
 
   function setSectionPattern(sectionIndex, patternIndex) {

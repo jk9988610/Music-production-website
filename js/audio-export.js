@@ -2,7 +2,14 @@
  * 编曲离线渲染 — WAV / MP3 导出
  */
 const AudioExport = (() => {
-  const TRACK_IDS = ["kick", "snare", "hihat", "openhat", "bass", "chord", "lead"];
+  function getTrackIds(project) {
+    const layout = project?.sequencer?.trackLayout;
+    if (layout?.length) return layout.map((t) => t.trackId);
+    if (typeof Sequencer !== "undefined" && Sequencer.getTracks) {
+      return Sequencer.getTracks().map((t) => t.id);
+    }
+    return ["kick", "snare", "hihat", "openhat", "bass", "chord", "lead"];
+  }
 
   function stepDelay(stepInPattern, swing, base) {
     if (swing <= 0) return base;
@@ -57,13 +64,10 @@ const AudioExport = (() => {
       const patternIndex = info.sections[sectionIdx]?.patternIndex ?? 0;
       const pattern = info.patterns[patternIndex];
       if (pattern) {
-        TRACK_IDS.forEach((trackId) => {
+        getTrackIds(project).forEach((trackId) => {
           const cell = pattern[trackId]?.[step];
           const rates = info.trackRates || {};
-          const rate =
-            typeof Sequencer !== "undefined"
-              ? Sequencer.getTrackRate(trackId)
-              : TrackTiming.normalizeRate(rates[trackId] ?? 1);
+          const rate = TrackTiming.normalizeRate(rates[trackId] ?? 1);
           TrackTiming.playStepCell(rate, step, cell, time, info.base, (t, note, dur) => {
             scheduler.schedule(offline, master, trackId, t, note, dur);
           });

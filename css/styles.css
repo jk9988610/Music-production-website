@@ -460,11 +460,22 @@ select.pitch-select:focus {
   min-width: 0;
 }
 
+.track-inst-btn,
 .track-rate-btn {
   flex: 0 0 auto;
   padding: 0.05rem 0.25rem !important;
   font-size: 0.55rem !important;
   min-width: 1.65rem;
+}
+
+.track-inst-btn {
+  min-width: 1.85rem;
+}
+
+.track-count-info {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
 }
 
 .track-name {
@@ -509,6 +520,23 @@ select.pitch-select:focus {
 .step-cell.on.bass { background: linear-gradient(135deg, #1d4ed8, var(--bass)); }
 .step-cell.on.chord { background: linear-gradient(135deg, #5b21b6, var(--chord)); }
 .step-cell.on.lead { background: linear-gradient(135deg, #c2410c, var(--lead)); }
+.step-cell.on.drum-tom { background: linear-gradient(135deg, #7c2d12, #ea580c); }
+.step-cell.on.drum-clap { background: linear-gradient(135deg, #9d174d, #f472b6); }
+.step-cell.on.drum-ride { background: linear-gradient(135deg, #475569, #94a3b8); }
+.step-cell.on.drum-perc { background: linear-gradient(135deg, #713f12, #fbbf24); }
+.step-cell.on.melodic-pluck { background: linear-gradient(135deg, #047857, #34d399); }
+.step-cell.on.melodic-pad { background: linear-gradient(135deg, #4338ca, #818cf8); }
+.step-cell.on.melodic-organ { background: linear-gradient(135deg, #6d28d9, #c4b5fd); }
+.step-cell.on.melodic-bells { background: linear-gradient(135deg, #0891b2, #67e8f9); }
+
+.track-name.drum-tom { color: #ea580c; }
+.track-name.drum-clap { color: #f472b6; }
+.track-name.drum-ride { color: #94a3b8; }
+.track-name.drum-perc { color: #fbbf24; }
+.track-name.melodic-pluck { color: #34d399; }
+.track-name.melodic-pad { color: #818cf8; }
+.track-name.melodic-organ { color: #c4b5fd; }
+.track-name.melodic-bells { color: #67e8f9; }
 
 .step-cell.current {
   outline: 2px solid var(--warn);

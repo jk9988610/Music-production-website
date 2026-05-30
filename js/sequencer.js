@@ -9,16 +9,8 @@ const Sequencer = (() => {
   const DEFAULT_PATTERN_COUNT = 4;
   const MAX_PATTERNS = 16;
   const MIN_PATTERNS = 1;
-
-  const TRACKS = [
-    { id: "kick", name: "底鼓", type: "drum", class: "drum-kick" },
-    { id: "snare", name: "军鼓", type: "drum", class: "drum-snare" },
-    { id: "hihat", name: "闭镲", type: "drum", class: "drum-hat" },
-    { id: "openhat", name: "开镲", type: "drum", class: "drum-open" },
-    { id: "bass", name: "贝斯", type: "melodic", class: "bass" },
-    { id: "chord", name: "和弦", type: "melodic", class: "chord" },
-    { id: "lead", name: "主旋律", type: "melodic", class: "lead" },
-  ];
+  const MAX_TRACKS = 12;
+  const MIN_TRACKS = 1;
 
   const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
@@ -36,6 +28,9 @@ const Sequencer = (() => {
     { id: "dorian", label: "多利亚" },
   ];
 
+  let trackLayout = Instruments.DEFAULT_LAYOUT.map((t) => ({ ...t }));
+  let trackIdSeq = 0;
+
   let steps = DEFAULT_STEPS;
   let patterns = createEmptyPatterns(DEFAULT_PATTERN_COUNT);
   let currentPattern = 0;
@@ -43,10 +38,43 @@ const Sequencer = (() => {
   let scaleName = "major";
   let volumes = {};
   let trackRates = {};
-  TRACKS.forEach((t) => {
-    volumes[t.id] = t.type === "drum" ? 0.85 : 0.75;
-    trackRates[t.id] = 1;
-  });
+
+  function initTrackMeta() {
+    volumes = {};
+    trackRates = {};
+    getTracks().forEach((t) => {
+      volumes[t.id] = Instruments.defaultVolume(t.type);
+      trackRates[t.id] = 1;
+    });
+  }
+
+  initTrackMeta();
+
+  function resolveTrack(entry) {
+    const inst = Instruments.get(entry.instrumentId);
+    if (!inst) return null;
+    return {
+      id: entry.trackId,
+      instrumentId: entry.instrumentId,
+      name: inst.name,
+      type: inst.type,
+      class: inst.class,
+      voice: inst.voice,
+    };
+  }
+
+  function getTracks() {
+    return trackLayout.map(resolveTrack).filter(Boolean);
+  }
+
+  function getTrack(trackId) {
+    return getTracks().find((t) => t.id === trackId) || null;
+  }
+
+  function nextTrackId() {
+    trackIdSeq += 1;
+    return `tr${trackIdSeq}`;
+  }
 
   function normalizeTrackRate(rate) {
     return typeof TrackTiming !== "undefined"
@@ -97,9 +125,17 @@ const Sequencer = (() => {
     return [...new Set(notes)].sort((a, b) => a - b);
   }
 
+  function ensurePatternRows(pattern) {
+    getTracks().forEach((track) => {
+      if (!pattern[track.id]) {
+        pattern[track.id] = Array(steps).fill(null).map(() => emptyCell());
+      }
+    });
+  }
+
   function createEmptyPattern() {
     const pattern = {};
-    TRACKS.forEach((track) => {
+    getTracks().forEach((track) => {
       pattern[track.id] = Array(steps).fill(null).map(() => emptyCell());
     });
     return pattern;
@@ -116,7 +152,7 @@ const Sequencer = (() => {
 
   function normalizeAllPatterns() {
     patterns.forEach((pattern) => {
-      TRACKS.forEach((track) => {
+      getTracks().forEach((track) => {
         const row = pattern[track.id];
         if (!row) {
           pattern[track.id] = Array(steps).fill(null).map(() => emptyCell());
@@ -128,12 +164,35 @@ const Sequencer = (() => {
     });
   }
 
+  function importTrackLayout(raw) {
+    if (!raw || !Array.isArray(raw) || !raw.length) {
+      trackLayout = Instruments.DEFAULT_LAYOUT.map((t) => ({ ...t }));
+      initTrackMeta();
+      return;
+    }
+    trackLayout = raw
+      .map((t) => ({
+        trackId: String(t.trackId || t.id || ""),
+        instrumentId: String(t.instrumentId || t.trackId || ""),
+      }))
+      .filter((t) => t.trackId && Instruments.get(t.instrumentId));
+    if (!trackLayout.length) {
+      trackLayout = Instruments.DEFAULT_LAYOUT.map((t) => ({ ...t }));
+    }
+    trackLayout.forEach((t) => {
+      const n = Number(String(t.trackId).replace(/\D/g, ""));
+      if (n > trackIdSeq) trackIdSeq = n;
+    });
+    initTrackMeta();
+  }
+
   function addSteps(count = STEP_ADD) {
     const add = Math.min(count, MAX_STEPS - steps);
     if (add <= 0) return { ok: false, steps };
     steps += add;
     patterns.forEach((pattern) => {
-      TRACKS.forEach((track) => {
+      getTracks().forEach((track) => {
+        ensurePatternRows(pattern);
         for (let i = 0; i < add; i++) {
           pattern[track.id].push(emptyCell());
         }
@@ -142,13 +201,12 @@ const Sequencer = (() => {
     return { ok: true, steps, added: add };
   }
 
-
   function removeSteps(count = STEP_ADD) {
     const remove = Math.min(count, steps - MIN_STEPS);
     if (remove <= 0) return { ok: false, steps };
     steps -= remove;
     patterns.forEach((pattern) => {
-      TRACKS.forEach((track) => {
+      getTracks().forEach((track) => {
         const row = pattern[track.id];
         if (row) row.length = steps;
       });
@@ -169,6 +227,61 @@ const Sequencer = (() => {
     return { ok: true, count: patterns.length };
   }
 
+  function addTrack(instrumentId) {
+    if (trackLayout.length >= MAX_TRACKS) {
+      return { ok: false, count: trackLayout.length };
+    }
+    const inst = Instruments.get(instrumentId);
+    if (!inst) return { ok: false, count: trackLayout.length };
+    const trackId = nextTrackId();
+    trackLayout.push({ trackId, instrumentId });
+    volumes[trackId] = Instruments.defaultVolume(inst.type);
+    trackRates[trackId] = 1;
+    patterns.forEach((pattern) => {
+      pattern[trackId] = Array(steps).fill(null).map(() => emptyCell());
+    });
+    return { ok: true, count: trackLayout.length, trackId };
+  }
+
+  function removeTrack() {
+    if (trackLayout.length <= MIN_TRACKS) {
+      return { ok: false, count: trackLayout.length };
+    }
+    const removed = trackLayout.pop();
+    if (removed) {
+      delete volumes[removed.trackId];
+      delete trackRates[removed.trackId];
+      patterns.forEach((pattern) => {
+        delete pattern[removed.trackId];
+      });
+    }
+    return { ok: true, count: trackLayout.length };
+  }
+
+  function setTrackInstrument(trackId, instrumentId) {
+    const entry = trackLayout.find((t) => t.trackId === trackId);
+    const inst = Instruments.get(instrumentId);
+    if (!entry || !inst) return false;
+    const prev = getTrack(trackId);
+    entry.instrumentId = instrumentId;
+    if (prev && prev.type !== inst.type) {
+      const defaults = getScaleNotes();
+      const mid = defaults[Math.floor(defaults.length / 2)] || 60;
+      patterns.forEach((pattern) => {
+        const row = pattern[trackId];
+        if (!row) return;
+        row.forEach((cell) => {
+          if (inst.type === "drum") {
+            cell.note = null;
+          } else if (cell.on && cell.note == null) {
+            cell.note = mid;
+          }
+        });
+      });
+    }
+    return true;
+  }
+
   function getScaleNotes(octaves = 3) {
     return getScaleNotesFor(rootKey, scaleName, octaves);
   }
@@ -181,7 +294,7 @@ const Sequencer = (() => {
   function stepColumnHasContent(patternIndex, step) {
     const pattern = patterns[patternIndex];
     if (!pattern) return false;
-    return TRACKS.some((track) => pattern[track.id]?.[step]?.on);
+    return getTracks().some((track) => pattern[track.id]?.[step]?.on);
   }
 
   function noteLabel(midi) {
@@ -193,7 +306,8 @@ const Sequencer = (() => {
 
   function toggleStep(patternIndex, trackId, step, noteMidi = null) {
     const cell = patterns[patternIndex][trackId][step];
-    const track = TRACKS.find((t) => t.id === trackId);
+    const track = getTrack(trackId);
+    if (!track) return cell;
     if (track.type === "drum") {
       cell.on = !cell.on;
     } else {
@@ -252,6 +366,7 @@ const Sequencer = (() => {
     return {
       steps,
       patterns,
+      trackLayout: trackLayout.map((t) => ({ ...t })),
       volumes,
       trackRates: { ...trackRates },
       rootKey,
@@ -261,6 +376,12 @@ const Sequencer = (() => {
   }
 
   function importState(state) {
+    if (state.trackLayout) {
+      importTrackLayout(state.trackLayout);
+    } else {
+      trackLayout = Instruments.DEFAULT_LAYOUT.map((t) => ({ ...t }));
+      initTrackMeta();
+    }
     if (state.steps != null) steps = Math.min(MAX_STEPS, Math.max(4, Number(state.steps) || DEFAULT_STEPS));
     if (state.patterns) {
       patterns = state.patterns;
@@ -269,7 +390,7 @@ const Sequencer = (() => {
     }
     if (state.volumes) volumes = { ...volumes, ...state.volumes };
     if (state.trackRates) {
-      TRACKS.forEach((t) => {
+      getTracks().forEach((t) => {
         if (state.trackRates[t.id] != null) {
           trackRates[t.id] = normalizeTrackRate(state.trackRates[t.id]);
         }
@@ -295,23 +416,40 @@ const Sequencer = (() => {
     get PATTERN_COUNT() {
       return patterns.length;
     },
+    get TRACKS() {
+      return getTracks();
+    },
+    get trackCount() {
+      return trackLayout.length;
+    },
     MAX_STEPS,
     MAX_PATTERNS,
+    MAX_TRACKS,
+    MIN_TRACKS,
     STEP_ADD,
     DEFAULT_PATTERN_COUNT,
-    TRACKS,
+    getTracks,
+    getTrack,
     KEYS,
     SCALE_OPTIONS,
     SCALES,
     patterns: () => patterns,
     currentPattern: () => currentPattern,
-    setCurrentPattern: (i) => { currentPattern = i; },
+    setCurrentPattern: (i) => {
+      currentPattern = i;
+    },
     rootKey: () => rootKey,
-    setRootKey: (k) => { rootKey = k; },
+    setRootKey: (k) => {
+      rootKey = k;
+    },
     scaleName: () => scaleName,
-    setScaleName: (s) => { scaleName = s; },
+    setScaleName: (s) => {
+      scaleName = s;
+    },
     volumes: () => volumes,
-    setVolume: (id, v) => { volumes[id] = v; },
+    setVolume: (id, v) => {
+      volumes[id] = v;
+    },
     trackRates: () => ({ ...trackRates }),
     getTrackRate,
     setTrackRate,
@@ -333,8 +471,12 @@ const Sequencer = (() => {
     removeSteps,
     addPattern,
     removePattern,
+    addTrack,
+    removeTrack,
+    setTrackInstrument,
     MIN_STEPS,
     MIN_PATTERNS,
     normalizeAllPatterns,
+    listInstruments: Instruments.list,
   };
 })();

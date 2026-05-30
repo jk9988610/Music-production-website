@@ -47,6 +47,9 @@
     btnRemoveSteps: $("#btnRemoveSteps"),
     btnAddSteps: $("#btnAddSteps"),
     stepCountInfo: $("#stepCountInfo"),
+    trackCountInfo: $("#trackCountInfo"),
+    btnAddTrack: $("#btnAddTrack"),
+    btnRemoveTrack: $("#btnRemoveTrack"),
     typeCountInfo: $("#typeCountInfo"),
     mixer: $("#mixer"),
     statusText: $("#statusText"),
@@ -157,6 +160,12 @@
     });
   }
 
+  function syncSequencerToSection(sectionIndex) {
+    const sec = Arranger.getSection(sectionIndex);
+    if (!sec) return;
+    selectPattern(sec.patternIndex, { fromArrangeSelection: true });
+  }
+
   function setSelectedArrangeSection(index) {
     selectedArrangeSection = index;
     els.arrangeTimeline
@@ -165,8 +174,89 @@
         el.classList.toggle("active", i === index);
       });
     if (index >= 0) {
-      setStatus(`已选中 §${index + 1}`);
+      syncSequencerToSection(index);
+      const sec = Arranger.getSection(index);
+      const pi = sec?.patternIndex ?? 0;
+      setStatus(`§${index + 1} · 类型 ${patternLabel(pi)}（音序已同步）`);
     }
+  }
+
+  function openAddSectionDialog() {
+    const last = Arranger.getSections();
+    const defaultPi = last.length
+      ? last[last.length - 1].patternIndex
+      : Sequencer.currentPattern();
+    openChoiceDialog({
+      title: "新段落使用类型",
+      columns: Math.min(4, Sequencer.patternCount),
+      currentValue: defaultPi,
+      items: Array.from({ length: Sequencer.patternCount }, (_, i) => ({
+        value: i,
+        label: patternLabel(i),
+      })),
+      onPick: (value) => {
+        runEdit(() => {
+          const r = Arranger.addSection(Number(value));
+          selectedArrangeSection = r.index;
+          renderArrangement();
+          syncSequencerToSection(r.index);
+        });
+        setStatus(`已添加 §${Arranger.getSectionCount()}（类型 ${patternLabel(Number(value))}）`);
+      },
+    });
+  }
+
+  function openInstrumentPicker(trackId) {
+    const track = Sequencer.getTrack(trackId);
+    if (!track) return;
+    const items = Sequencer.listInstruments().map((inst) => ({
+      value: inst.id,
+      label: inst.name,
+    }));
+    openChoiceDialog({
+      title: `${track.name} · 切换乐器`,
+      columns: 4,
+      currentValue: track.instrumentId,
+      items,
+      onPick: (value) => {
+        runEdit(() => {
+          Sequencer.setTrackInstrument(trackId, String(value));
+          renderSequencer();
+          renderMixer();
+        });
+        const inst = Instruments.get(String(value));
+        setStatus(`已切换为 ${inst?.name ?? value}`);
+      },
+    });
+  }
+
+  function openAddTrackDialog() {
+    if (Sequencer.trackCount >= Sequencer.MAX_TRACKS) {
+      setStatus(`已达最大 ${Sequencer.MAX_TRACKS} 轨`);
+      return;
+    }
+    const items = Sequencer.listInstruments().map((inst) => ({
+      value: inst.id,
+      label: `${inst.name}${inst.type === "drum" ? "" : " ♪"}`,
+    }));
+    openChoiceDialog({
+      title: "添加轨道 · 选择乐器",
+      columns: 4,
+      currentValue: "kick",
+      items,
+      onPick: (value) => {
+        runEdit(() => {
+          const r = Sequencer.addTrack(String(value));
+          if (!r.ok) return;
+          renderSequencer();
+          renderMixer();
+          applyVolumesToEngine();
+          updateTrackCountUI();
+        });
+        const inst = Instruments.get(String(value));
+        setStatus(`已添加轨：${inst?.name ?? value}`);
+      },
+    });
   }
 
   function openTrackRatePicker(trackId) {
@@ -269,6 +359,9 @@
         runEdit(() => {
           Arranger.setSectionPattern(sectionIndex, Number(value));
           renderArrangement();
+          if (selectedArrangeSection === sectionIndex) {
+            syncSequencerToSection(sectionIndex);
+          }
         });
         scheduleAutosave();
         setStatus(`§${sectionIndex + 1} → 类型 ${patternLabel(Number(value))}`);
@@ -283,6 +376,7 @@
     renderSequencer();
     renderArrangement();
     updateStepCountUI();
+    updateTrackCountUI();
     updateTypeCountUI();
     syncSequencerLayout();
     syncModuleSpacing();
@@ -415,6 +509,7 @@
     bindEvents();
     applyVolumesToEngine();
     updateStepCountUI();
+    updateTrackCountUI();
     updateTypeCountUI();
     syncSequencerLayout();
     syncModuleSpacing();
@@ -528,17 +623,30 @@
     renderPatternTabs();
     renderSequencer();
     if (playing) updatePlayhead(currentStep, currentArrangeSection);
+    if (options.fromArrangeSelection) return;
     if (playing && playMode === "pattern" && typeLoopEnabled) {
       setStatus(`类型循环：${patternLabel(index)}`);
-    } else {
+    } else if (!options.silent) {
       setStatus(`类型 ${patternLabel(index)}`);
     }
-    scheduleAutosave();
+    if (!options.silent) scheduleAutosave();
   }
 
   function updateTypeCountUI() {
     if (els.typeCountInfo) {
       els.typeCountInfo.textContent = `${Sequencer.patternCount}型`;
+    }
+  }
+
+  function updateTrackCountUI() {
+    if (els.trackCountInfo) {
+      els.trackCountInfo.textContent = `${Sequencer.trackCount}轨`;
+    }
+    if (els.btnAddTrack) {
+      els.btnAddTrack.disabled = Sequencer.trackCount >= Sequencer.MAX_TRACKS;
+    }
+    if (els.btnRemoveTrack) {
+      els.btnRemoveTrack.disabled = Sequencer.trackCount <= Sequencer.MIN_TRACKS;
     }
   }
 
@@ -589,6 +697,17 @@
       name.className = `track-name ${track.type === "drum" ? "drum" : track.class}`;
       name.textContent = track.name;
       labelCol.appendChild(name);
+
+      const instBtn = document.createElement("button");
+      instBtn.type = "button";
+      instBtn.className = "note-btn pitch-pick-btn track-inst-btn";
+      instBtn.title = "切换乐器";
+      instBtn.textContent = "音色";
+      instBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openInstrumentPicker(track.id);
+      });
+      labelCol.appendChild(instBtn);
 
       const rateBtn = document.createElement("button");
       rateBtn.type = "button";
@@ -944,12 +1063,25 @@
 
     const btnAddSection = document.getElementById("btnAddSection");
     if (btnAddSection) {
-      btnAddSection.addEventListener("click", () => {
+      btnAddSection.addEventListener("click", () => openAddSectionDialog());
+    }
+
+    if (els.btnAddTrack) {
+      els.btnAddTrack.addEventListener("click", () => openAddTrackDialog());
+    }
+    if (els.btnRemoveTrack) {
+      els.btnRemoveTrack.addEventListener("click", () => {
         runEdit(() => {
-          Arranger.addSection();
-          renderArrangement();
+          const r = Sequencer.removeTrack();
+          if (!r.ok) {
+            setStatus(`至少保留 ${Sequencer.MIN_TRACKS} 轨`);
+            return;
+          }
+          renderSequencer();
+          renderMixer();
+          updateTrackCountUI();
+          setStatus(`已减少至 ${r.count} 轨`);
         });
-        scheduleAutosave();
       });
     }
 
@@ -1389,6 +1521,7 @@
     renderSequencer();
     renderArrangement();
     updateStepCountUI();
+    updateTrackCountUI();
     updateTypeCountUI();
     syncSequencerLayout();
     syncModuleSpacing();
