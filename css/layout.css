@@ -284,3 +284,150 @@ fieldset.module.module-sequencer .sequencer-wrap .step-labels {
   align-items: center;
   gap: 0.2rem;
 }
+
+/* —— 用户自定义布局 —— */
+fieldset.module {
+  border-radius: var(--layout-module-radius, 3px) !important;
+}
+
+html[data-layout-columns="2"] .main {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  align-items: start;
+}
+
+html[data-layout-columns="2"] .main fieldset.module[data-module="mixer"] {
+  grid-column: 1 / -1;
+}
+
+html[data-layout-compact-header="1"] .header {
+  padding: 0.12rem 0;
+  gap: 0.1rem;
+}
+
+html[data-layout-compact-header="1"] .header-row {
+  gap: 0.15rem 0.25rem;
+}
+
+.layout-edit-mode fieldset.module[data-module] {
+  cursor: grab;
+  outline: 1px dashed var(--accent-dim);
+  outline-offset: 2px;
+}
+
+.layout-edit-mode fieldset.module.layout-dragging {
+  opacity: 0.55;
+  cursor: grabbing;
+}
+
+.layout-edit-mode fieldset.module.layout-drop-target {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.layout-dialog {
+  max-width: min(420px, 96vw);
+  max-height: 90vh;
+}
+
+.layout-dialog-body {
+  overflow-y: auto;
+  max-height: calc(90vh - 3rem);
+  padding: 0 0.25rem 0.5rem;
+}
+
+.layout-section {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.layout-section h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.layout-hint {
+  margin: 0 0 0.35rem;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+}
+
+.layout-control {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  margin: 0.25rem 0;
+  flex-wrap: wrap;
+}
+
+.layout-control input[type="range"] {
+  flex: 1 1 100px;
+  min-width: 60px;
+  accent-color: var(--accent);
+}
+
+.layout-control output {
+  min-width: 2.2rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--accent);
+}
+
+.layout-vis-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.68rem;
+  margin: 0.35rem 0;
+}
+
+.layout-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.35rem;
+}
+
+.layout-preset-select {
+  font-size: 0.68rem;
+  padding: 0.2rem 0.35rem;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.layout-order-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.layout-order-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0;
+  font-size: 0.72rem;
+}
+
+.layout-order-grip {
+  color: var(--text-muted);
+  cursor: grab;
+  user-select: none;
+}
+
+.layout-order-name {
+  flex: 1;
+}
+
+#btnLayoutEdit.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}

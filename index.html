@@ -54,6 +54,7 @@
         <button type="button" class="btn btn-ghost btn-compact" id="btnLoad">读</button>
         <button type="button" class="btn btn-ghost btn-compact" id="btnClear">清</button>
         <span class="header-divider" aria-hidden="true"></span>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnLayout" title="自定义模块布局">布局</button>
         <button type="button" class="btn btn-ghost btn-compact" id="btnHelp" title="帮助">帮助</button>
         <button type="button" class="btn btn-ghost btn-compact" id="btnLogs" title="查看运行日志">日志</button>
         <button type="button" class="btn btn-ghost btn-compact" id="btnUpdate" title="检查更新">更新</button>
@@ -61,7 +62,7 @@
     </header>
 
     <main class="main">
-      <fieldset class="module module-arrange" aria-label="编曲时间轴" data-shell="chrome">
+      <fieldset class="module module-arrange" data-module="arrange" aria-label="编曲时间轴" data-shell="chrome">
         <legend>编曲</legend>
         <div class="module-chrome arrange-bar">
           <div class="pattern-tabs-wrap">
@@ -77,7 +78,7 @@
         </div>
       </fieldset>
 
-      <fieldset class="module module-sequencer" aria-label="步进音序器" data-shell="chrome">
+      <fieldset class="module module-sequencer" data-module="sequencer" aria-label="步进音序器" data-shell="chrome">
         <legend>音序</legend>
         <div class="module-chrome sequencer-bar">
           <button type="button" class="btn btn-sm" id="btnRemoveSteps" title="减少 4 个步进（最少 4 步）">−4步</button>
@@ -90,7 +91,7 @@
         </div>
       </fieldset>
 
-      <fieldset class="module module-mixer" aria-label="混音" data-shell="chrome">
+      <fieldset class="module module-mixer" data-module="mixer" aria-label="混音" data-shell="chrome">
         <legend>混音</legend>
         <div class="module-body mixer-tracks mixer-horizontal" id="mixer"></div>
       </fieldset>
@@ -100,6 +101,69 @@
       <span id="statusText">就绪</span>
     </footer>
   </div>
+
+  
+  <dialog id="layoutDialog" class="layout-dialog help-dialog">
+    <div class="log-dialog-head">
+      <h3>布局</h3>
+      <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutClose" aria-label="关闭">关闭</button>
+    </div>
+    <div class="layout-dialog-body">
+      <div class="layout-section">
+        <h4>模块顺序与显示</h4>
+        <p class="layout-hint">可拖拽排序，或点「拖拽排序」后在页面上拖动模块。</p>
+        <ul class="layout-order-list" id="layoutOrderList"></ul>
+        <div class="layout-vis-row">
+          <label><input type="checkbox" id="layoutVis_arrange" checked> 编曲</label>
+          <label><input type="checkbox" id="layoutVis_sequencer" checked> 音序</label>
+          <label><input type="checkbox" id="layoutVis_mixer" checked> 混音</label>
+        </div>
+        <div class="layout-actions-row">
+          <button type="button" class="btn btn-sm" id="btnLayoutEdit">拖拽排序</button>
+          <select id="layoutPreset" class="layout-preset-select" title="预设">
+            <option value="">预设…</option>
+            <option value="default">默认</option>
+            <option value="compact">紧凑</option>
+            <option value="comfortable">宽松</option>
+            <option value="wide">宽屏双列</option>
+          </select>
+          <button type="button" class="btn btn-ghost btn-xs" id="btnLayoutReset">恢复默认</button>
+        </div>
+      </div>
+      <div class="layout-section">
+        <h4>整体</h4>
+        <label class="layout-control"><input type="checkbox" id="layoutAutoGap" checked> 模块间距自适应视口</label>
+        <label class="layout-control">模块间距 <input type="range" id="layoutModuleGap" min="0" max="24" value="6"><output id="layoutModuleGapVal">6</output> px</label>
+        <label class="layout-control">主区域行距 <input type="range" id="layoutMainGap" min="0" max="24" value="6"><output id="layoutMainGapVal">6</output> px</label>
+        <label class="layout-control">页面最大宽度 <input type="range" id="layoutAppWidth" min="640" max="1400" step="20" value="920"><output id="layoutAppWidthVal">920</output> px</label>
+        <label class="layout-control">分栏
+          <select id="layoutColumns">
+            <option value="1">单列</option>
+            <option value="2">双列（宽屏）</option>
+          </select>
+        </label>
+        <label class="layout-control"><input type="checkbox" id="layoutCompactHeader"> 紧凑顶栏</label>
+      </div>
+      <div class="layout-section">
+        <h4>模块外壳</h4>
+        <label class="layout-control">左右内边距 <input type="range" id="layoutPadX" min="0" max="16" value="4"><output id="layoutPadXVal">4</output> px</label>
+        <label class="layout-control">底部内边距 <input type="range" id="layoutPadB" min="0" max="12" value="2"><output id="layoutPadBVal">2</output> px</label>
+        <label class="layout-control">标题字号 <input type="range" id="layoutLegendSize" min="0.5" max="0.9" step="0.05" value="0.6"><output id="layoutLegendSizeVal">0.6</output> rem</label>
+        <label class="layout-control">工具条间距 <input type="range" id="layoutToolbarGap" min="0" max="8" value="2"><output id="layoutToolbarGapVal">2</output> px</label>
+        <label class="layout-control">圆角 <input type="range" id="layoutRadius" min="0" max="12" value="3"><output id="layoutRadiusVal">3</output> px</label>
+      </div>
+      <div class="layout-section">
+        <h4>内容尺寸</h4>
+        <label class="layout-control">音序格 <input type="range" id="layoutSeqStep" min="0.7" max="1.3" step="0.05" value="0.95"><output id="layoutSeqStepVal">0.95</output> rem</label>
+        <label class="layout-control">轨名宽 <input type="range" id="layoutSeqLabel" min="2.5" max="5" step="0.25" value="3.25"><output id="layoutSeqLabelVal">3.25</output> rem</label>
+        <label class="layout-control">编曲格宽 <input type="range" id="layoutArrangeW" min="28" max="64" value="40"><output id="layoutArrangeWVal">40</output> px</label>
+        <label class="layout-control">编曲格高 <input type="range" id="layoutArrangeH" min="22" max="56" value="30"><output id="layoutArrangeHVal">30</output> px</label>
+        <label class="layout-control">混音轨宽 <input type="range" id="layoutMixerW" min="2.5" max="5" step="0.25" value="3.35"><output id="layoutMixerWVal">3.35</output> rem</label>
+      </div>
+      <p class="layout-hint">布局随「存/读」与草稿自动保存。</p>
+    </div>
+  </dialog>
+
 
   <dialog id="helpDialog" class="help-dialog">
     <div class="log-dialog-head">
@@ -121,6 +185,8 @@
         <dd>底部横条调节各轨音量，随草稿保存。</dd>
         <dt>调性 / 音阶</dt>
         <dd>顶栏选择根音与音阶，旋律选音仅在音阶内。</dd>
+        <dt>布局</dt>
+        <dd>顶栏「布局」可调模块顺序、显示/隐藏、间距与格子尺寸；支持预设与拖拽排序，随草稿保存。</dd>
         <dt>保存与草稿</dt>
         <dd>自动保存草稿；顶栏「存/读/清」管理项目。</dd>
         <dt>版本与更新</dt>
@@ -162,6 +228,7 @@
   <script src="js/audio-engine.js"></script>
   <script src="js/sequencer.js"></script>
   <script src="js/arranger.js"></script>
+  <script src="js/layout.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

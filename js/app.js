@@ -63,7 +63,13 @@
 
   let moduleSpacingRaf = null;
 
-  function syncModuleSpacing() {
+  window.syncModuleSpacing = function syncModuleSpacing() {
+    if (typeof LayoutManager !== "undefined" && !LayoutManager.isAutoGap()) {
+      const g = LayoutManager.getManualGaps();
+      document.documentElement.style.setProperty("--chrome-module-gap", `${g.moduleGap}px`);
+      document.documentElement.style.setProperty("--main-module-gap", `${g.mainGap}px`);
+      return;
+    }
     if (moduleSpacingRaf) cancelAnimationFrame(moduleSpacingRaf);
     moduleSpacingRaf = requestAnimationFrame(() => {
       moduleSpacingRaf = null;
@@ -116,6 +122,9 @@
 
     AppLogger.info("HarmonyForge 启动", `v${AppVersion.CURRENT} · build ${AppVersion.BUILD}`);
     AppVersion.initUI();
+    LayoutManager.init({
+      onChange: () => scheduleAutosave(),
+    });
     populateKeySelect();
     if (!loadDraft()) {
       Sequencer.loadDemoPatterns();
@@ -627,12 +636,16 @@
       arranger: Arranger.exportState(),
       bpm: Number(els.bpm.value),
       swing: Number(els.swing.value),
+      layout: typeof LayoutManager !== "undefined" ? LayoutManager.exportState() : undefined,
     };
   }
 
   function applyProjectData(data, silent) {
     if (!data) return false;
     if (data.sequencer) Sequencer.importState(data.sequencer);
+    if (data.layout && typeof LayoutManager !== "undefined") {
+      LayoutManager.importState(data.layout);
+    }
     if (data.arranger) Arranger.importState(data.arranger, Sequencer.patternCount);
     if (data.bpm) {
       els.bpm.value = data.bpm;
@@ -723,6 +736,7 @@
     Sequencer.importState({ steps: 16, patterns: Sequencer.createEmptyPatterns(Sequencer.DEFAULT_PATTERN_COUNT) });
     Arranger.init(Sequencer.patternCount);
     Sequencer.loadDemoPatterns();
+    if (typeof LayoutManager !== "undefined") LayoutManager.importState(null);
     localStorage.removeItem(DRAFT_KEY);
     renderStepLabels();
     renderSequencer();

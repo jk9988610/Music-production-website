@@ -3,7 +3,7 @@
  * 以页面内嵌的 BUNDLED_* 为「当前运行版本」；与远端 version.json 比较决定是否可更新
  */
 const AppVersion = (() => {
-  const BUNDLED_VERSION = "1.4.4";
+  const BUNDLED_VERSION = "1.5.0";
   let BUNDLED_BUILD = "dev";
 
   const scriptEl = document.currentScript;
