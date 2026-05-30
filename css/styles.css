@@ -1,4 +1,6 @@
 :root {
+  --seq-label-col: 4.5rem;
+  --seq-step-size: 1.375rem;
   --bg-deep: #0a0c10;
   --bg-panel: #12151c;
   --bg-elevated: #1a1f2a;
@@ -27,12 +29,14 @@
 }
 
 html {
-  font-size: 15px;
+  font-size: 14px;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
   font-family: var(--font);
   background: var(--bg-deep);
   color: var(--text);
@@ -45,9 +49,11 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  max-width: 1600px;
+  width: 100%;
+  max-width: 920px;
   margin: 0 auto;
-  padding: 0 1rem 1rem;
+  padding: 0 0.75rem 1rem;
+  overflow-x: hidden;
 }
 
 /* Header */
@@ -55,9 +61,10 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1rem 1.5rem;
-  padding: 1rem 0;
+  gap: 0.65rem 0.85rem;
+  padding: 0.75rem 0;
   border-bottom: 1px solid var(--border);
+  min-width: 0;
 }
 
 .brand {
@@ -95,12 +102,15 @@ body {
 }
 
 .transport {
-  flex: 1;
-  justify-content: center;
+  flex: 1 1 100%;
+  justify-content: flex-start;
+  min-width: 0;
 }
 
 .header-actions {
-  margin-left: auto;
+  flex: 1 1 100%;
+  margin-left: 0;
+  min-width: 0;
 }
 
 /* Buttons & controls */
@@ -164,7 +174,8 @@ body {
 }
 
 .control-inline input[type="range"] {
-  width: 80px;
+  width: 64px;
+  max-width: 18vw;
   accent-color: var(--accent);
 }
 
@@ -188,28 +199,35 @@ select {
 /* Main layout */
 .main {
   display: grid;
-  grid-template-columns: 1fr 220px;
-  gap: 1rem;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
   flex: 1;
-  padding-top: 1rem;
+  padding-top: 0.75rem;
+  min-width: 0;
 }
 
-@media (max-width: 1100px) {
+@media (min-width: 720px) {
   .main {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 180px;
   }
+}
 
-  .sidebar {
-    order: -1;
-  }
+.main > :not(.sidebar) {
+  min-width: 0;
+}
+
+.sidebar {
+  min-width: 0;
 }
 
 .panel {
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: 0.85rem;
+  margin-bottom: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .panel-head {
@@ -245,16 +263,27 @@ select {
   font-family: var(--mono);
 }
 
+.arrange-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  margin: 0 -0.25rem;
+  padding: 0.15rem 0.25rem 0.35rem;
+  -webkit-overflow-scrolling: touch;
+}
+
 .arrange-timeline {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
+  width: max-content;
 }
 
 .arrange-slot {
   position: relative;
-  width: 72px;
-  min-height: 64px;
+  flex: 0 0 auto;
+  width: 64px;
+  min-height: 58px;
   padding: 0.5rem;
   background: var(--bg-elevated);
   border: 2px solid var(--border);
@@ -324,17 +353,24 @@ select {
   background: rgba(110, 231, 183, 0.08);
 }
 
-/* Sequencer */
+/* Sequencer — 横向滚动仅在模块内 */
 .sequencer-wrap {
   overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  margin: 0 -0.25rem;
+  padding: 0.15rem 0.25rem 0.35rem;
+  -webkit-overflow-scrolling: touch;
 }
 
 .step-labels {
   display: grid;
-  grid-template-columns: 100px repeat(16, 1fr);
-  gap: 4px;
-  margin-bottom: 4px;
+  grid-template-columns: var(--seq-label-col) repeat(16, var(--seq-step-size));
+  gap: 3px;
+  margin-bottom: 3px;
   padding-left: 0;
+  width: max-content;
+  min-width: 100%;
 }
 
 .step-label {
@@ -358,13 +394,15 @@ select {
 
 .track-row {
   display: grid;
-  grid-template-columns: 100px repeat(16, 1fr);
-  gap: 4px;
+  grid-template-columns: var(--seq-label-col) repeat(16, var(--seq-step-size));
+  gap: 3px;
   align-items: center;
+  width: max-content;
+  min-width: 100%;
 }
 
 .track-name {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   padding-right: 0.5rem;
   white-space: nowrap;
@@ -378,9 +416,11 @@ select {
 .track-name.lead { color: var(--lead); }
 
 .step-cell {
-  aspect-ratio: 1;
-  min-width: 28px;
-  max-width: 48px;
+  width: var(--seq-step-size);
+  height: var(--seq-step-size);
+  min-width: 0;
+  max-width: none;
+  padding: 0;
   background: var(--bg-cell);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -475,15 +515,27 @@ kbd {
 /* Footer */
 .footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 0.35rem 0.75rem;
   padding: 0.75rem 0;
   font-size: 0.75rem;
   color: var(--text-muted);
   border-top: 1px solid var(--border);
+  min-width: 0;
+}
+
+.footer-credit {
+  flex-shrink: 0;
 }
 
 #statusText {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--accent-dim);
 }
 
