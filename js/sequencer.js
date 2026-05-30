@@ -4,9 +4,11 @@
 const Sequencer = (() => {
   const DEFAULT_STEPS = 16;
   const MAX_STEPS = 64;
+  const MIN_STEPS = 4;
   const STEP_ADD = 4;
   const DEFAULT_PATTERN_COUNT = 4;
   const MAX_PATTERNS = 16;
+  const MIN_PATTERNS = 1;
 
   const TRACKS = [
     { id: "kick", name: "底鼓", type: "drum", class: "drum-kick" },
@@ -82,6 +84,27 @@ const Sequencer = (() => {
       });
     });
     return { ok: true, steps, added: add };
+  }
+
+
+  function removeSteps(count = STEP_ADD) {
+    const remove = Math.min(count, steps - MIN_STEPS);
+    if (remove <= 0) return { ok: false, steps };
+    steps -= remove;
+    patterns.forEach((pattern) => {
+      TRACKS.forEach((track) => {
+        const row = pattern[track.id];
+        if (row) row.length = steps;
+      });
+    });
+    return { ok: true, steps, removed: remove };
+  }
+
+  function removePattern() {
+    if (patterns.length <= MIN_PATTERNS) return { ok: false, count: patterns.length };
+    patterns.pop();
+    if (currentPattern >= patterns.length) currentPattern = patterns.length - 1;
+    return { ok: true, count: patterns.length };
   }
 
   function addPattern() {
@@ -230,7 +253,11 @@ const Sequencer = (() => {
     importState,
     createEmptyPatterns,
     addSteps,
+    removeSteps,
     addPattern,
+    removePattern,
+    MIN_STEPS,
+    MIN_PATTERNS,
     normalizeAllPatterns,
   };
 })();

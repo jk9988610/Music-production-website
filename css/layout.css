@@ -53,7 +53,7 @@
 }
 
 .main {
-  gap: 0;
+  gap: var(--main-module-gap, 4px);
   padding-top: 0.12rem;
   grid-template-columns: 1fr !important;
 }
@@ -75,7 +75,8 @@
    CONTENT 内容 — 只改 --content-*（格子与滑条尺寸）
    ============================================================ */
 :root {
-  --chrome-module-gap: 0px;
+  --chrome-module-gap: 4px;
+  --main-module-gap: 4px;
   --chrome-module-pad-x: 4px;
   --chrome-module-pad-b: 2px;
   --chrome-legend-size: 0.6rem;
@@ -262,4 +263,24 @@ fieldset.module.module-sequencer .sequencer-wrap .track-row,
 fieldset.module.module-sequencer .sequencer-wrap .step-labels {
   width: max-content;
   min-width: min-content;
+}
+
+
+.home-version.has-update {
+  color: var(--warn);
+  box-shadow: 0 0 0 1px var(--warn);
+}
+
+.sequencer-bar,
+.arrange-bar .pattern-tabs-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.btn-step-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
 }

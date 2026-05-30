@@ -29,11 +29,14 @@
     keySelect: $("#keySelect"),
     scaleSelect: $("#scaleSelect"),
     patternTabs: $("#patternTabs"),
+    btnRemovePattern: $("#btnRemovePattern"),
     btnAddPattern: $("#btnAddPattern"),
     tracks: $("#tracks"),
     stepLabels: $("#stepLabels"),
     arrangeTimeline: $("#arrangeTimeline"),
+    btnRemoveSection: $("#btnRemoveSection"),
     arrangeInfo: $("#arrangeInfo"),
+    btnRemoveSteps: $("#btnRemoveSteps"),
     btnAddSteps: $("#btnAddSteps"),
     stepCountInfo: $("#stepCountInfo"),
     mixer: $("#mixer"),
@@ -56,6 +59,38 @@
   function syncSequencerLayout() {
     const wrap = document.querySelector(".module-sequencer .sequencer-wrap");
     if (wrap) wrap.style.setProperty("--seq-step-count", String(Sequencer.steps));
+  }
+
+  let moduleSpacingRaf = null;
+
+  function syncModuleSpacing() {
+    if (moduleSpacingRaf) cancelAnimationFrame(moduleSpacingRaf);
+    moduleSpacingRaf = requestAnimationFrame(() => {
+      moduleSpacingRaf = null;
+      const main = document.querySelector(".main");
+      const modules = main ? [...main.querySelectorAll("fieldset.module")] : [];
+      if (!modules.length) return;
+
+      const header = document.querySelector(".header");
+      const footer = document.querySelector(".footer");
+      const vh = window.innerHeight;
+      const chrome = (header?.offsetHeight || 0) + (footer?.offsetHeight || 0) + 12;
+      const contentH = modules.reduce((sum, el) => sum + el.offsetHeight, 0);
+      const gaps = modules.length - 1;
+      const free = vh - chrome - contentH;
+
+      let gapPx;
+      if (gaps <= 0) {
+        gapPx = 0;
+      } else if (free > 4) {
+        gapPx = Math.min(14, Math.max(2, Math.floor(free / gaps)));
+      } else {
+        gapPx = Math.max(0, Math.min(4, 2 + Math.floor(free / gaps)));
+      }
+
+      document.documentElement.style.setProperty("--chrome-module-gap", `${gapPx}px`);
+      document.documentElement.style.setProperty("--main-module-gap", `${gapPx}px`);
+    });
   }
 
   function logModuleShellMetrics() {
@@ -94,6 +129,12 @@
     applyVolumesToEngine();
     updateStepCountUI();
     syncSequencerLayout();
+    syncModuleSpacing();
+    window.addEventListener("resize", syncModuleSpacing);
+    if (typeof ResizeObserver !== "undefined") {
+      const main = document.querySelector(".main");
+      if (main) new ResizeObserver(syncModuleSpacing).observe(main);
+    }
     setStatus("就绪 — 草稿将自动保存");
     scheduleAutosave();
   }
@@ -124,6 +165,9 @@
     if (els.btnAddPattern) {
       els.btnAddPattern.disabled = Sequencer.patternCount >= Sequencer.MAX_PATTERNS;
     }
+    if (els.btnRemovePattern) {
+      els.btnRemovePattern.disabled = Sequencer.patternCount <= Sequencer.MIN_PATTERNS;
+    }
   }
 
   function selectPattern(index) {
@@ -137,6 +181,12 @@
   function updateStepCountUI() {
     if (els.stepCountInfo) {
       els.stepCountInfo.textContent = `${Sequencer.steps}步`;
+    }
+    if (els.btnAddSteps) {
+      els.btnAddSteps.disabled = Sequencer.steps >= Sequencer.MAX_STEPS;
+    }
+    if (els.btnRemoveSteps) {
+      els.btnRemoveSteps.disabled = Sequencer.steps <= Sequencer.MIN_STEPS;
     }
   }
 
@@ -186,6 +236,7 @@
       els.tracks.appendChild(row);
     });
     syncSequencerLayout();
+    syncModuleSpacing();
   }
 
   function onStepClick(track, step) {
@@ -253,6 +304,10 @@
     els.arrangeTimeline.appendChild(addBtn);
 
     els.arrangeInfo.textContent = `${sections.length}段 · ${Sequencer.patternCount}型 · ${Sequencer.steps}步/段`;
+    if (els.btnRemoveSection) {
+      els.btnRemoveSection.disabled = sections.length <= Arranger.MIN_SECTIONS;
+    }
+    syncModuleSpacing();
   }
 
   function renderMixer() {
@@ -308,6 +363,20 @@
       Sequencer.setScaleName(els.scaleSelect.value);
       scheduleAutosave();
     });
+
+    if (els.btnRemoveSection) {
+      els.btnRemoveSection.addEventListener("click", () => {
+        const r = Arranger.removeSection();
+        if (!r.ok) {
+          setStatus("至少保留 1 个编曲段");
+          return;
+        }
+        renderArrangement();
+        scheduleAutosave();
+        setStatus(`已减少至 ${r.count} 段`);
+      });
+    }
+
     if (els.arrangeTimeline) {
       els.arrangeTimeline.addEventListener("click", (e) => {
         if (e.target.closest("#btnAddSection")) {
@@ -332,6 +401,22 @@
         setStatus(`已增加至 ${Sequencer.steps} 步`);
       });
     }
+    if (els.btnRemoveSteps) {
+      els.btnRemoveSteps.addEventListener("click", () => {
+        const r = Sequencer.removeSteps(Sequencer.STEP_ADD);
+        if (!r.ok) {
+          setStatus(`最少保留 ${Sequencer.MIN_STEPS} 步`);
+          return;
+        }
+        renderStepLabels();
+        renderSequencer();
+        updateStepCountUI();
+        renderArrangement();
+        scheduleAutosave();
+        setStatus(`已减少至 ${Sequencer.steps} 步`);
+      });
+    }
+
     if (els.btnAddPattern) {
       els.btnAddPattern.addEventListener("click", () => {
         const r = Sequencer.addPattern();
@@ -345,6 +430,25 @@
         setStatus(`已增加至 ${r.count} 个 Pattern（${patternLabel(r.count - 1)}）`);
       });
     }
+    if (els.btnRemovePattern) {
+      els.btnRemovePattern.addEventListener("click", () => {
+        const r = Sequencer.removePattern();
+        if (!r.ok) {
+          setStatus(`至少保留 ${Sequencer.MIN_PATTERNS} 个 Pattern`);
+          return;
+        }
+        Arranger.getSections().forEach((sec) => {
+          if (sec.patternIndex >= Sequencer.patternCount) {
+            sec.patternIndex = Sequencer.patternCount - 1;
+          }
+        });
+        renderPatternTabs();
+        renderArrangement();
+        scheduleAutosave();
+        setStatus(`已减少至 ${r.count} 个 Pattern`);
+      });
+    }
+
 
     els.btnSave.addEventListener("click", saveProject);
     els.btnLoad.addEventListener("click", loadProject);
@@ -548,6 +652,7 @@
     renderArrangement();
     updateStepCountUI();
     syncSequencerLayout();
+    syncModuleSpacing();
     renderMixer();
     applyVolumesToEngine();
     if (!silent) AppLogger.info("项目数据已应用");

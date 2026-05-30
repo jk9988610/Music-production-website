@@ -66,8 +66,10 @@
         <div class="module-chrome arrange-bar">
           <div class="pattern-tabs-wrap">
             <div class="pattern-tabs" id="patternTabs" role="tablist"></div>
+            <button type="button" class="btn btn-sm" id="btnRemovePattern" title="减少 Pattern">−型</button>
             <button type="button" class="btn btn-sm" id="btnAddPattern" title="增加 Pattern（最多 16 个）">+型</button>
           </div>
+          <button type="button" class="btn btn-sm" id="btnRemoveSection" title="减少一个编曲段落">−段</button>
           <span class="arrange-info" id="arrangeInfo">8段</span>
         </div>
         <div class="module-body arrange-scroll">
@@ -78,6 +80,7 @@
       <fieldset class="module module-sequencer" aria-label="步进音序器" data-shell="chrome">
         <legend>音序</legend>
         <div class="module-chrome sequencer-bar">
+          <button type="button" class="btn btn-sm" id="btnRemoveSteps" title="减少 4 个步进（最少 4 步）">−4步</button>
           <button type="button" class="btn btn-sm" id="btnAddSteps" title="增加 4 个步进（最多 64 步）">+4步</button>
           <span class="step-count-info" id="stepCountInfo">16步</span>
         </div>
@@ -107,13 +110,13 @@
       <h4>模块使用指导</h4>
       <dl class="help-modules">
                 <dt>外壳与内容</dt>
-        <dd>灰框（fieldset）高度随内容区 .module-body 自适应；格子与滑条在 <code>.module-body</code> 内。只改 CSS 中 <code>--chrome-*</code> 压缩框高，<code>--content-*</code> 控制内容。URL 加 <code>?debug=layers</code> 可橙框=外壳、青框=内容。</dd>
+        <dd>模块间距随视口与内容高度自动调节（<code>--chrome-module-gap</code>）。灰框高度随 <code>.module-body</code> 内容撑开；URL 加 <code>?debug=layers</code> 可看外壳/内容分层。</dd>
         <dt>编曲时间轴</dt>
         <dd>每个格子 1 小节（步数可扩展），点击切换 Pattern（A–D）；时间轴末尾「+段」增加小节。</dd>
         <dt>Pattern 库</dt>
-        <dd>编曲栏切换当前编辑 Pattern；「+型」可增加 Pattern（最多 16，A–P…）；各段可分配不同 Pattern。</dd>
+        <dd>编曲栏切换 Pattern；「±型」增减 Pattern（1–16）；「±段」增减小节段；各段可分配不同 Pattern。</dd>
         <dt>步进音序器</dt>
-        <dd>7 轨步进格；音序栏「+4步」增加步数（最多 64）；鼓轨点击开关，旋律轨点击选音高。</dd>
+        <dd>7 轨步进格；「±4步」调整步数（4–64），超出宽度可横向滚动；鼓轨开关，旋律轨选音高。</dd>
         <dt>混音</dt>
         <dd>底部横条调节各轨音量，随草稿保存。</dd>
         <dt>调性 / 音阶</dt>
@@ -121,7 +124,7 @@
         <dt>保存与草稿</dt>
         <dd>自动保存草稿；顶栏「存/读/清」管理项目。</dd>
         <dt>版本与更新</dt>
-        <dd>顶栏显示版本号；「更新」检测新版本；「日志」查看运行记录，可「复制日志」到剪贴板。更新后版本号以 version.json 为准。</dd>
+        <dd>顶栏显示<strong>当前运行</strong>版本；「更新」对比线上 version.json 与页面内嵌版本/build，有新版本时提示并强制刷新资源。</dd>
       </dl>
       <h4>快捷键</h4>
       <ul class="help-list">

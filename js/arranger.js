@@ -14,6 +14,8 @@ const Arranger = (() => {
       }));
   }
 
+  const MIN_SECTIONS = 1;
+
   function addSection() {
     const last = sections[sections.length - 1];
     sections.push({
@@ -25,6 +27,12 @@ const Arranger = (() => {
     if (sections[sectionIndex]) {
       sections[sectionIndex].patternIndex = patternIndex;
     }
+  }
+
+  function removeSection() {
+    if (sections.length <= MIN_SECTIONS) return { ok: false, count: sections.length };
+    sections.pop();
+    return { ok: true, count: sections.length };
   }
 
   function cycleSectionPattern(sectionIndex, patternCount) {
@@ -60,6 +68,8 @@ const Arranger = (() => {
   return {
     init,
     addSection,
+    removeSection,
+    MIN_SECTIONS,
     setSectionPattern,
     cycleSectionPattern,
     getSections,
