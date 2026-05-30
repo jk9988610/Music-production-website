@@ -296,9 +296,33 @@ const Sequencer = (() => {
     return true;
   }
 
+  const PIANO_MIDI_MIN = 48;
+  const PIANO_MIDI_MAX = 80;
+
   function getScaleNotesForCell(patternIndex, trackId, step, octaves = 3) {
     const t = getCellTonality(patternIndex, trackId, step);
-    return getScaleNotesFor(t.rootKey, t.scaleName, octaves);
+    let notes = getScaleNotesFor(t.rootKey, t.scaleName, octaves);
+    const track = getTrack(trackId);
+    if (track && (track.voice === "piano" || track.instrumentId === "piano")) {
+      notes = notes.filter((m) => m >= PIANO_MIDI_MIN && m <= PIANO_MIDI_MAX);
+      if (!notes.length) {
+        notes = getScaleNotesFor(t.rootKey, t.scaleName, 2).filter(
+          (m) => m >= PIANO_MIDI_MIN && m <= PIANO_MIDI_MAX
+        );
+      }
+    }
+    return notes;
+  }
+
+  function defaultMidiForTrack(trackId, patternIndex, step) {
+    const notes = getScaleNotesForCell(patternIndex, trackId, step);
+    if (!notes.length) return 60;
+    const track = getTrack(trackId);
+    if (track && (track.voice === "piano" || track.instrumentId === "piano")) {
+      const mid = notes.filter((m) => m >= 55 && m <= 67);
+      if (mid.length) return mid[Math.floor(mid.length / 2)];
+    }
+    return notes[Math.floor(notes.length / 2)];
   }
 
   function stepColumnHasContent(patternIndex, step) {
@@ -322,9 +346,7 @@ const Sequencer = (() => {
       cell.on = !cell.on;
     } else {
       if (!cell.on && noteMidi == null) {
-        const ton = getCellTonality(patternIndex, trackId, step);
-        const defaults = getScaleNotesFor(ton.rootKey, ton.scaleName);
-        cell.note = defaults[Math.floor(defaults.length / 2)] || 60;
+        cell.note = defaultMidiForTrack(trackId, patternIndex, step);
         cell.on = true;
       } else if (noteMidi != null) {
         cell.note = noteMidi;
@@ -455,6 +477,9 @@ const Sequencer = (() => {
     setTrackRate,
     getScaleNotesFor,
     getScaleNotesForCell,
+    defaultMidiForTrack,
+    PIANO_MIDI_MIN,
+    PIANO_MIDI_MAX,
     getCellTonality,
     setCellTonality,
     stepColumnHasContent,

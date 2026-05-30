@@ -59,7 +59,7 @@ const HelpGuide = (() => {
           <li><strong>鼓组</strong>：底鼓、军鼓、闭镲、开镲、通鼓、吊镲</li>
           <li><strong>旋律</strong>：贝斯、钢琴、电吉他、和弦、领奏、萨克斯、小号、长号、小提琴、大提琴</li>
           <li><strong>弓弦</strong>：小提琴 / 大提琴 — 锯齿激励 + 起弓噪声 + 体腔扫频 + 延迟揉弦</li>
-          <li><strong>钢琴</strong>：现代流行取向 — 柔和起音、持续延音，非古典击弦/拨弦感</li>
+          <li><strong>钢琴</strong>：电钢琴式 FM+体（调/阶只限选音音高，不改变音色）；选音默认 C3–G5</li>
           <li><strong>和弦</strong>：管风琴式垫音（慢起、偏暗），非钢琴音色</li>
           <li><strong>换乐器</strong>：点左侧轨名</li>
           <li><strong>密度</strong>：倍率按钮（½×～4×），弹窗选择。</li>
@@ -91,7 +91,7 @@ const HelpGuide = (() => {
       label: "音高与配器",
       html: `
         <h4>程序音高基础</h4>
-        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。点格子打开<strong>选音弹窗</strong>，在弹窗顶部设「调」「阶」；未单独设置时默认为 <strong>C 大调</strong>。音阶可选：大调、小调、五声、蓝调。</p>
+        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。点格子打开<strong>选音弹窗</strong>，在弹窗顶部设「调」「阶」——<strong>只决定可选音列表，不改变乐器音色</strong>。钢琴轨选音限定在 C3–G5，避免过低像贝斯。未设时默认 <strong>C 大调</strong>。</p>
         <p>选音弹窗默认勾选 <strong>试听</strong>：点击音高会用该轨对应乐器预听一次，并会停止编曲 / 类型循环 / 单步循环播放；满意后点「选用」写入格子。</p>
 
         <h4>底鼓 · 军鼓 · 镲</h4>

@@ -208,84 +208,83 @@ const AudioEngine = (() => {
   }
 
   /**
-   * 钢琴 — 现代流行 / 工作室贴皮取向（非古典击弦、非拨弦快衰）：
-   * - 共享柔和 ADSR，三角主体 + 整数谐波，无琴槌噪声
-   * - 稳定低通 + 轻微 presence，短延迟增加空间感
+   * 钢琴 — 电钢琴取向（Rhodes 式 FM 击齿 + 锯波体，对照常见电子琴）：
+   * 调/阶不参与发声，只影响选音列表；音长取 max(步长, 0.45s) 避免高密度轨听成拨弦。
    */
   function playPianoOn(c, out, time, midi, duration, gain = 0.5) {
     const freq = midiToFreq(midi);
-    const stopAt = time + duration + 0.25;
+    const noteLen = Math.max(duration, 0.45);
+    const stopAt = time + noteLen + 0.2;
 
-    const toneBus = c.createGain();
-    toneBus.gain.value = 1;
-
-    const masterEnv = c.createGain();
-    const peak = gain * 0.82;
-    masterEnv.gain.setValueAtTime(0, time);
-    masterEnv.gain.linearRampToValueAtTime(peak, time + 0.032);
-    masterEnv.gain.linearRampToValueAtTime(peak * 0.94, time + 0.12);
-    masterEnv.gain.setValueAtTime(peak * 0.88, time + duration * 0.5);
-    masterEnv.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.96);
+    const env = c.createGain();
+    const peak = gain * 0.9;
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(peak, time + 0.01);
+    env.gain.exponentialRampToValueAtTime(peak * 0.68, time + 0.14);
+    env.gain.setValueAtTime(peak * 0.6, time + noteLen * 0.5);
+    env.gain.exponentialRampToValueAtTime(0.001, time + noteLen * 0.98);
 
     const lp = c.createBiquadFilter();
     lp.type = "lowpass";
-    const lpHz = Math.min(4400, 380 + freq * 5.2);
-    lp.frequency.setValueAtTime(lpHz, time);
-    lp.Q.value = 0.4;
+    lp.frequency.setValueAtTime(Math.min(5800, 700 + freq * 7.5), time);
+    lp.Q.value = 0.85;
 
-    const presence = c.createBiquadFilter();
-    presence.type = "peaking";
-    presence.frequency.value = Math.min(3200, freq * 2.8 + 900);
-    presence.Q.value = 0.7;
-    presence.gain.value = 2.2;
+    const mix = c.createGain();
+    mix.connect(lp);
+    lp.connect(env);
+    env.connect(out);
 
-    toneBus.connect(presence);
-    presence.connect(lp);
-    lp.connect(masterEnv);
+    const carrier = c.createOscillator();
+    carrier.type = "sine";
+    carrier.frequency.setValueAtTime(freq, time);
+    const mod = c.createOscillator();
+    mod.type = "sine";
+    mod.frequency.setValueAtTime(freq * 4, time);
+    const modDepth = c.createGain();
+    modDepth.gain.setValueAtTime(freq * 0.16, time);
+    modDepth.gain.exponentialRampToValueAtTime(freq * 0.008, time + 0.11);
+    mod.connect(modDepth);
+    modDepth.connect(carrier.frequency);
+    const tineG = c.createGain();
+    tineG.gain.value = 0.52;
+    carrier.connect(tineG);
+    tineG.connect(mix);
+    carrier.start(time);
+    carrier.stop(stopAt);
+    mod.start(time);
+    mod.stop(stopAt);
 
-    const delay = c.createDelay(0.04);
-    delay.delayTime.value = 0.016;
-    const dlyLp = c.createBiquadFilter();
-    dlyLp.type = "lowpass";
-    dlyLp.frequency.value = 2400;
-    const dlyGain = c.createGain();
-    dlyGain.gain.value = 0.14;
-    toneBus.connect(delay);
-    delay.connect(dlyLp);
-    dlyLp.connect(dlyGain);
-    dlyGain.connect(masterEnv);
-
-    masterEnv.connect(out);
-
-    [-2.2, 2.2, 0].forEach((cents, i) => {
-      const osc = c.createOscillator();
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(freq, time);
-      if (cents) osc.detune.setValueAtTime(cents, time);
-      const layer = c.createGain();
-      layer.gain.value = i === 2 ? 0.28 : 0.36;
-      osc.connect(layer);
-      layer.connect(toneBus);
-      osc.start(time);
-      osc.stop(stopAt);
+    [-4, 4].forEach((cents) => {
+      const saw = c.createOscillator();
+      saw.type = "sawtooth";
+      saw.frequency.setValueAtTime(freq, time);
+      saw.detune.setValueAtTime(cents, time);
+      const g = c.createGain();
+      g.gain.value = 0.16;
+      saw.connect(g);
+      g.connect(mix);
+      saw.start(time);
+      saw.stop(stopAt);
     });
 
-    [
-      { n: 2, amp: 0.18, wave: "sine" },
-      { n: 3, amp: 0.1, wave: "sine" },
-      { n: 4, amp: 0.055, wave: "triangle" },
-      { n: 5, amp: 0.032, wave: "sine" },
-    ].forEach(({ n, amp, wave }) => {
-      const osc = c.createOscillator();
-      osc.type = wave;
-      osc.frequency.setValueAtTime(freq * n, time);
-      const layer = c.createGain();
-      layer.gain.value = amp;
-      osc.connect(layer);
-      layer.connect(toneBus);
-      osc.start(time);
-      osc.stop(stopAt);
-    });
+    const body = c.createOscillator();
+    body.type = "triangle";
+    body.frequency.setValueAtTime(freq, time);
+    const bodyG = c.createGain();
+    bodyG.gain.value = 0.22;
+    body.connect(bodyG);
+    bodyG.connect(mix);
+    body.start(time);
+    body.stop(stopAt);
+  }
+
+  function pianoNoteDuration(stepDuration) {
+    return Math.max(stepDuration, 0.45);
+  }
+
+  function previewDurationForVoice(voice) {
+    if (voice === "piano") return 0.62;
+    return 0.28;
   }
 
   /** 和弦轨：管风琴式垫音（慢起音、偏暗），与钢琴击弦模型区分 */
@@ -467,7 +466,7 @@ const AudioEngine = (() => {
         });
         break;
       case "piano":
-        playPianoOn(c, out, time, noteMidi, d * 0.92, gain);
+        playPianoOn(c, out, time, noteMidi, pianoNoteDuration(d), gain);
         break;
       case "eguitar":
         playMono(c, out, time, noteMidi, d * 0.62, gain, {
@@ -568,8 +567,12 @@ const AudioEngine = (() => {
     playTrackSoundOn(ensureContext(), (id) => getTrackGain(id), trackId, time, noteMidi, stepDuration);
   }
 
-  function previewTrackNote(trackId, midi, duration = 0.28) {
-    playTrackSound(trackId, ensureContext().currentTime + 0.02, midi, duration);
+  function previewTrackNote(trackId, midi, duration) {
+    const voice = resolveVoice(trackId);
+    const dur =
+      duration != null ? duration : previewDurationForVoice(voice);
+    const stepDur = voice === "piano" ? pianoNoteDuration(dur) : dur;
+    playTrackSound(trackId, ensureContext().currentTime + 0.02, midi, stepDur);
   }
 
   function createOfflineScheduler(volumes) {
