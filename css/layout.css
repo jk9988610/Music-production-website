@@ -85,17 +85,18 @@
   --content-arrange-slot-w: 40px;
   --content-arrange-slot-h: 30px;
   --content-mixer-track-w: 3.35rem;
-  /* 限制内容区最大高度 → 灰框整体变矮，格子大小不变，框内滚动 */
-  --content-sequencer-max-h: 9.25rem;
-  --content-arrange-max-h: 2.85rem;
 }
 
+/* 外壳高度随 .module-body 内容撑开 */
 fieldset.module {
   border: 1px solid var(--border) !important;
   border-radius: 3px;
   margin: 0 0 var(--chrome-module-gap) !important;
   padding: 0 var(--chrome-module-pad-x) var(--chrome-module-pad-b) !important;
   min-width: 0;
+  width: 100%;
+  height: fit-content;
+  min-height: 0;
   background: var(--bg-panel);
   box-sizing: border-box;
 }
@@ -125,24 +126,23 @@ fieldset.module .module-body {
   margin: 0 !important;
   padding: 0 !important;
   min-width: 0;
+  width: 100%;
+  height: auto;
+  max-height: none !important;
   box-sizing: border-box;
-}
-
-fieldset.module .module-body {
   --seq-label-col: var(--content-seq-label);
   --seq-step-size: var(--content-seq-step);
 }
 
-fieldset.module.module-sequencer .module-body {
-  max-height: var(--content-sequencer-max-h);
-  overflow: auto;
+fieldset.module.module-sequencer .module-body,
+fieldset.module.module-arrange .module-body {
+  overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
 }
 
-fieldset.module.module-arrange .module-body {
-  max-height: var(--content-arrange-max-h);
-  overflow-x: auto;
-  overflow-y: hidden;
+fieldset.module.module-mixer .module-body {
+  overflow: visible;
 }
 
 /* 内容尺寸：仅 module-body 内，用 !important 压过 styles.css 全局 .arrange-slot */
