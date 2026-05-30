@@ -226,8 +226,8 @@
       selectedArrangeSection = Math.min(idx, r.count - 1);
       renderArrangement();
       setStatus(`已剪切 §${idx + 1}（类型 ${patternLabel(sec.patternIndex)}）`);
+      scheduleAutosave();
     });
-    scheduleAutosave();
   }
 
   function insertArrangeSection(before) {
