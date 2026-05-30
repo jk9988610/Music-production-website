@@ -31,7 +31,6 @@
     btnStop: $("#btnStop"),
     bpm: $("#bpm"),
     bpmValue: $("#bpmValue"),
-    btnNoteTonalityReset: $("#btnNoteTonalityReset"),
     patternTabs: $("#patternTabs"),
     btnRemovePattern: $("#btnRemovePattern"),
     btnAddPattern: $("#btnAddPattern"),
@@ -111,44 +110,6 @@
       els.choiceGrid.appendChild(btn);
     });
     els.choiceDialog.showModal();
-  }
-
-  function openTrackKeyPicker(trackId) {
-    const track = Sequencer.getTrack(trackId);
-    if (!track || track.type !== "melodic") return;
-    const ton = Sequencer.getTrackTonality(trackId);
-    openChoiceDialog({
-      title: `${track.name} · 调`,
-      columns: 4,
-      currentValue: ton.rootKey,
-      items: Sequencer.KEYS.map((key, i) => ({ value: i, label: key })),
-      onPick: (value) => {
-        runEdit(() => {
-          Sequencer.setTrackTonality(trackId, Number(value), null);
-          renderSequencer();
-        });
-        setStatus(`${track.name} 调：${Sequencer.KEYS[Number(value)]}`);
-      },
-    });
-  }
-
-  function openTrackScalePicker(trackId) {
-    const track = Sequencer.getTrack(trackId);
-    if (!track || track.type !== "melodic") return;
-    const ton = Sequencer.getTrackTonality(trackId);
-    openChoiceDialog({
-      title: `${track.name} · 音阶`,
-      columns: 2,
-      currentValue: ton.scaleName,
-      items: Sequencer.SCALE_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
-      onPick: (value) => {
-        runEdit(() => {
-          Sequencer.setTrackTonality(trackId, null, value);
-          renderSequencer();
-        });
-        setStatus(`${track.name} 音阶：${scaleLabel(value)}`);
-      },
-    });
   }
 
   function syncSequencerToSection(sectionIndex) {
@@ -703,32 +664,6 @@
         openTrackRatePicker(track.id);
       });
       labelCol.appendChild(rateBtn);
-
-      if (track.type === "melodic") {
-        const ton = Sequencer.getTrackTonality(track.id);
-        const keyBtn = document.createElement("button");
-        keyBtn.type = "button";
-        keyBtn.className = "note-btn pitch-pick-btn track-tonality-btn";
-        keyBtn.title = "本轨调（根音）";
-        keyBtn.textContent = Sequencer.KEYS[ton.rootKey] ?? "C";
-        keyBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          openTrackKeyPicker(track.id);
-        });
-        labelCol.appendChild(keyBtn);
-
-        const scaleBtn = document.createElement("button");
-        scaleBtn.type = "button";
-        scaleBtn.className = "note-btn pitch-pick-btn track-tonality-btn";
-        scaleBtn.title = "本轨音阶";
-        scaleBtn.textContent = scaleLabel(ton.scaleName);
-        scaleBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          openTrackScalePicker(track.id);
-        });
-        labelCol.appendChild(scaleBtn);
-      }
-
       row.appendChild(labelCol);
 
       for (let step = 0; step < Sequencer.steps; step++) {
@@ -801,19 +736,12 @@
   function updateNoteDialogTonalityButtons() {
     if (!noteEditContext) return;
     const { trackId, step, patternIndex } = noteEditContext;
-    const cell = Sequencer.getPattern(patternIndex)[trackId][step];
-    const resolved = Sequencer.getCellTonality(patternIndex, trackId, step);
-    const overridden = Sequencer.cellHasTonalityOverride(cell);
+    const ton = Sequencer.getCellTonality(patternIndex, trackId, step);
     if (els.btnNoteKeyPick) {
-      els.btnNoteKeyPick.textContent = Sequencer.KEYS[resolved.rootKey] ?? "C";
-      els.btnNoteKeyPick.classList.toggle("tonality-overridden", overridden);
+      els.btnNoteKeyPick.textContent = Sequencer.KEYS[ton.rootKey] ?? "C";
     }
     if (els.btnNoteScalePick) {
-      els.btnNoteScalePick.textContent = scaleLabel(resolved.scaleName);
-      els.btnNoteScalePick.classList.toggle("tonality-overridden", overridden);
-    }
-    if (els.btnNoteTonalityReset) {
-      els.btnNoteTonalityReset.disabled = !overridden;
+      els.btnNoteScalePick.textContent = scaleLabel(ton.scaleName);
     }
   }
 
@@ -851,7 +779,7 @@
     const { trackId, step, patternIndex } = noteEditContext;
     const ton = Sequencer.getCellTonality(patternIndex, trackId, step);
     openChoiceDialog({
-      title: "本格覆盖 · 调",
+      title: "选调",
       columns: 4,
       currentValue: ton.rootKey,
       items: Sequencer.KEYS.map((key, i) => ({ value: i, label: key })),
@@ -872,7 +800,7 @@
     const { trackId, step, patternIndex } = noteEditContext;
     const ton = Sequencer.getCellTonality(patternIndex, trackId, step);
     openChoiceDialog({
-      title: "本格覆盖 · 音阶",
+      title: "选阶",
       columns: 2,
       currentValue: ton.scaleName,
       items: Sequencer.SCALE_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
@@ -982,19 +910,6 @@
       els.bpmValue.textContent = bpm;
       scheduleAutosave();
     });
-    if (els.btnNoteTonalityReset) {
-      els.btnNoteTonalityReset.addEventListener("click", (e) => {
-        e.preventDefault();
-        if (!noteEditContext) return;
-        const { trackId, step, patternIndex } = noteEditContext;
-        runEdit(() => {
-          Sequencer.clearCellTonality(patternIndex, trackId, step);
-          updateNoteDialogTonalityButtons();
-          rebuildNoteGrid();
-        });
-        setStatus("已恢复轨道默认调/阶");
-      });
-    }
     if (els.chkTypeLoop) {
       els.chkTypeLoop.addEventListener("change", () => {
         if (els.chkTypeLoop.checked) {

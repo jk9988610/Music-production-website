@@ -481,21 +481,11 @@ select.pitch-select:focus {
   outline-offset: 1px;
 }
 
-.track-rate-btn,
-.track-tonality-btn {
+.track-rate-btn {
   flex: 0 0 auto;
   padding: 0.05rem 0.25rem !important;
   font-size: 0.55rem !important;
   min-width: 1.65rem;
-}
-
-.track-tonality-btn {
-  min-width: 1.45rem;
-}
-
-.note-dialog-tonality .tonality-overridden {
-  outline: 1px solid var(--accent);
-  outline-offset: 1px;
 }
 
 .track-count-info {

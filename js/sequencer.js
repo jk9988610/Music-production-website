@@ -34,37 +34,27 @@ const Sequencer = (() => {
   let steps = DEFAULT_STEPS;
   let patterns = createEmptyPatterns(DEFAULT_PATTERN_COUNT);
   let currentPattern = 0;
-  let trackTonality = {};
   let volumes = {};
   let trackRates = {};
 
+  const DEFAULT_ROOT_KEY = 0;
+  const DEFAULT_SCALE_NAME = SCALE_OPTIONS[0].id;
+
   function normalizeScaleName(name) {
-    if (!name || name === "dorian") return "minor";
-    return SCALES[name] ? name : "major";
+    if (!name || name === "dorian") return DEFAULT_SCALE_NAME;
+    return SCALES[name] ? name : DEFAULT_SCALE_NAME;
   }
 
-  function defaultTonalityForTrack(trackId) {
-    const track = getTrack(trackId);
-    if (!track || track.type !== "melodic") return { ...Instruments.FALLBACK_TONALITY };
-    return Instruments.getDefaultTonality(track.instrumentId);
-  }
-
-  function ensureTrackTonality(trackId) {
-    if (!trackTonality[trackId]) {
-      trackTonality[trackId] = defaultTonalityForTrack(trackId);
-    }
-    trackTonality[trackId].scaleName = normalizeScaleName(trackTonality[trackId].scaleName);
-    return trackTonality[trackId];
+  function defaultTonality() {
+    return { rootKey: DEFAULT_ROOT_KEY, scaleName: DEFAULT_SCALE_NAME };
   }
 
   function initTrackMeta() {
     volumes = {};
     trackRates = {};
-    trackTonality = {};
     getTracks().forEach((t) => {
       volumes[t.id] = Instruments.defaultVolume(t.type);
       trackRates[t.id] = 1;
-      if (t.type === "melodic") ensureTrackTonality(t.id);
     });
   }
 
@@ -114,49 +104,23 @@ const Sequencer = (() => {
     return { on: false, note: null, rootKey: null, scaleName: null };
   }
 
-  function getTrackTonality(trackId) {
-    const track = getTrack(trackId);
-    if (!track || track.type !== "melodic") return { ...Instruments.FALLBACK_TONALITY };
-    return { ...ensureTrackTonality(trackId) };
-  }
-
-  function setTrackTonality(trackId, rootK, scaleN) {
-    const track = getTrack(trackId);
-    if (!track || track.type !== "melodic") return false;
-    const t = ensureTrackTonality(trackId);
-    if (rootK != null) t.rootKey = Math.max(0, Math.min(11, Number(rootK) || 0));
-    if (scaleN != null) t.scaleName = normalizeScaleName(scaleN);
-    return true;
-  }
-
-  function resolveTonality(cell, trackId) {
-    const trackDef = getTrackTonality(trackId);
+  function resolveTonality(cell) {
+    const def = defaultTonality();
     return {
-      rootKey: cell?.rootKey != null ? cell.rootKey : trackDef.rootKey,
-      scaleName: cell?.scaleName ? normalizeScaleName(cell.scaleName) : trackDef.scaleName,
+      rootKey: cell?.rootKey != null ? cell.rootKey : def.rootKey,
+      scaleName: cell?.scaleName ? normalizeScaleName(cell.scaleName) : def.scaleName,
     };
   }
 
   function getCellTonality(patternIndex, trackId, step) {
     const cell = patterns[patternIndex]?.[trackId]?.[step];
-    return resolveTonality(cell, trackId);
-  }
-
-  function cellHasTonalityOverride(cell) {
-    return cell?.rootKey != null || !!cell?.scaleName;
+    return resolveTonality(cell);
   }
 
   function setCellTonality(patternIndex, trackId, step, rk, sn) {
     const cell = patterns[patternIndex][trackId][step];
     if (rk != null) cell.rootKey = rk;
     if (sn != null) cell.scaleName = normalizeScaleName(sn);
-  }
-
-  function clearCellTonality(patternIndex, trackId, step) {
-    const cell = patterns[patternIndex]?.[trackId]?.[step];
-    if (!cell) return;
-    cell.rootKey = null;
-    cell.scaleName = null;
   }
 
   function getScaleNotesFor(rootK, scaleN, octaves = 3) {
@@ -286,9 +250,6 @@ const Sequencer = (() => {
     trackLayout.push({ trackId, instrumentId });
     volumes[trackId] = Instruments.defaultVolume(inst.type);
     trackRates[trackId] = 1;
-    if (inst.type === "melodic") {
-      trackTonality[trackId] = Instruments.getDefaultTonality(instrumentId);
-    }
     patterns.forEach((pattern) => {
       pattern[trackId] = Array(steps).fill(null).map(() => emptyCell());
     });
@@ -303,7 +264,6 @@ const Sequencer = (() => {
     if (removed) {
       delete volumes[removed.trackId];
       delete trackRates[removed.trackId];
-      delete trackTonality[removed.trackId];
       patterns.forEach((pattern) => {
         delete pattern[removed.trackId];
       });
@@ -317,14 +277,9 @@ const Sequencer = (() => {
     if (!entry || !inst) return false;
     const prev = getTrack(trackId);
     entry.instrumentId = instrumentId;
-    if (inst.type === "melodic") {
-      trackTonality[trackId] = Instruments.getDefaultTonality(instrumentId);
-    } else {
-      delete trackTonality[trackId];
-    }
     if (prev && prev.type !== inst.type) {
-      const ton = getTrackTonality(trackId);
-      const defaults = getScaleNotesFor(ton.rootKey, ton.scaleName);
+      const def = defaultTonality();
+      const defaults = getScaleNotesFor(def.rootKey, def.scaleName);
       const mid = defaults[Math.floor(defaults.length / 2)] || 60;
       patterns.forEach((pattern) => {
         const row = pattern[trackId];
@@ -339,11 +294,6 @@ const Sequencer = (() => {
       });
     }
     return true;
-  }
-
-  function getScaleNotesForTrack(trackId, octaves = 3) {
-    const t = getTrackTonality(trackId);
-    return getScaleNotesFor(t.rootKey, t.scaleName, octaves);
   }
 
   function getScaleNotesForCell(patternIndex, trackId, step, octaves = 3) {
@@ -430,7 +380,6 @@ const Sequencer = (() => {
       trackLayout: trackLayout.map((t) => ({ ...t })),
       volumes,
       trackRates: { ...trackRates },
-      trackTonality: JSON.parse(JSON.stringify(trackTonality)),
       currentPattern,
     };
   }
@@ -456,29 +405,6 @@ const Sequencer = (() => {
         }
       });
     }
-    if (state.trackTonality && typeof state.trackTonality === "object") {
-      trackTonality = {};
-      Object.entries(state.trackTonality).forEach(([id, ton]) => {
-        if (!ton || typeof ton !== "object") return;
-        trackTonality[id] = {
-          rootKey: ton.rootKey != null ? ton.rootKey : 0,
-          scaleName: normalizeScaleName(ton.scaleName),
-        };
-      });
-    } else if (state.rootKey != null || state.scaleName) {
-      const legacy = {
-        rootKey: state.rootKey != null ? state.rootKey : 0,
-        scaleName: normalizeScaleName(state.scaleName),
-      };
-      getTracks()
-        .filter((t) => t.type === "melodic")
-        .forEach((t) => {
-          trackTonality[t.id] = { ...legacy };
-        });
-    }
-    getTracks()
-      .filter((t) => t.type === "melodic")
-      .forEach((t) => ensureTrackTonality(t.id));
     if (state.currentPattern != null) currentPattern = state.currentPattern;
     normalizeAllPatterns();
     if (currentPattern >= patterns.length) currentPattern = 0;
@@ -519,10 +445,7 @@ const Sequencer = (() => {
     setCurrentPattern: (i) => {
       currentPattern = i;
     },
-    getTrackTonality,
-    setTrackTonality,
-    cellHasTonalityOverride,
-    clearCellTonality,
+    defaultTonality,
     volumes: () => volumes,
     setVolume: (id, v) => {
       volumes[id] = v;
@@ -530,7 +453,6 @@ const Sequencer = (() => {
     trackRates: () => ({ ...trackRates }),
     getTrackRate,
     setTrackRate,
-    getScaleNotesForTrack,
     getScaleNotesFor,
     getScaleNotesForCell,
     getCellTonality,
