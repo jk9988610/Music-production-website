@@ -1,0 +1,200 @@
+/* HarmonyForge 布局与模块外壳 — 后加载，覆盖 styles.css 中冲突项 */
+
+/* ---------- 顶栏 ---------- */
+.header-line { display: none; }
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.25rem 0;
+}
+
+.header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.28rem 0.4rem;
+  width: 100%;
+}
+
+.header-row-top { justify-content: flex-start; }
+.header-row-top .transport { margin-left: auto; }
+.header-row-sub { justify-content: flex-start; }
+
+.header-divider {
+  width: 1px;
+  height: 0.9rem;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.btn-icon-sm {
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 0.7rem;
+}
+
+.btn-compact {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.68rem;
+}
+
+.control-inline {
+  gap: 0.25rem;
+  font-size: 0.68rem;
+}
+
+.control-inline input[type="range"] { width: 52px; }
+
+.home-version {
+  font-size: 0.62rem;
+  padding: 0.1rem 0.35rem;
+}
+
+.main {
+  gap: 0.25rem;
+  padding-top: 0.2rem;
+  grid-template-columns: 1fr !important;
+}
+
+.footer-slim {
+  padding: 0.15rem 0;
+  font-size: 0.62rem;
+}
+
+.footer-meta,
+.footer-credit,
+.version-badge,
+.brand-tag { display: none !important; }
+
+.sidebar { display: none; }
+
+/* ============================================================
+   CHROME 外壳 — 只改 --chrome-*（边框/标题/工具条/模块间距）
+   CONTENT 内容 — 只改 --content-*（格子与滑条尺寸）
+   ============================================================ */
+:root {
+  --chrome-module-gap: 3px;
+  --chrome-module-pad-x: 4px;
+  --chrome-module-pad-b: 2px;
+  --chrome-legend-size: 0.6rem;
+  --chrome-toolbar-gap: 2px;
+  --content-seq-step: 0.95rem;
+  --content-seq-label: 3.25rem;
+  --content-arrange-slot-w: 40px;
+  --content-arrange-slot-h: 30px;
+  --content-mixer-track-w: 3.35rem;
+  /* 限制内容区最大高度 → 灰框整体变矮，格子大小不变，框内滚动 */
+  --content-sequencer-max-h: 9.25rem;
+  --content-arrange-max-h: 2.85rem;
+}
+
+fieldset.module {
+  border: 1px solid var(--border) !important;
+  border-radius: 3px;
+  margin: 0 0 var(--chrome-module-gap) !important;
+  padding: 0 var(--chrome-module-pad-x) var(--chrome-module-pad-b) !important;
+  min-width: 0;
+  background: var(--bg-panel);
+  box-sizing: border-box;
+}
+
+fieldset.module legend {
+  font-size: var(--chrome-legend-size);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 3px;
+  margin-left: 1px;
+  line-height: 1;
+}
+
+fieldset.module .module-chrome,
+fieldset.module .arrange-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.3rem;
+  margin: 0 0 var(--chrome-toolbar-gap) !important;
+  padding: 0 !important;
+}
+
+fieldset.module .module-body {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+fieldset.module .module-body {
+  --seq-label-col: var(--content-seq-label);
+  --seq-step-size: var(--content-seq-step);
+}
+
+fieldset.module.module-sequencer .module-body {
+  max-height: var(--content-sequencer-max-h);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+fieldset.module.module-arrange .module-body {
+  max-height: var(--content-arrange-max-h);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* 内容尺寸：仅 module-body 内，用 !important 压过 styles.css 全局 .arrange-slot */
+fieldset.module .module-body .arrange-slot {
+  width: var(--content-arrange-slot-w) !important;
+  min-height: var(--content-arrange-slot-h) !important;
+  max-height: none;
+  padding: 0.15rem 0.2rem !important;
+  box-sizing: border-box;
+}
+
+fieldset.module .module-body .step-cell {
+  width: var(--seq-step-size) !important;
+  height: var(--seq-step-size) !important;
+  min-width: 0;
+  max-width: none;
+}
+
+fieldset.module .module-body .track-row,
+fieldset.module .module-body .step-labels {
+  gap: 2px;
+}
+
+fieldset.module .module-body .pattern-tab {
+  padding: 0.15rem 0.45rem;
+  font-size: 0.68rem;
+}
+
+fieldset.module .module-body .mixer-horizontal {
+  gap: 0.12rem;
+}
+
+fieldset.module .module-body .mixer-horizontal .mixer-track {
+  flex: 0 0 var(--content-mixer-track-w) !important;
+  min-width: var(--content-mixer-track-w) !important;
+}
+
+fieldset.module .module-body .mixer-horizontal .mixer-track label {
+  font-size: 0.55rem;
+  margin-bottom: 0;
+}
+
+/* 调试 ?debug=layers ：橙=外壳 fieldset，青=内容 body，紫=工具条 */
+html[data-debug-layers] fieldset.module {
+  outline: 2px dashed #f59e0b !important;
+}
+
+html[data-debug-layers] fieldset.module .module-body {
+  outline: 2px dashed #22d3ee !important;
+  outline-offset: -2px;
+}
+
+html[data-debug-layers] fieldset.module .module-chrome {
+  outline: 1px dotted #a78bfa !important;
+}

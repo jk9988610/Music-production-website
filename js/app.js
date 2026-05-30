@@ -46,9 +46,25 @@
 
   let noteEditContext = null;
 
+  function logModuleShellMetrics() {
+    document.querySelectorAll("fieldset.module").forEach((fs) => {
+      const body = fs.querySelector(".module-body");
+      const chrome = fs.querySelector(".module-chrome");
+      const name = fs.querySelector("legend")?.textContent || "?";
+      const r = fs.getBoundingClientRect();
+      const br = body?.getBoundingClientRect();
+      AppLogger.info(
+        `外壳[${name}]`,
+        `fieldset ${Math.round(r.height)}px · body ${body ? Math.round(br.height) : 0}px` +
+          (chrome ? ` · 工具条 ${Math.round(chrome.getBoundingClientRect().height)}px` : "")
+      );
+    });
+  }
+
   function init() {
     if (new URLSearchParams(location.search).get("debug") === "layers") {
       document.documentElement.setAttribute("data-debug-layers", "");
+      requestAnimationFrame(() => logModuleShellMetrics());
     }
 
     AppLogger.info("HarmonyForge 启动", `v${AppVersion.CURRENT} · build ${AppVersion.BUILD}`);
