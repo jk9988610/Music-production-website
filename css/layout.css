@@ -131,7 +131,12 @@ fieldset.module .module-body {
   --seq-step-size: var(--content-seq-step);
 }
 
-fieldset.module.module-sequencer .module-body,
+fieldset.module.module-sequencer .module-body {
+  overflow-x: auto;
+  overflow-y: visible !important;
+  padding-bottom: 2px;
+}
+
 fieldset.module.module-arrange .module-body {
   overflow-x: auto;
   overflow-y: visible;
@@ -252,7 +257,8 @@ html[data-debug-layers] fieldset.module .module-chrome {
 
 fieldset.module.module-sequencer .sequencer-wrap {
   overflow-x: auto !important;
-  overflow-y: hidden;
+  overflow-y: visible !important;
+  padding-bottom: 0.5rem !important;
 }
 
 fieldset.module.module-sequencer .sequencer-wrap .track-row,

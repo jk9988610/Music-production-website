@@ -129,6 +129,7 @@
 
     AppLogger.info("HarmonyForge 启动", `v${AppVersion.CURRENT} · build ${AppVersion.BUILD}`);
     AppVersion.initUI();
+    if (typeof HelpGuide !== "undefined") HelpGuide.init();
     LayoutManager.init({
       onChange: () => scheduleAutosave(),
     });
@@ -514,7 +515,7 @@
     const helpDialog = document.getElementById("helpDialog");
     const btnHelpClose = document.getElementById("btnHelpClose");
     if (btnHelp && helpDialog) {
-      btnHelp.addEventListener("click", () => helpDialog.showModal());
+      btnHelp.addEventListener("click", () => { if (typeof HelpGuide !== "undefined") HelpGuide.init(); helpDialog.showModal(); });
     }
     if (btnHelpClose && helpDialog) {
       btnHelpClose.addEventListener("click", () => helpDialog.close());

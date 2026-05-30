@@ -355,14 +355,18 @@ select {
 /* Sequencer — 横向滚动仅在模块内 */
 .sequencer-wrap {
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   max-width: 100%;
   margin: 0 -0.25rem;
-  padding: 0.15rem 0.25rem 0.35rem;
+  padding: 0.15rem 0.35rem 0.65rem;
   -webkit-overflow-scrolling: touch;
 }
 
-.sequencer-wrap .tracks,
+.sequencer-wrap .tracks {
+  flex-shrink: 0;
+  padding-bottom: 0.35rem;
+}
+
 .sequencer-wrap .step-labels {
   flex-shrink: 0;
 }
@@ -761,4 +765,110 @@ kbd {
   margin: 0.15rem 0 0 0;
   color: var(--text-muted);
   line-height: 1.4;
+}
+
+
+/* 帮助中心 — 标签页 */
+.help-dialog-tabs {
+  max-width: min(520px, 96vw);
+  width: 96vw;
+}
+
+.help-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.help-tab {
+  font-family: var(--font);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.help-tab:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.help-tab.active {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+  background: rgba(110, 231, 183, 0.08);
+}
+
+.help-tab-panels {
+  overflow-y: auto;
+  max-height: min(70vh, 28rem);
+  padding: 0.5rem 0.65rem 0.75rem;
+}
+
+.help-panel h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+.help-panel h4:not(:first-child) {
+  margin-top: 0.75rem;
+}
+
+.help-panel p,
+.help-panel li {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.help-steps {
+  margin: 0.4rem 0 0.6rem 1.1rem;
+  padding: 0;
+}
+
+.help-steps li {
+  margin-bottom: 0.35rem;
+}
+
+.help-tip {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  border-left: 2px solid var(--accent-dim);
+  padding-left: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.help-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.68rem;
+  margin: 0.5rem 0;
+}
+
+.help-table th,
+.help-table td {
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.35rem;
+  text-align: left;
+}
+
+.help-table th {
+  background: var(--bg-elevated);
+  color: var(--accent);
+}
+
+.module-sequencer .module-body {
+  overflow-y: visible !important;
+}
+
+.module-sequencer .sequencer-wrap {
+  overflow-y: visible !important;
 }

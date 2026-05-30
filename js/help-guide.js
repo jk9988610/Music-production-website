@@ -1,0 +1,219 @@
+/**
+ * 帮助中心 — 分标签页教学内容
+ */
+const HelpGuide = (() => {
+  const PANELS = [
+    {
+      id: "workflow",
+      label: "完整流程",
+      html: `
+        <h4>从零完成一首编曲</h4>
+        <p>HarmonyForge 把「节奏 → 和声 → 旋律 → 段落」拆开，用 <strong>Pattern（型）</strong> 存短循环，用 <strong>时间轴</strong> 拼成完整曲式。建议按下面顺序操作。</p>
+        <ol class="help-steps">
+          <li><strong>定调</strong>：顶栏选「调」（根音）与「阶」（音阶）。后续所有旋律选音只在此音阶内。</li>
+          <li><strong>做鼓</strong>：在音序器选 Pattern A，只开底鼓 / 军鼓 / 镲，做出 1 小节节奏模板。</li>
+          <li><strong>做贝斯</strong>：仍在 A（或新建 B），在贝斯轨填根音 — 通常落在强拍，与鼓对齐。</li>
+          <li><strong>做和弦</strong>：在和弦轨填块状和弦根音（见「音高与配器」），常每 4 步换一次。</li>
+          <li><strong>做主旋律</strong>：在主旋律轨用音阶内音填句，避开与和弦打架的密集区。</li>
+          <li><strong>复制变型</strong>：用「+型」复制出 B/C/D，做加花、过门或副歌加密度。</li>
+          <li><strong>排段落</strong>：在编曲模块用时间轴把 §1§2§… 指到 A/B/C/D，用「±段」加长曲长。</li>
+          <li><strong>混音</strong>：在混音条平衡鼓组、贝斯、和弦、主旋律音量。</li>
+          <li><strong>播放检查</strong>：点播放走完整时间轴；不满意回到对应 Pattern 改步格。</li>
+          <li><strong>保存</strong>：自动草稿 +「导出」.hfproj 备份。</li>
+        </ol>
+        <p class="help-tip">小技巧：先 8～16 步做短循环，确认好听后再「+4步」扩展；时间轴先 4～8 段试结构，再加长。</p>
+      `,
+    },
+    {
+      id: "arrange",
+      label: "编曲",
+      html: `
+        <h4>编曲模块</h4>
+        <p><strong>工具栏两行：</strong></p>
+        <ul class="help-list">
+          <li><strong>Pattern 行</strong>：标签 A/B/C… 切换「正在编辑哪一型」；「−型」「+型」增减 Pattern（最多 16 个）。</li>
+          <li><strong>段落 行</strong>：「−段」「+段」减少 / 增加时间轴小节段；右侧显示段数、型数、每段步数。</li>
+        </ul>
+        <p><strong>时间轴：</strong>每个格子 = 播放时的一个小节。格上大字（A/B/C…）表示该段播放哪一型 Pattern。点击格子会在 A→B→C→… 间轮换，不会删除节奏。</p>
+        <p><strong>与音序的关系：</strong>你在音序里编辑的是「某一型的 7 轨数据」；时间轴只负责「第几小节播放哪一型」。例如 §1–§4 用 A（主歌），§5–§8 用 B（副歌）。</p>
+        <p><strong>典型曲式示例：</strong></p>
+        <ul class="help-list">
+          <li>§1–§2 → A（前奏 / 主歌节奏）</li>
+          <li>§3–§6 → B（主歌加贝斯和弦）</li>
+          <li>§7–§8 → C（副歌更满）</li>
+          <li>§9 → D（过门或 breakdown）</li>
+        </ul>
+      `,
+    },
+    {
+      id: "sequencer",
+      label: "音序",
+      html: `
+        <h4>步进音序器</h4>
+        <p>7 轨自上而下：底鼓、军鼓、闭镲、开镲、贝斯、和弦、<strong>主旋律</strong>。横向每一步 = 1/16 拍（4/4 拍下 16 步 = 1 小节）。</p>
+        <ul class="help-list">
+          <li><strong>鼓轨</strong>：点击格开 / 关，无音高。</li>
+          <li><strong>旋律轨</strong>（贝斯 / 和弦 / 主旋律）：点击选音高，格内显示如 <code>C4</code>。</li>
+          <li><strong>±4步</strong>：扩展或缩短 Pattern 长度（4～64 步）。</li>
+          <li>步数变多后横向滚动查看；最底行「主旋律」需完整可见，若被裁切可略增布局中的模块内边距。</li>
+        </ul>
+        <p><strong>播放头：</strong>播放时当前步会高亮；编曲播放模式下时间轴对应段也会亮。</p>
+        <p><strong>Pattern 切换：</strong>编曲栏点 A/B/C 或快捷键 <kbd>1</kbd>–<kbd>9</kbd>，编辑的是不同 Pattern 副本。</p>
+      `,
+    },
+    {
+      id: "pitch",
+      label: "音高与配器",
+      html: `
+        <h4>程序音高基础</h4>
+        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。顶栏「调 + 阶」决定选音弹窗里有哪些音（约 C2–C6）。</p>
+
+        <h4>底鼓 · 军鼓 · 镲</h4>
+        <p><strong>无音高。</strong>只负责节奏框架。</p>
+        <ul class="help-list">
+          <li>底鼓：常放在第 1、5、9、13 步（四拍底）</li>
+          <li>军鼓：常放在第 5、13 步（2、4 拍）</li>
+          <li>闭镲：八分或十六分均匀；开镲：偶尔在第 16 步或反拍点缀</li>
+        </ul>
+
+        <h4>贝斯轨</h4>
+        <p><strong>单音</strong>，跟根音走。在 C 大调里优先选 C、F、G 等音阶音，低八度（如 C2–G2）。</p>
+        <ul class="help-list">
+          <li>强拍（1、3 拍）放根音，与底鼓对齐</li>
+          <li>可每 4 步换一个音，形成 I–IV–V 进行（如 C → F → G → C）</li>
+          <li>避免与和弦轨音高完全重复同一八度，贝斯应更低</li>
+        </ul>
+
+        <h4>和弦轨</h4>
+        <p>格内音高是<strong>和弦根音</strong>。程序会自动叠 <strong>根音 + 大三度 + 纯五度</strong>（大三和弦）。</p>
+        <ul class="help-list">
+          <li>同一和弦常持续 4 步或 8 步再换</li>
+          <li>C 大调：I=C，IV=F，V=G — 选对应根音即可</li>
+          <li>和弦轨偏中低区（如 C3–G3），不要比贝斯还低</li>
+        </ul>
+
+        <h4>主旋律轨</h4>
+        <p><strong>单音</strong>，最亮。常用比和弦高一个八度以上（如 C4–G4）。</p>
+        <ul class="help-list">
+          <li>从音阶音开始，先写短 motive（3～5 个音）再重复变奏</li>
+          <li>强拍可用音阶 1 度或 5 度，弱拍用经过音</li>
+          <li>一句结束音落在 1 度或 3 度更稳</li>
+          <li>格内字被边框挡住时：缩小步进或略增模块下内边距；播放检查听感为主</li>
+        </ul>
+
+        <h4>搭配总表（C 大调示例）</h4>
+        <table class="help-table">
+          <thead><tr><th>轨</th><th>音区</th><th>节奏</th><th>作用</th></tr></thead>
+          <tbody>
+            <tr><td>底鼓</td><td>—</td><td>四拍</td><td>脉动</td></tr>
+            <tr><td>军鼓</td><td>—</td><td>2/4 拍</td><td>骨架</td></tr>
+            <tr><td>贝斯</td><td>C2–G2</td><td>根音在强拍</td><td>和声底座</td></tr>
+            <tr><td>和弦</td><td>C3–G3</td><td>每 4 步换根</td><td>和声填充</td></tr>
+            <tr><td>主旋律</td><td>C4–G4</td><td>句型</td><td>记忆点</td></tr>
+          </tbody>
+        </table>
+
+        <h4>不同调式</h4>
+        <p>换「阶」为五声时，选音变少，主旋律更易写「中国风」；小调时贝斯 / 和弦优先 i、iv、V 级。改调后已填音不会自动移调，需手动重选。</p>
+      `,
+    },
+    {
+      id: "mixer",
+      label: "混音播放",
+      html: `
+        <h4>混音</h4>
+        <p>混音模块各轨一条音量滑条。建议起点：</p>
+        <ul class="help-list">
+          <li>鼓组合计最大（底鼓、军鼓、镲约 80～90%）</li>
+          <li>贝斯次之（约 75%），再和弦（约 70%）</li>
+          <li>主旋律略低于鼓、高于和弦背垫（约 65～75%），避免盖过人声想象位</li>
+        </ul>
+        <p>随草稿自动保存。</p>
+        <h4>播放</h4>
+        <ul class="help-list">
+          <li><kbd>Space</kbd> 播放 / 暂停编曲时间轴（按段顺序）</li>
+          <li>BPM、摆：顶栏调节速度与摇摆</li>
+          <li>播放时音序当前 Pattern 高亮；时间轴当前段高亮</li>
+        </ul>
+      `,
+    },
+    {
+      id: "project",
+      label: "项目布局",
+      html: `
+        <h4>保存与文件</h4>
+        <ul class="help-list">
+          <li><strong>自动草稿</strong>：改动后约 0.6 秒写入浏览器</li>
+          <li><strong>存 / 读</strong>：浏览器内项目槽</li>
+          <li><strong>导出 / 导入</strong>：<code>.hfproj</code> JSON 文件，可备份或换设备</li>
+          <li><strong>清</strong>：重置演示数据（慎用）</li>
+        </ul>
+        <h4>布局</h4>
+        <p>顶栏「布局」可改模块顺序、间距、格子大小；「主区域行距」= 模块间距。默认：混音 → 音序 → 编曲。</p>
+        <h4>版本</h4>
+        <p>顶栏版本号；「更新」检查线上版本；「日志」排错。</p>
+      `,
+    },
+    {
+      id: "shortcuts",
+      label: "快捷键",
+      html: `
+        <h4>快捷键</h4>
+        <ul class="help-list">
+          <li><kbd>Space</kbd> 播放 / 暂停</li>
+          <li><kbd>1</kbd>–<kbd>9</kbd> 切换 Pattern 1～9</li>
+        </ul>
+        <p>在输入框内时光标不会触发上述快捷键。</p>
+      `,
+    },
+  ];
+
+  function init() {
+    if (init._done) return;
+    init._done = true;
+    const dialog = document.getElementById("helpDialog");
+    if (!dialog) return;
+
+    const nav = dialog.querySelector(".help-tabs");
+    const body = dialog.querySelector(".help-tab-panels");
+    if (!nav || !body) return;
+
+    nav.innerHTML = "";
+    body.innerHTML = "";
+
+    PANELS.forEach((panel, i) => {
+      const tab = document.createElement("button");
+      tab.type = "button";
+      tab.className = "help-tab" + (i === 0 ? " active" : "");
+      tab.dataset.helpTab = panel.id;
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", i === 0 ? "true" : "false");
+      tab.textContent = panel.label;
+      nav.appendChild(tab);
+
+      const article = document.createElement("article");
+      article.className = "help-panel";
+      article.dataset.panel = panel.id;
+      article.setAttribute("role", "tabpanel");
+      article.hidden = i !== 0;
+      article.innerHTML = panel.html;
+      body.appendChild(article);
+    });
+
+    nav.addEventListener("click", (e) => {
+      const tab = e.target.closest(".help-tab");
+      if (!tab) return;
+      const id = tab.dataset.helpTab;
+      nav.querySelectorAll(".help-tab").forEach((t) => {
+        const on = t === tab;
+        t.classList.toggle("active", on);
+        t.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      body.querySelectorAll(".help-panel").forEach((p) => {
+        p.hidden = p.dataset.panel !== id;
+      });
+    });
+  }
+
+  return { init, PANELS };
+})();

@@ -197,39 +197,13 @@
   </dialog>
 
 
-  <dialog id="helpDialog" class="help-dialog">
+  <dialog id="helpDialog" class="help-dialog help-dialog-tabs">
     <div class="log-dialog-head">
-      <h3>帮助</h3>
+      <h3>帮助中心</h3>
       <button type="button" class="btn btn-ghost btn-xs" id="btnHelpClose" aria-label="关闭">关闭</button>
     </div>
-    <div class="help-body">
-      <h4>模块使用指导</h4>
-      <dl class="help-modules">
-                <dt>外壳与内容</dt>
-        <dd>「主区域行距」为模块之间的 grid 间距；「模块额外间距」为每块下边距。开启余白填充时只把空白留在底部，不会撑大行距。灰框高度随 <code>.module-body</code> 内容撑开；URL 加 <code>?debug=layers</code> 可看外壳/内容分层。</dd>
-        <dt>编曲时间轴</dt>
-        <dd>每个格子 1 小节（步数可扩展），点击切换 Pattern（A–D）；时间轴末尾「+段」增加小节。</dd>
-        <dt>Pattern 库</dt>
-        <dd>编曲栏切换 Pattern；「±型」增减 Pattern（1–16）；「±段」增减小节段；各段可分配不同 Pattern。</dd>
-        <dt>步进音序器</dt>
-        <dd>7 轨步进格；「±4步」调整步数（4–64），超出宽度可横向滚动；鼓轨开关，旋律轨选音高。</dd>
-        <dt>混音</dt>
-        <dd>底部横条调节各轨音量，随草稿保存。</dd>
-        <dt>调性 / 音阶</dt>
-        <dd>顶栏选择根音与音阶，旋律选音仅在音阶内。</dd>
-        <dt>布局</dt>
-        <dd>顶栏「布局」可调模块顺序、显示/隐藏、间距与格子尺寸；支持预设与拖拽排序，随草稿保存。</dd>
-        <dt>保存与草稿</dt>
-        <dd>自动保存草稿；「导出/导入」下载或打开 <code>.hfproj</code> 编曲文件；「存/读/清」管理浏览器内项目。</dd>
-        <dt>版本与更新</dt>
-        <dd>顶栏显示<strong>当前运行</strong>版本；「更新」对比线上 version.json 与页面内嵌版本/build，有新版本时提示并强制刷新资源。</dd>
-      </dl>
-      <h4>快捷键</h4>
-      <ul class="help-list">
-        <li><kbd>Space</kbd> 播放 / 暂停</li>
-        <li><kbd>1</kbd>–<kbd>9</kbd> 切换前 9 个 Pattern</li>
-      </ul>
-    </div>
+    <nav class="help-tabs" role="tablist" aria-label="帮助分类"></nav>
+    <div class="help-body help-tab-panels"></div>
   </dialog>
 
   <dialog id="logDialog" class="log-dialog">
@@ -262,6 +236,7 @@
   <script src="js/arranger.js"></script>
   <script src="js/layout.js"></script>
   <script src="js/project-io.js"></script>
+  <script src="js/help-guide.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
