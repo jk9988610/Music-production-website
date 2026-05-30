@@ -72,9 +72,9 @@
    ============================================================ */
 :root {
   --chrome-module-gap: 0px;
-  --main-module-gap: 15px;
+  --main-module-gap: 11px;
   --chrome-module-pad-x: 4px;
-  --chrome-module-pad-b: 2px;
+  --chrome-module-pad-b: 12px;
   --chrome-legend-size: 0.6rem;
   --chrome-toolbar-gap: 2px;
   --content-seq-step: 0.95rem;
