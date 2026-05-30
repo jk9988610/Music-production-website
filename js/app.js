@@ -311,14 +311,6 @@
       els.arrangeTimeline.appendChild(slot);
     });
 
-    const addBtn = document.createElement("button");
-    addBtn.type = "button";
-    addBtn.id = "btnAddSection";
-    addBtn.className = "arrange-slot arrange-slot-add";
-    addBtn.title = "在末尾增加一个编曲段落";
-    addBtn.innerHTML = '<span class="arrange-slot-add-label">+段</span>';
-    els.arrangeTimeline.appendChild(addBtn);
-
     els.arrangeInfo.textContent = `${sections.length}段 · ${Sequencer.patternCount}型 · ${Sequencer.steps}步/段`;
     if (els.btnRemoveSection) {
       els.btnRemoveSection.disabled = sections.length <= Arranger.MIN_SECTIONS;
@@ -393,13 +385,12 @@
       });
     }
 
-    if (els.arrangeTimeline) {
-      els.arrangeTimeline.addEventListener("click", (e) => {
-        if (e.target.closest("#btnAddSection")) {
-          Arranger.addSection();
-          renderArrangement();
-          scheduleAutosave();
-        }
+    const btnAddSection = document.getElementById("btnAddSection");
+    if (btnAddSection) {
+      btnAddSection.addEventListener("click", () => {
+        Arranger.addSection();
+        renderArrangement();
+        scheduleAutosave();
       });
     }
 

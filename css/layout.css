@@ -516,3 +516,72 @@ html[data-layout-compact-header="1"] .header-row {
   font-family: var(--mono);
   margin-left: 0.1rem;
 }
+
+/* 模块工具栏 — 编曲 / 音序统一格式 */
+.module-toolbar-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  width: 100%;
+}
+
+.module-toolbar-row + .module-toolbar-row {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.module-toolbar-label {
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  min-width: 3.25rem;
+}
+
+.arrange-bar .pattern-tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.arrange-bar .btn-step-group .btn-sm {
+  min-width: 2.1rem;
+  padding: 0.2rem 0.45rem;
+}
+
+.sequencer-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+.sequencer-bar .step-count-info {
+  margin-left: auto;
+}
+
+.arrange-bar .arrange-info {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.help-modules dd ul.help-list {
+  margin: 0.35rem 0 0.5rem 1rem;
+  padding: 0;
+}
+
+.help-modules dd p {
+  margin: 0.35rem 0;
+  line-height: 1.45;
+}
+
+.help-modules dd p:first-child {
+  margin-top: 0;
+}

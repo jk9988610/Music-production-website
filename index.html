@@ -71,13 +71,22 @@
       <fieldset class="module module-arrange" data-module="arrange" aria-label="编曲时间轴" data-shell="chrome">
         <legend>编曲</legend>
         <div class="module-chrome arrange-bar">
-          <div class="pattern-tabs-wrap">
+          <div class="module-toolbar-row">
+            <span class="module-toolbar-label">Pattern</span>
             <div class="pattern-tabs" id="patternTabs" role="tablist"></div>
-            <button type="button" class="btn btn-sm" id="btnRemovePattern" title="减少 Pattern">−型</button>
-            <button type="button" class="btn btn-sm" id="btnAddPattern" title="增加 Pattern（最多 16 个）">+型</button>
+            <div class="btn-step-group" aria-label="Pattern 数量">
+              <button type="button" class="btn btn-sm" id="btnRemovePattern" title="减少一个 Pattern">−型</button>
+              <button type="button" class="btn btn-sm" id="btnAddPattern" title="增加一个 Pattern（最多 16 个）">+型</button>
+            </div>
           </div>
-          <button type="button" class="btn btn-sm" id="btnRemoveSection" title="减少一个编曲段落">−段</button>
-          <span class="arrange-info" id="arrangeInfo">8段</span>
+          <div class="module-toolbar-row">
+            <span class="module-toolbar-label">段落</span>
+            <div class="btn-step-group" aria-label="编曲段落">
+              <button type="button" class="btn btn-sm" id="btnRemoveSection" title="减少一个编曲段落">−段</button>
+              <button type="button" class="btn btn-sm" id="btnAddSection" title="在末尾增加一个编曲段落">+段</button>
+            </div>
+            <span class="arrange-info" id="arrangeInfo">8段</span>
+          </div>
         </div>
         <div class="module-body arrange-scroll">
           <div class="arrange-timeline" id="arrangeTimeline"></div>
@@ -87,8 +96,11 @@
       <fieldset class="module module-sequencer" data-module="sequencer" aria-label="步进音序器" data-shell="chrome">
         <legend>音序</legend>
         <div class="module-chrome sequencer-bar">
-          <button type="button" class="btn btn-sm" id="btnRemoveSteps" title="减少 4 个步进（最少 4 步）">−4步</button>
-          <button type="button" class="btn btn-sm" id="btnAddSteps" title="增加 4 个步进（最多 64 步）">+4步</button>
+          <span class="module-toolbar-label">步进</span>
+          <div class="btn-step-group" aria-label="步进数量">
+            <button type="button" class="btn btn-sm" id="btnRemoveSteps" title="减少 4 个步进（最少 4 步）">−4步</button>
+            <button type="button" class="btn btn-sm" id="btnAddSteps" title="增加 4 个步进（最多 64 步）">+4步</button>
+          </div>
           <span class="step-count-info" id="stepCountInfo">16步</span>
         </div>
         <div class="module-body sequencer-wrap">
