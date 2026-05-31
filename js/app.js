@@ -442,6 +442,7 @@
 
     AppLogger.info("HarmonyForge 启动", `v${AppVersion.CURRENT} · build ${AppVersion.BUILD}`);
     AppVersion.initUI();
+    wireAudioUnlock();
     if (typeof BeatBattleCloud !== "undefined") {
       BeatBattleCloud.initUI({ getProjectData, setStatus });
     }
@@ -542,6 +543,20 @@
     if (playing) pause({ keepLoopFlags: false });
     setTypeLoopEnabled(false);
     setStepLoopEnabled(false);
+  }
+
+  function wireAudioUnlock() {
+    const warm = () => {
+      AudioEngine.unlockAudio().catch(() => {});
+    };
+    document.addEventListener("pointerdown", warm, { once: true, capture: true });
+    document.addEventListener("keydown", warm, { once: true, capture: true });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible" || !playing) return;
+      AudioEngine.unlockAudio()
+        .then(() => syncSchedulerClock())
+        .catch(() => {});
+    });
   }
 
   function setTypeLoopEnabled(on) {
@@ -707,9 +722,10 @@
         renderSequencer();
       });
       if (!wasOn && cell.on) {
-        AudioEngine.ensureContext();
-        const t = AudioEngine.getContext().currentTime + 0.02;
-        AudioEngine.playTrackSound(track.id, t, null, getStepDuration());
+        AudioEngine.unlockAudio().then(() => {
+          const c = AudioEngine.getContext();
+          AudioEngine.playTrackSound(track.id, c.currentTime + 0.02, null, getStepDuration());
+        });
       }
     }
   }
@@ -1292,8 +1308,23 @@
     startPlay("arrange");
   }
 
-  function startPlay(mode) {
-    AudioEngine.ensureContext();
+  function syncSchedulerClock() {
+    const ctx = AudioEngine.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    if (nextStepTime < now - 0.05) {
+      nextStepTime = now + 0.02;
+    }
+  }
+
+  async function startPlay(mode) {
+    try {
+      await AudioEngine.unlockAudio();
+    } catch (err) {
+      AppLogger.error("无法启动音频", err.message);
+      setStatus("音频未就绪，请再点一次播放");
+      return;
+    }
     playing = true;
     playMode = mode;
     stepCounter = 0;
@@ -1359,10 +1390,27 @@
   function schedule() {
     if (!playing) return;
     const ctx = AudioEngine.getContext();
-    const lookAhead = 0.1;
+    if (!ctx) return;
 
-    while (nextStepTime < ctx.currentTime + lookAhead) {
-      playStepAt(nextStepTime);
+    if (!AudioEngine.isRunning()) {
+      AudioEngine.unlockAudio()
+        .then(() => {
+          if (!playing) return;
+          syncSchedulerClock();
+          schedule();
+        })
+        .catch(() => {});
+      schedulerTimer = setTimeout(schedule, 50);
+      return;
+    }
+
+    const lookAhead = 0.1;
+    const now = ctx.currentTime;
+    syncSchedulerClock();
+
+    while (nextStepTime < now + lookAhead) {
+      const t = Math.max(nextStepTime, now + 0.001);
+      playStepAt(t);
       nextStepTime += getStepDuration();
       stepCounter++;
     }

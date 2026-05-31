@@ -4,6 +4,7 @@
 const AudioEngine = (() => {
   let ctx = null;
   let masterGain = null;
+  let resumePromise = null;
   const trackGains = {};
 
   function midiToFreq(midi) {
@@ -107,7 +108,7 @@ const AudioEngine = (() => {
     osc.stop(time + 0.34);
   }
 
-  /** 飞擦 — 比开擦更亮、更长的高频金属感 */
+  /** 沧澜 — 比破晓更亮、更长的高频金属感 */
   function playCymbalOn(c, out, time, gain = 0.42) {
     const dur = 0.55;
     const bufferSize = Math.floor(c.sampleRate * dur);
@@ -313,7 +314,7 @@ const AudioEngine = (() => {
   }
 
   /**
-   * 击亮 — FM 击齿 + 锯波体（Rhodes 式）：
+   * 瓷釉 — FM 击齿 + 锯波体（Rhodes 式）：
    * 调/阶不参与发声，只影响选音列表；音长取 max(步长, 0.45s) 避免高密度轨听成拨弦。
    */
   function playPianoOn(c, out, time, midi, duration, gain = 0.5) {
@@ -420,7 +421,7 @@ const AudioEngine = (() => {
     return map[voice] ?? 0.28;
   }
 
-  /** 厚底 — 正弦低音 + 锯齿谐波 */
+  /** 渊鸣 — 正弦低音 + 锯齿谐波 */
   function playBassOn(c, out, time, midi, duration, gain = 0.5) {
     const freq = midiToFreq(midi);
     const noteLen = Math.max(duration, 0.32);
@@ -462,7 +463,7 @@ const AudioEngine = (() => {
     saw.stop(stopAt);
   }
 
-  /** 句亮 — 主旋律：明亮、延音足，适合唱句 */
+  /** 星织 — 主旋律：明亮、延音足，适合唱句 */
   function playLeadOn(c, out, time, midi, duration, gain = 0.52) {
     const freq = midiToFreq(midi);
     const noteLen = leadNoteDuration(duration);
@@ -528,7 +529,7 @@ const AudioEngine = (() => {
     shine.stop(stopAt);
   }
 
-  /** 拨清 — 清拨（起拨噪声 + 锯齿体、较快衰减） */
+  /** 流光 — 清拨（起拨噪声 + 锯齿体、较快衰减） */
   function playEguitarOn(c, out, time, midi, duration, gain = 0.48) {
     const freq = midiToFreq(midi);
     const noteLen = Math.max(duration, 0.22);
@@ -572,7 +573,7 @@ const AudioEngine = (() => {
     osc.stop(stopAt);
   }
 
-  /** 簧亮 — 锯齿激励 + 共振峰 */
+  /** 烟簧 — 锯齿激励 + 共振峰 */
   function playReedOn(c, out, time, midi, duration, gain, formantHz) {
     const freq = midiToFreq(midi);
     const stopAt = time + duration + 0.12;
@@ -620,7 +621,7 @@ const AudioEngine = (() => {
     ]);
   }
 
-  /** 铜尖 / 铜厚 — 共用铜色模型，参数区分亮/暗 */
+  /** 金翎 / 暮铜 — 共用铜色模型，参数区分亮/暗 */
   function playBrassOn(c, out, time, midi, duration, gain, preset) {
     const freq = midiToFreq(midi);
     const stopAt = time + duration + 0.15;
@@ -711,7 +712,7 @@ const AudioEngine = (() => {
     playBrassOn(c, out, time, midi, duration, gain, BRASS_TROMBONE);
   }
 
-  /** 垫暖 — 管风琴式垫音（慢起音、偏暗），与击亮模型区分 */
+  /** 绒霭 — 管风琴式垫音（慢起音、偏暗），与瓷釉模型区分 */
   function playChordPadTone(c, out, time, midi, duration, noteGain, detuneCents) {
     const freq = midiToFreq(midi);
     const bus = c.createGain();
@@ -877,9 +878,30 @@ const AudioEngine = (() => {
       masterGain = ctx.createGain();
       masterGain.gain.value = 0.85;
       masterGain.connect(ctx.destination);
+      ctx.addEventListener("statechange", () => {
+        if (ctx.state === "suspended" && typeof AppLogger !== "undefined") {
+          AppLogger.warn("音频引擎已挂起", "再点播放或任意音序格可恢复");
+        }
+      });
     }
-    if (ctx.state === "suspended") ctx.resume();
     return ctx;
+  }
+
+  /** 等待 AudioContext 进入 running（浏览器自动播放策略要求用户手势后 resume） */
+  async function unlockAudio() {
+    const c = ensureContext();
+    if (c.state === "running") return c;
+    if (!resumePromise) {
+      resumePromise = c.resume().finally(() => {
+        resumePromise = null;
+      });
+    }
+    await resumePromise;
+    return c;
+  }
+
+  function isRunning() {
+    return ctx != null && ctx.state === "running";
   }
 
   function getTrackGain(trackId, defaultVol = 0.8) {
@@ -906,7 +928,9 @@ const AudioEngine = (() => {
     const dur =
       duration != null ? duration : previewDurationForVoice(voice);
     const stepDur = melodicNoteDuration(voice, dur);
-    playTrackSound(trackId, ensureContext().currentTime + 0.02, midi, stepDur);
+    unlockAudio().then(() => {
+      playTrackSound(trackId, ensureContext().currentTime + 0.02, midi, stepDur);
+    });
   }
 
   function createOfflineScheduler(volumes) {
@@ -926,6 +950,8 @@ const AudioEngine = (() => {
 
   return {
     ensureContext,
+    unlockAudio,
+    isRunning,
     setTrackVolume,
     playTrackSound,
     playTrackSoundOn,
@@ -933,6 +959,6 @@ const AudioEngine = (() => {
     previewTrackNote,
     createOfflineScheduler,
     midiToFreq,
-    getContext: () => ctx,
+    getContext: () => ensureContext(),
   };
 })();
