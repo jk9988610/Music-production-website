@@ -43,10 +43,10 @@ const AudioEngine = (() => {
     return Tone.Frequency(midi, "midi").toNote();
   }
 
-  /** 钢琴按键按住时长（短、偏断奏；不用满步长，避免听成弓弦长音） */
+  /** 钢琴按键按住：够让 decay 展开，但短于弦乐长音 */
   function pianoGateDuration(stepDuration) {
     const step = Math.max(stepDuration, 0.06);
-    return Math.min(step * 0.42, 0.26);
+    return Math.min(step * 0.5, 0.34);
   }
 
   function pianoNoteDuration(stepDuration) {
@@ -69,7 +69,7 @@ const AudioEngine = (() => {
 
   function previewDurationForVoice(voice) {
     const map = {
-      piano: 0.3,
+      piano: 0.38,
       bass: 0.42,
       cello: 0.78,
       violin: 0.74,
@@ -150,22 +150,22 @@ const AudioEngine = (() => {
         return new Tone.PolySynth(Tone.FMSynth, {
           maxPolyphony: 8,
           voice: {
-            volume: -3,
-            harmonicity: 3.5,
-            modulationIndex: 14,
-            oscillator: { type: "sine" },
-            modulation: { type: "square" },
+            volume: -2,
+            harmonicity: 2.01,
+            modulationIndex: 6.5,
+            oscillator: { type: "triangle" },
+            modulation: { type: "sine" },
             envelope: {
               attack: 0.001,
-              decay: 0.24,
+              decay: 0.34,
               sustain: 0,
-              release: 0.28,
+              release: 0.55,
             },
             modulationEnvelope: {
               attack: 0.001,
-              decay: 0.1,
+              decay: 0.04,
               sustain: 0,
-              release: 0.04,
+              release: 0.015,
             },
           },
         });
@@ -282,12 +282,36 @@ const AudioEngine = (() => {
     }
   }
 
+  function connectVoiceSynth(synth, voice, destination) {
+    if (voice !== "piano") {
+      synth.connect(destination);
+      return { synth, extras: [] };
+    }
+    const bright = new Tone.EQ3({
+      low: -2.5,
+      mid: 0.5,
+      high: 4.5,
+      lowFrequency: 200,
+      highFrequency: 3200,
+    });
+    synth.connect(bright);
+    bright.connect(destination);
+    return { synth, extras: [bright] };
+  }
+
   function disposeTrackSynth(trackId) {
     const entry = trackSynths[trackId];
     if (entry?.synth?.dispose) {
       try {
         entry.synth.dispose();
       } catch (_) {}
+    }
+    if (entry?.extras) {
+      entry.extras.forEach((node) => {
+        try {
+          node.dispose();
+        } catch (_) {}
+      });
     }
     delete trackSynths[trackId];
   }
@@ -302,9 +326,9 @@ const AudioEngine = (() => {
     const entry = trackSynths[trackId];
     if (entry && entry.voice === voice) return entry.synth;
     if (entry) disposeTrackSynth(trackId);
-    const synth = createVoiceSynth(voice);
-    synth.connect(channel);
-    trackSynths[trackId] = { synth, voice, channel };
+    const raw = createVoiceSynth(voice);
+    const { synth, extras } = connectVoiceSynth(raw, voice, channel);
+    trackSynths[trackId] = { synth, voice, channel, extras };
     return synth;
   }
 
@@ -449,10 +473,17 @@ const AudioEngine = (() => {
               cached.synth.dispose();
             } catch (_) {}
           }
+          if (cached?.extras) {
+            cached.extras.forEach((node) => {
+              try {
+                node.dispose();
+              } catch (_) {}
+            });
+          }
           const ch = new Tone.Gain(volumes[trackId] ?? 0.75).toDestination();
-          const synth = createVoiceSynth(voice);
-          synth.connect(ch);
-          offlineTracks[trackId] = { channel: ch, synth, voice };
+          const raw = createVoiceSynth(voice);
+          const { synth, extras } = connectVoiceSynth(raw, voice, ch);
+          offlineTracks[trackId] = { channel: ch, synth, voice, extras };
         }
         const { synth, voice: v } = offlineTracks[trackId];
         const dur =
