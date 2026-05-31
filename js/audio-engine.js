@@ -143,14 +143,15 @@ const AudioEngine = (() => {
   function playBowedString(c, out, time, midi, duration, gain, preset) {
     const freq = midiToFreq(midi);
     const inharmonicB = preset.inharmonicB ?? 0.00028;
-    const stopAt = time + duration + 0.25;
+    const noteLen = Math.max(duration, preset.minNoteLen ?? 0.65);
+    const stopAt = time + noteLen + 0.35;
     const baseAtk = preset.attack ?? 0.1;
-    const rel = duration * (preset.releaseMul ?? 0.92);
+    const rel = noteLen * (preset.releaseMul ?? 0.98);
 
     const master = c.createGain();
     master.gain.setValueAtTime(0, time);
     master.gain.linearRampToValueAtTime(gain, time + baseAtk);
-    master.gain.setValueAtTime(gain * (preset.sustain ?? 0.86), time + baseAtk + 0.1);
+    master.gain.setValueAtTime(gain * (preset.sustain ?? 0.92), time + baseAtk + 0.12);
     master.gain.exponentialRampToValueAtTime(0.001, time + rel);
 
     const bus = c.createGain();
@@ -202,10 +203,10 @@ const AudioEngine = (() => {
       const amp = c.createGain();
       const peak = gain * (p.amp ?? 0.25);
       const atk = p.atk ?? Math.max(0.008, baseAtk - n * 0.012);
-      const pRel = Math.max(0.1, duration * (p.decayMul ?? 0.88));
+      const pRel = Math.max(0.2, noteLen * (p.decayMul ?? 0.96));
       amp.gain.setValueAtTime(0, time);
       amp.gain.linearRampToValueAtTime(peak, time + atk);
-      amp.gain.setValueAtTime(peak * (p.sustain ?? 0.78), time + atk + 0.04);
+      amp.gain.setValueAtTime(peak * (p.sustain ?? 0.88), time + atk + 0.06);
       amp.gain.exponentialRampToValueAtTime(0.001, time + pRel);
 
       osc.connect(amp);
@@ -216,67 +217,70 @@ const AudioEngine = (() => {
   }
 
   const BOW_VIOLIN = {
-    attack: 0.1,
-    sustain: 0.88,
-    releaseMul: 0.93,
+    minNoteLen: 0.68,
+    attack: 0.11,
+    sustain: 0.92,
+    releaseMul: 0.99,
     vibratoHz: 5.4,
     vibratoCents: 12,
-    vibratoDelay: 0.26,
-    inharmonicB: 0.00032,
-    lpCap: 9500,
-    lpMul: 12,
-    lpAdd: 750,
-    lpQ: 0.65,
-    maxHz: 11000,
+    vibratoDelay: 0.22,
+    inharmonicB: 0.0003,
+    lpCap: 11000,
+    lpMul: 13,
+    lpAdd: 900,
+    lpQ: 0.5,
+    maxHz: 12000,
     partials: [
-      { n: 1, amp: 0.4, atk: 0.1, decayMul: 1, detuneCents: -5 },
-      { n: 1, amp: 0.4, atk: 0.1, decayMul: 1, detuneCents: 5 },
-      { n: 2, amp: 0.36, atk: 0.065, decayMul: 0.94 },
-      { n: 3, amp: 0.28, atk: 0.045, decayMul: 0.86 },
-      { n: 4, amp: 0.21, atk: 0.032, decayMul: 0.78 },
-      { n: 5, amp: 0.15, atk: 0.022, decayMul: 0.7 },
-      { n: 6, amp: 0.1, atk: 0.016, decayMul: 0.62 },
-      { n: 7, amp: 0.065, atk: 0.012, decayMul: 0.54 },
-      { n: 8, amp: 0.04, atk: 0.008, decayMul: 0.46 },
+      { n: 1, amp: 0.44, atk: 0.11, decayMul: 1, detuneCents: -5 },
+      { n: 1, amp: 0.44, atk: 0.11, decayMul: 1, detuneCents: 5 },
+      { n: 2, amp: 0.38, atk: 0.07, decayMul: 0.98 },
+      { n: 3, amp: 0.3, atk: 0.05, decayMul: 0.96 },
+      { n: 4, amp: 0.24, atk: 0.038, decayMul: 0.94 },
+      { n: 5, amp: 0.18, atk: 0.028, decayMul: 0.9 },
+      { n: 6, amp: 0.12, atk: 0.02, decayMul: 0.86 },
+      { n: 7, amp: 0.08, atk: 0.015, decayMul: 0.82 },
+      { n: 8, amp: 0.05, atk: 0.01, decayMul: 0.78 },
     ],
     bodyPeaks: [
-      { hz: 440, q: 4, gain: 3.5 },
-      { hz: 900, q: 5, gain: 2 },
+      { hz: 440, q: 3.5, gain: 4 },
+      { hz: 2800, q: 6, gain: 3.5 },
     ],
   };
 
   const BOW_CELLO = {
-    attack: 0.12,
-    sustain: 0.9,
-    releaseMul: 0.95,
+    minNoteLen: 0.72,
+    attack: 0.13,
+    sustain: 0.93,
+    releaseMul: 0.99,
     vibratoHz: 4.3,
     vibratoCents: 9,
-    vibratoDelay: 0.3,
-    inharmonicB: 0.00022,
-    lpCap: 4200,
-    lpMul: 7.5,
-    lpAdd: 380,
-    lpQ: 0.55,
-    maxHz: 6500,
+    vibratoDelay: 0.28,
+    inharmonicB: 0.0002,
+    lpCap: 5500,
+    lpMul: 8.5,
+    lpAdd: 520,
+    lpQ: 0.48,
+    maxHz: 7500,
     partials: [
-      { n: 1, amp: 0.48, atk: 0.12, decayMul: 1, detuneCents: -4 },
-      { n: 1, amp: 0.48, atk: 0.12, decayMul: 1, detuneCents: 4 },
-      { n: 2, amp: 0.34, atk: 0.08, decayMul: 0.92 },
-      { n: 3, amp: 0.22, atk: 0.06, decayMul: 0.84 },
-      { n: 4, amp: 0.14, atk: 0.045, decayMul: 0.76 },
-      { n: 5, amp: 0.08, atk: 0.03, decayMul: 0.66 },
+      { n: 1, amp: 0.5, atk: 0.13, decayMul: 1, detuneCents: -4 },
+      { n: 1, amp: 0.5, atk: 0.13, decayMul: 1, detuneCents: 4 },
+      { n: 2, amp: 0.36, atk: 0.09, decayMul: 0.98 },
+      { n: 3, amp: 0.26, atk: 0.07, decayMul: 0.95 },
+      { n: 4, amp: 0.18, atk: 0.05, decayMul: 0.92 },
+      { n: 5, amp: 0.11, atk: 0.035, decayMul: 0.88 },
+      { n: 6, amp: 0.06, atk: 0.025, decayMul: 0.84 },
     ],
     bodyPeaks: [
-      { hz: 220, q: 3.5, gain: 4 },
-      { hz: 440, q: 4, gain: 2.5 },
+      { hz: 220, q: 3, gain: 4.5 },
+      { hz: 520, q: 4, gain: 3 },
     ],
   };
 
-  function playViolinOn(c, out, time, midi, duration, gain = 0.4) {
+  function playViolinOn(c, out, time, midi, duration, gain = 0.46) {
     playBowedString(c, out, time, midi, duration, gain, BOW_VIOLIN);
   }
 
-  function playCelloOn(c, out, time, midi, duration, gain = 0.44) {
+  function playCelloOn(c, out, time, midi, duration, gain = 0.48) {
     playBowedString(c, out, time, midi, duration, gain, BOW_CELLO);
   }
 
@@ -355,13 +359,17 @@ const AudioEngine = (() => {
     return Math.max(stepDuration, 0.45);
   }
 
+  function leadNoteDuration(stepDuration) {
+    return Math.max(stepDuration, 0.58);
+  }
+
   function melodicNoteDuration(voice, stepDuration) {
     if (voice === "piano") return pianoNoteDuration(stepDuration);
-    if (voice === "bass" || voice === "cello" || voice === "trombone") {
+    if (voice === "violin") return Math.max(stepDuration, 0.68);
+    if (voice === "cello") return Math.max(stepDuration, 0.72);
+    if (voice === "lead") return leadNoteDuration(stepDuration);
+    if (voice === "bass" || voice === "trombone") {
       return Math.max(stepDuration, 0.32);
-    }
-    if (voice === "violin" || voice === "cello") {
-      return Math.max(stepDuration, 0.5);
     }
     if (voice === "sax" || voice === "trumpet") {
       return Math.max(stepDuration, 0.36);
@@ -373,13 +381,13 @@ const AudioEngine = (() => {
     const map = {
       piano: 0.62,
       bass: 0.42,
-      cello: 0.65,
-      violin: 0.6,
+      cello: 0.78,
+      violin: 0.74,
+      lead: 0.62,
       sax: 0.46,
       trumpet: 0.44,
       trombone: 0.48,
       eguitar: 0.34,
-      lead: 0.32,
     };
     return map[voice] ?? 0.28;
   }
@@ -426,39 +434,70 @@ const AudioEngine = (() => {
     saw.stop(stopAt);
   }
 
-  /** 领奏 — 流行合成器 Lead（锯齿 + 扫频） */
-  function playLeadOn(c, out, time, midi, duration, gain = 0.45) {
+  /** 领奏 — 主旋律：明亮、延音足，适合唱句（非短促特效音） */
+  function playLeadOn(c, out, time, midi, duration, gain = 0.52) {
     const freq = midiToFreq(midi);
-    const stopAt = time + duration + 0.08;
+    const noteLen = leadNoteDuration(duration);
+    const stopAt = time + noteLen + 0.12;
 
     const env = c.createGain();
     env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(gain * 0.8, time + 0.012);
-    env.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.88);
+    env.gain.linearRampToValueAtTime(gain * 0.88, time + 0.03);
+    env.gain.setValueAtTime(gain * 0.84, time + noteLen * 0.45);
+    env.gain.setValueAtTime(gain * 0.8, time + noteLen * 0.72);
+    env.gain.exponentialRampToValueAtTime(0.001, time + noteLen * 0.98);
 
     const lp = c.createBiquadFilter();
     lp.type = "lowpass";
-    lp.frequency.setValueAtTime(900, time);
-    lp.frequency.exponentialRampToValueAtTime(Math.min(5200, 1200 + freq * 8), time + 0.06);
-    lp.Q.value = 2.2;
+    const lpHz = Math.min(7200, 1600 + freq * 10);
+    lp.frequency.setValueAtTime(lpHz, time);
+    lp.Q.value = 0.85;
+
+    const presence = c.createBiquadFilter();
+    presence.type = "peaking";
+    presence.frequency.value = Math.min(3800, freq * 3.2 + 1200);
+    presence.Q.value = 0.9;
+    presence.gain.value = 4.5;
 
     const mix = c.createGain();
-    mix.connect(lp);
+    mix.connect(presence);
+    presence.connect(lp);
     lp.connect(env);
     env.connect(out);
 
-    [-7, 0, 7].forEach((cents, i) => {
+    const vib = c.createOscillator();
+    vib.type = "sine";
+    vib.frequency.value = 5.6;
+    const vibG = c.createGain();
+    vibG.gain.value = 14;
+    vib.connect(vibG);
+    const vibStart = time + 0.18;
+    vib.start(vibStart);
+    vib.stop(stopAt);
+
+    [-8, 0, 8].forEach((cents, i) => {
       const osc = c.createOscillator();
-      osc.type = i === 1 ? "sawtooth" : "square";
+      osc.type = "sawtooth";
       osc.frequency.setValueAtTime(freq, time);
       osc.detune.setValueAtTime(cents, time);
+      if (i === 1) vibG.connect(osc.detune);
       const g = c.createGain();
-      g.gain.value = i === 1 ? 0.38 : 0.14;
+      g.gain.value = i === 1 ? 0.42 : 0.22;
       osc.connect(g);
       g.connect(mix);
       osc.start(time);
       osc.stop(stopAt);
     });
+
+    const shine = c.createOscillator();
+    shine.type = "sine";
+    shine.frequency.setValueAtTime(freq * 2, time);
+    const shineG = c.createGain();
+    shineG.gain.value = 0.12;
+    shine.connect(shineG);
+    shineG.connect(mix);
+    shine.start(time);
+    shine.stop(stopAt);
   }
 
   /** 电吉他 — 清音拨弦（起拨噪声 + 锯齿体、较快衰减） */
@@ -736,7 +775,7 @@ const AudioEngine = (() => {
         playBassOn(c, out, time, noteMidi, d, gain);
         break;
       case "lead":
-        playLeadOn(c, out, time, noteMidi, d * 0.9, gain);
+        playLeadOn(c, out, time, noteMidi, d, gain * 1.05);
         break;
       case "piano":
         playPianoOn(c, out, time, noteMidi, d, gain);
