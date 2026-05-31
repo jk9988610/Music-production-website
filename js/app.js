@@ -780,8 +780,9 @@
       btn.addEventListener("click", () => {
         if (els.notePreview && els.notePreview.checked) {
           interruptPlaybackForPreview();
-          AudioEngine.ensureContext();
-          AudioEngine.previewTrackNote(trackId, midi);
+          AudioEngine.unlockAudio().then(() => {
+            AudioEngine.previewTrackNote(trackId, midi);
+          });
           notePendingMidi = midi;
           highlightNoteGridSelection();
           setStatus(`试听 ${Sequencer.noteLabel(midi)}（${track?.name ?? ""}）`);

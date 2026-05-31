@@ -413,7 +413,7 @@ const AudioEngine = (() => {
       cello: 0.78,
       violin: 0.74,
       lead: 0.62,
-      sax: 0.46,
+      sax: 0.52,
       trumpet: 0.44,
       trombone: 0.48,
       eguitar: 0.34,
@@ -573,16 +573,10 @@ const AudioEngine = (() => {
     osc.stop(stopAt);
   }
 
-  /** 烟簧 — 锯齿激励 + 共振峰 */
+  /** 烟簧 — 锯齿激励 + 管体低通 + 固定共振峰（峰位不随基频同比下移，避免试听区无声） */
   function playReedOn(c, out, time, midi, duration, gain, formantHz) {
     const freq = midiToFreq(midi);
     const stopAt = time + duration + 0.12;
-
-    const exc = c.createOscillator();
-    exc.type = "sawtooth";
-    exc.frequency.setValueAtTime(freq, time);
-    const excG = c.createGain();
-    excG.gain.value = 0.35;
 
     const env = c.createGain();
     env.gain.setValueAtTime(0, time);
@@ -590,18 +584,31 @@ const AudioEngine = (() => {
     env.gain.setValueAtTime(gain * 0.78, time + duration * 0.4);
     env.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.85);
 
+    const exc = c.createOscillator();
+    exc.type = "sawtooth";
+    exc.frequency.setValueAtTime(freq, time);
+
+    const bodyLp = c.createBiquadFilter();
+    bodyLp.type = "lowpass";
+    bodyLp.frequency.setValueAtTime(Math.min(3200, freq * 5.5 + 400), time);
+    bodyLp.Q.value = 0.85;
+    const bodyG = c.createGain();
+    bodyG.gain.value = 0.48;
+    exc.connect(bodyG);
+    bodyG.connect(bodyLp);
+    bodyLp.connect(env);
+
     const bus = c.createGain();
-    bus.gain.value = 1;
-    exc.connect(excG);
-    excG.connect(bus);
+    bus.gain.value = 0.55;
+    exc.connect(bus);
 
     formantHz.forEach((hz, i) => {
       const f = c.createBiquadFilter();
       f.type = "bandpass";
       f.frequency.value = hz;
-      f.Q.value = i === 1 ? 9 : 6;
+      f.Q.value = i === 1 ? 7 : 5;
       const g = c.createGain();
-      g.gain.value = i === 1 ? 0.55 : 0.38;
+      g.gain.value = i === 1 ? 0.5 : 0.36;
       bus.connect(f);
       f.connect(g);
       g.connect(env);
@@ -612,12 +619,12 @@ const AudioEngine = (() => {
     exc.stop(stopAt);
   }
 
-  function playSaxOn(c, out, time, midi, duration, gain = 0.45) {
+  function playSaxOn(c, out, time, midi, duration, gain = 0.52) {
     const f = midiToFreq(midi);
     playReedOn(c, out, time, midi, duration, gain, [
-      Math.min(700, f * 0.75),
-      Math.min(1500, f * 1.1),
-      Math.min(3200, f * 2.5),
+      Math.max(420, Math.min(980, 560 + f * 0.1)),
+      Math.max(1000, Math.min(1900, 1320 + f * 0.15)),
+      Math.max(2400, Math.min(3800, 2850 + f * 0.06)),
     ]);
   }
 
