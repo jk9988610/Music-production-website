@@ -166,7 +166,7 @@
       label: inst.name,
     }));
     openChoiceDialog({
-      title: `切换乐器 · 当前 ${track.name}`,
+      title: `切换音色 · 当前 ${track.name}`,
       columns: 4,
       currentValue: track.instrumentId,
       items,
@@ -192,7 +192,7 @@
       label: inst.name,
     }));
     openChoiceDialog({
-      title: "添加轨道 · 选择乐器",
+      title: "添加轨道 · 选择音色",
       columns: 4,
       currentValue: "kick",
       items,
@@ -647,7 +647,7 @@
       nameBtn.type = "button";
       nameBtn.className = `track-name-btn ${track.class}`;
       nameBtn.textContent = track.name;
-      nameBtn.title = `点击切换乐器（当前：${track.name}）`;
+      nameBtn.title = `点击切换音色（当前：${track.name}）`;
       nameBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         openInstrumentPicker(track.id);

@@ -1,5 +1,5 @@
 /**
- * Web Audio 合成 — 乐队常用乐器（鼓组 / 电声 / 管乐 / 弓弦谐波模型，见各 play* 注释）
+ * Web Audio 合成 — 16 种听感音色（节奏击擦 / 厚底 / 击亮 / 垫暖 / 句亮 / 簧铜 / 弓弦等，见各 play* 注释）
  */
 const AudioEngine = (() => {
   let ctx = null;
@@ -107,7 +107,7 @@ const AudioEngine = (() => {
     osc.stop(time + 0.34);
   }
 
-  /** 吊镲 — 比开镲更亮、更长的高频金属感 */
+  /** 飞擦 — 比开擦更亮、更长的高频金属感 */
   function playCymbalOn(c, out, time, gain = 0.42) {
     const dur = 0.55;
     const bufferSize = Math.floor(c.sampleRate * dur);
@@ -313,7 +313,7 @@ const AudioEngine = (() => {
   }
 
   /**
-   * 钢琴 — 电钢琴取向（Rhodes 式 FM 击齿 + 锯波体，对照常见电子琴）：
+   * 击亮 — FM 击齿 + 锯波体（Rhodes 式）：
    * 调/阶不参与发声，只影响选音列表；音长取 max(步长, 0.45s) 避免高密度轨听成拨弦。
    */
   function playPianoOn(c, out, time, midi, duration, gain = 0.5) {
@@ -420,7 +420,7 @@ const AudioEngine = (() => {
     return map[voice] ?? 0.28;
   }
 
-  /** 电贝斯 — 正弦低音 + 锯齿谐波，偏 Funk/R&B 电贝斯 */
+  /** 厚底 — 正弦低音 + 锯齿谐波 */
   function playBassOn(c, out, time, midi, duration, gain = 0.5) {
     const freq = midiToFreq(midi);
     const noteLen = Math.max(duration, 0.32);
@@ -462,7 +462,7 @@ const AudioEngine = (() => {
     saw.stop(stopAt);
   }
 
-  /** 领奏 — 主旋律：明亮、延音足，适合唱句（非短促特效音） */
+  /** 句亮 — 主旋律：明亮、延音足，适合唱句 */
   function playLeadOn(c, out, time, midi, duration, gain = 0.52) {
     const freq = midiToFreq(midi);
     const noteLen = leadNoteDuration(duration);
@@ -528,7 +528,7 @@ const AudioEngine = (() => {
     shine.stop(stopAt);
   }
 
-  /** 电吉他 — 清音拨弦（起拨噪声 + 锯齿体、较快衰减） */
+  /** 拨清 — 清拨（起拨噪声 + 锯齿体、较快衰减） */
   function playEguitarOn(c, out, time, midi, duration, gain = 0.48) {
     const freq = midiToFreq(midi);
     const noteLen = Math.max(duration, 0.22);
@@ -572,7 +572,7 @@ const AudioEngine = (() => {
     osc.stop(stopAt);
   }
 
-  /** 簧片管（萨克斯）— 锯齿激励 + 共振峰 */
+  /** 簧亮 — 锯齿激励 + 共振峰 */
   function playReedOn(c, out, time, midi, duration, gain, formantHz) {
     const freq = midiToFreq(midi);
     const stopAt = time + duration + 0.12;
@@ -620,7 +620,7 @@ const AudioEngine = (() => {
     ]);
   }
 
-  /** 铜管 — 小号 / 长号共用模型，参数区分 */
+  /** 铜尖 / 铜厚 — 共用铜色模型，参数区分亮/暗 */
   function playBrassOn(c, out, time, midi, duration, gain, preset) {
     const freq = midiToFreq(midi);
     const stopAt = time + duration + 0.15;
@@ -711,7 +711,7 @@ const AudioEngine = (() => {
     playBrassOn(c, out, time, midi, duration, gain, BRASS_TROMBONE);
   }
 
-  /** 和弦轨：管风琴式垫音（慢起音、偏暗），与钢琴击弦模型区分 */
+  /** 垫暖 — 管风琴式垫音（慢起音、偏暗），与击亮模型区分 */
   function playChordPadTone(c, out, time, midi, duration, noteGain, detuneCents) {
     const freq = midiToFreq(midi);
     const bus = c.createGain();

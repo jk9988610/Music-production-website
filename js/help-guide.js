@@ -10,11 +10,11 @@ const HelpGuide = (() => {
         <h4>从零完成一首编曲</h4>
         <p>HarmonyForge 把「节奏 → 和声 → 旋律 → 段落」拆开，用 <strong>类型</strong> 存短循环，用 <strong>时间轴</strong> 拼成完整曲式。建议按下面顺序操作。</p>
         <ol class="help-steps">
-          <li><strong>定调</strong>：点旋律格子打开选音弹窗，在弹窗里设「调」「阶」（未改时默认 C 大调）。鼓轨无音高。</li>
-          <li><strong>做鼓</strong>：在音序器选 Pattern A，只开底鼓 / 军鼓 / 镲，做出 1 小节节奏模板。</li>
-          <li><strong>做贝斯</strong>：仍在 A（或新建 B），在贝斯轨填根音 — 通常落在强拍，与鼓对齐。</li>
-          <li><strong>做和弦</strong>：在和弦轨填块状和弦根音（见「音高与配器」），常每 4 步换一次。</li>
-          <li><strong>做领奏</strong>：在领奏轨用音阶内音填句，避开与和弦打架的密集区。</li>
+          <li><strong>定调</strong>：点旋律格子打开选音弹窗，在弹窗里设「调」「阶」（未改时默认 C 大调）。节奏类音色无音高。</li>
+          <li><strong>做节奏</strong>：在音序器选 Pattern A，用沉击 / 脆击 / 细擦等，做出 1 小节节奏模板。</li>
+          <li><strong>做厚底</strong>：仍在 A（或新建 B），在厚底轨填根音 — 通常落在强拍，与沉击对齐。</li>
+          <li><strong>做垫暖</strong>：在垫暖轨填块状和弦根音（见「音高与配器」），常每 4 步换一次。</li>
+          <li><strong>做句亮</strong>：在句亮轨用音阶内音填句，避开与垫暖打架的密集区。</li>
           <li><strong>复制变型</strong>：用「+型」复制出 B/C/D，做加花、过门或副歌加密度。</li>
           <li><strong>排段落</strong>：在编曲模块用时间轴把 §1§2§… 指到 A/B/C/D；「+段」会弹窗选类型。</li>
           <li><strong>混音</strong>：平衡各轨音量；音序轨旁可设「密度」½×～4×。</li>
@@ -43,7 +43,7 @@ const HelpGuide = (() => {
         <p><strong>典型曲式示例：</strong></p>
         <ul class="help-list">
           <li>§1–§2 → A（前奏 / 主歌节奏）</li>
-          <li>§3–§6 → B（主歌加贝斯和弦）</li>
+          <li>§3–§6 → B（主歌加厚底与垫暖）</li>
           <li>§7–§8 → C（副歌更满）</li>
           <li>§9 → D（过门或 breakdown）</li>
         </ul>
@@ -54,27 +54,29 @@ const HelpGuide = (() => {
       label: "音序",
       html: `
         <h4>步进音序器</h4>
-        <p>默认 7 轨，可用「+轨」「−轨」增减（1～12 轨）。<strong>点击轨名</strong>切换乐器（宁缺毋滥，共 16 种常用乐队音色）。</p>
+        <p>默认 7 轨，可用「+轨」「−轨」增减（1～12 轨）。<strong>点击轨名</strong>切换音色（共 16 种听感命名音色）。</p>
         <ul class="help-list">
-          <li><strong>鼓组</strong>：底鼓、军鼓、闭镲、开镲、通鼓、吊镲</li>
-          <li><strong>旋律</strong>：贝斯、钢琴、电吉他、和弦、领奏、萨克斯、小号、长号、小提琴、大提琴</li>
-          <li><strong>鼓组</strong>：底鼓（下沉正弦+击点击）、军鼓（噪声+体）、镲（闭/开/吊镲分层）</li>
-          <li><strong>贝斯</strong>：电贝斯 — 正弦低音 + 锯齿谐波</li>
-          <li><strong>钢琴</strong>：电钢琴 Rhodes 式 FM+体；选音 C3–G5</li>
-          <li><strong>领奏</strong>：主旋律用 — 明亮锯齿、长延音，适合唱句</li>
-          <li><strong>和弦</strong>：管风琴垫音，适合铺底（程序内表现较稳）</li>
-          <li><strong>电吉他</strong>：清音拨弦（拨片噪声 + 快衰）</li>
-          <li><strong>萨克斯</strong>：锯齿激励 + 共振峰</li>
-          <li><strong>小号 / 长号</strong>：铜管模型（亮扫频 vs 暗长号），带轻微揉弦</li>
-          <li><strong>小提琴 / 大提琴</strong>：爽朗清亮 — 快起弓、高中频突出、高次谐波偏锐；连弓长音，无噪声层</li>
-          <li><strong>换乐器</strong>：点左侧轨名</li>
+          <li><strong>节奏类</strong>：沉击、脆击、细擦、开擦、中击、飞擦</li>
+          <li><strong>旋律类</strong>：厚底、击亮、拨清、垫暖、句亮、簧亮、铜尖、铜厚、弓清、弓深</li>
+          <li><strong>沉击</strong>：低频正弦 + 击点击</li>
+          <li><strong>脆击</strong>：噪声 + 体共鸣</li>
+          <li><strong>细擦 / 开擦 / 飞擦</strong>：短、开、长亮金属擦音分层</li>
+          <li><strong>厚底</strong>：正弦低音 + 锯齿谐波</li>
+          <li><strong>击亮</strong>：FM 击齿 + 体；选音 C3–G5</li>
+          <li><strong>句亮</strong>：主旋律 — 明亮锯齿、长延音</li>
+          <li><strong>垫暖</strong>：管风琴式垫音，适合铺底</li>
+          <li><strong>拨清</strong>：清拨快衰</li>
+          <li><strong>簧亮</strong>：锯齿激励 + 共振峰</li>
+          <li><strong>铜尖 / 铜厚</strong>：亮扫频 vs 暗厚铜色</li>
+          <li><strong>弓清 / 弓深</strong>：爽朗清亮弓弦谐波；连弓长音，无噪声层</li>
+          <li><strong>换音色</strong>：点左侧轨名</li>
           <li><strong>密度</strong>：倍率按钮（½×～4×），弹窗选择。</li>
           <li><strong>±轨 / ±4步</strong>：增减轨道数与 Pattern 长度。</li>
         </ul>
         <p><strong>播放头：</strong>播放时当前步会高亮；编曲播放模式下时间轴对应段也会亮。</p>
         <p><strong>Pattern 切换：</strong>音序模块点类型标签 A/B/C，或快捷键 <kbd>1</kbd>–<kbd>9</kbd>，编辑的是不同 Pattern 副本；编曲时间轴点段落格可选该段类型。</p>
         <p><strong>类型循环：</strong>勾选后按 BPM 循环播放当前类型的完整 7 轨音序，并停止顶栏编曲播放。</p>
-        <p><strong>单步循环：</strong>先点步进号（1、2、3…）选定列，勾选后按 BPM 循环播放该<strong>整列</strong>上已填内容。鼓轨点选时只响一次，取消不发声。</p>
+        <p><strong>单步循环：</strong>先点步进号（1、2、3…）选定列，勾选后按 BPM 循环播放该<strong>整列</strong>上已填内容。节奏轨点选时只响一次，取消不发声。</p>
       `,
     },
     {
@@ -86,7 +88,7 @@ const HelpGuide = (() => {
         <p>音序模块每轨名称旁的 <strong>密度</strong>（½× / 1× / 2× / 4×）表示相对主步进的触发倍率：</p>
         <ul class="help-list">
           <li><strong>1×</strong>：每个主步最多触发一次（默认）</li>
-          <li><strong>2× / 4×</strong>：同一主步内细分多次（适合镲、装饰音）</li>
+          <li><strong>2× / 4×</strong>：同一主步内细分多次（适合细擦、装饰音）</li>
           <li><strong>½×</strong>：每隔一个主步才读该列格子（适合慢一倍的气垫）</li>
         </ul>
         <p>网格仍按主步编辑；密度只改变播放与导出时的触发时机，不改变段落长度。</p>
@@ -97,35 +99,35 @@ const HelpGuide = (() => {
       label: "音高与配器",
       html: `
         <h4>程序音高基础</h4>
-        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。点格子打开<strong>选音弹窗</strong>，在弹窗顶部设「调」「阶」——<strong>只决定可选音列表，不改变乐器音色</strong>。钢琴轨选音限定在 C3–G5，避免过低像贝斯。未设时默认 <strong>C 大调</strong>。</p>
-        <p>选音弹窗默认勾选 <strong>试听</strong>：点击音高会用该轨对应乐器预听一次，并会停止编曲 / 类型循环 / 单步循环播放；满意后点「选用」写入格子。</p>
+        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。点格子打开<strong>选音弹窗</strong>，在弹窗顶部设「调」「阶」——<strong>只决定可选音列表，不改变该轨音色</strong>。击亮选音限定在 C3–G5，避免过低像厚底。未设时默认 <strong>C 大调</strong>。</p>
+        <p>选音弹窗默认勾选 <strong>试听</strong>：点击音高会用该轨当前音色预听一次，并会停止编曲 / 类型循环 / 单步循环播放；满意后点「选用」写入格子。</p>
 
-        <h4>底鼓 · 军鼓 · 镲</h4>
+        <h4>沉击 · 脆击 · 擦音类</h4>
         <p><strong>无音高。</strong>只负责节奏框架。</p>
         <ul class="help-list">
-          <li>底鼓：常放在第 1、5、9、13 步（四拍底）</li>
-          <li>军鼓：常放在第 5、13 步（2、4 拍）</li>
-          <li>闭镲：八分或十六分均匀；开镲：偶尔在第 16 步或反拍点缀</li>
+          <li>沉击：常放在第 1、5、9、13 步（四拍底）</li>
+          <li>脆击：常放在第 5、13 步（2、4 拍）</li>
+          <li>细擦：八分或十六分均匀；开擦：偶尔在第 16 步或反拍点缀</li>
         </ul>
 
-        <h4>贝斯轨</h4>
+        <h4>厚底轨</h4>
         <p><strong>单音</strong>，跟根音走。在 C 大调里优先选 C、F、G 等音阶音，低八度（如 C2–G2）。</p>
         <ul class="help-list">
-          <li>强拍（1、3 拍）放根音，与底鼓对齐</li>
+          <li>强拍（1、3 拍）放根音，与沉击对齐</li>
           <li>可每 4 步换一个音，形成 I–IV–V 进行（如 C → F → G → C）</li>
-          <li>避免与和弦轨音高完全重复同一八度，贝斯应更低</li>
+          <li>避免与垫暖轨音高完全重复同一八度，厚底应更低</li>
         </ul>
 
-        <h4>和弦轨</h4>
+        <h4>垫暖轨</h4>
         <p>格内音高是<strong>和弦根音</strong>。程序会自动叠 <strong>根音 + 大三度 + 纯五度</strong>（大三和弦）。</p>
         <ul class="help-list">
           <li>同一和弦常持续 4 步或 8 步再换</li>
           <li>C 大调：I=C，IV=F，V=G — 选对应根音即可</li>
-          <li>和弦轨偏中低区（如 C3–G3），不要比贝斯还低</li>
+          <li>垫暖偏中低区（如 C3–G3），不要比厚底还低</li>
         </ul>
 
-        <h4>领奏轨</h4>
-        <p><strong>单音</strong>，最亮（原「主旋律」已更名为领奏）。常用比和弦高一个八度以上（如 C4–G4）。</p>
+        <h4>句亮轨</h4>
+        <p><strong>单音</strong>，最亮。常用比垫暖高一个八度以上（如 C4–G4）。</p>
         <ul class="help-list">
           <li>从音阶音开始，先写短 motive（3～5 个音）再重复变奏</li>
           <li>强拍可用音阶 1 度或 5 度，弱拍用经过音</li>
@@ -135,30 +137,30 @@ const HelpGuide = (() => {
 
         <h4>搭配总表（C 大调示例）</h4>
         <table class="help-table">
-          <thead><tr><th>轨</th><th>音区</th><th>节奏</th><th>作用</th></tr></thead>
+          <thead><tr><th>音色</th><th>音区</th><th>节奏</th><th>作用</th></tr></thead>
           <tbody>
-            <tr><td>底鼓</td><td>—</td><td>四拍</td><td>脉动</td></tr>
-            <tr><td>军鼓</td><td>—</td><td>2/4 拍</td><td>骨架</td></tr>
-            <tr><td>贝斯</td><td>C2–G2</td><td>根音在强拍</td><td>和声底座</td></tr>
-            <tr><td>和弦</td><td>C3–G3</td><td>每 4 步换根</td><td>和声填充</td></tr>
-            <tr><td>领奏</td><td>C4–G4</td><td>句型</td><td>记忆点</td></tr>
+            <tr><td>沉击</td><td>—</td><td>四拍</td><td>脉动</td></tr>
+            <tr><td>脆击</td><td>—</td><td>2/4 拍</td><td>骨架</td></tr>
+            <tr><td>厚底</td><td>C2–G2</td><td>根音在强拍</td><td>和声底座</td></tr>
+            <tr><td>垫暖</td><td>C3–G3</td><td>每 4 步换根</td><td>和声填充</td></tr>
+            <tr><td>句亮</td><td>C4–G4</td><td>句型</td><td>记忆点</td></tr>
           </tbody>
         </table>
 
         <h4>不同调式</h4>
-        <p>换「阶」为五声时选音变少；蓝调适合爵士句；小调时贝斯 / 和弦优先 i、iv、V 级。每格可单独选调/阶。改调/阶后已填音不会自动移调，需手动重选。</p>
+        <p>换「阶」为五声时选音变少；蓝调适合爵士句；小调时厚底 / 垫暖优先 i、iv、V 级。每格可单独选调/阶。改调/阶后已填音不会自动移调，需手动重选。</p>
       `,
     },
     {
-      id: "mixer",
+      id: "mixer-play",
       label: "混音播放",
       html: `
         <h4>混音</h4>
         <p>混音模块各轨一条音量滑条。建议起点：</p>
         <ul class="help-list">
-          <li>鼓组合计最大（底鼓、军鼓、镲约 80～90%）</li>
-          <li>贝斯次之（约 75%），再和弦（约 70%）</li>
-          <li>领奏略低于鼓、高于和弦背垫（约 65～75%），避免盖过人声想象位</li>
+          <li>节奏类合计最大（沉击、脆击、擦音约 80～90%）</li>
+          <li>厚底次之（约 75%），再垫暖（约 70%）</li>
+          <li>句亮略低于节奏、高于垫暖（约 65～75%），避免盖过主唱想象位</li>
         </ul>
         <p>随草稿自动保存。</p>
         <h4>播放</h4>
