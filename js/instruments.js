@@ -27,22 +27,22 @@ const Instruments = (() => {
   };
 
   const CATALOG = [
-    { id: "kick", name: "沉击", type: "drum", voice: "kick", class: "drum-kick" },
-    { id: "snare", name: "脆击", type: "drum", voice: "snare", class: "drum-snare" },
-    { id: "hihat", name: "细擦", type: "drum", voice: "hihat", class: "drum-hat" },
-    { id: "openhat", name: "开擦", type: "drum", voice: "openhat", class: "drum-open" },
-    { id: "tom", name: "中击", type: "drum", voice: "tom", class: "drum-tom" },
-    { id: "cymbal", name: "飞擦", type: "drum", voice: "cymbal", class: "drum-cymbal" },
-    { id: "bass", name: "厚底", type: "melodic", voice: "bass", class: "bass" },
-    { id: "piano", name: "击亮", type: "melodic", voice: "piano", class: "melodic-piano" },
-    { id: "eguitar", name: "拨清", type: "melodic", voice: "eguitar", class: "melodic-eguitar" },
-    { id: "chord", name: "垫暖", type: "melodic", voice: "chord", class: "chord" },
-    { id: "lead", name: "句亮", type: "melodic", voice: "lead", class: "lead" },
-    { id: "sax", name: "簧亮", type: "melodic", voice: "sax", class: "melodic-sax" },
-    { id: "trumpet", name: "铜尖", type: "melodic", voice: "trumpet", class: "melodic-trumpet" },
-    { id: "trombone", name: "铜厚", type: "melodic", voice: "trombone", class: "melodic-trombone" },
-    { id: "violin", name: "弓清", type: "melodic", voice: "violin", class: "melodic-violin" },
-    { id: "cello", name: "弓深", type: "melodic", voice: "cello", class: "melodic-cello" },
+    { id: "kick", name: "地脉", type: "drum", voice: "kick", class: "drum-kick" },
+    { id: "snare", name: "裂帛", type: "drum", voice: "snare", class: "drum-snare" },
+    { id: "hihat", name: "星屑", type: "drum", voice: "hihat", class: "drum-hat" },
+    { id: "openhat", name: "破晓", type: "drum", voice: "openhat", class: "drum-open" },
+    { id: "tom", name: "木霆", type: "drum", voice: "tom", class: "drum-tom" },
+    { id: "cymbal", name: "沧澜", type: "drum", voice: "cymbal", class: "drum-cymbal" },
+    { id: "bass", name: "渊鸣", type: "melodic", voice: "bass", class: "bass" },
+    { id: "piano", name: "瓷釉", type: "melodic", voice: "piano", class: "melodic-piano" },
+    { id: "eguitar", name: "流光", type: "melodic", voice: "eguitar", class: "melodic-eguitar" },
+    { id: "chord", name: "绒霭", type: "melodic", voice: "chord", class: "chord" },
+    { id: "lead", name: "星织", type: "melodic", voice: "lead", class: "lead" },
+    { id: "sax", name: "烟簧", type: "melodic", voice: "sax", class: "melodic-sax" },
+    { id: "trumpet", name: "金翎", type: "melodic", voice: "trumpet", class: "melodic-trumpet" },
+    { id: "trombone", name: "暮铜", type: "melodic", voice: "trombone", class: "melodic-trombone" },
+    { id: "violin", name: "霜弓", type: "melodic", voice: "violin", class: "melodic-violin" },
+    { id: "cello", name: "幽沼", type: "melodic", voice: "cello", class: "melodic-cello" },
   ];
 
   const byId = Object.fromEntries(CATALOG.map((i) => [i.id, i]));
