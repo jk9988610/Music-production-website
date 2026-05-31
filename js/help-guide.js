@@ -63,7 +63,7 @@ const HelpGuide = (() => {
           <li><strong>军鼓</strong>：噪声 + 体共鸣</li>
           <li><strong>闭镲 / 开镲 / 碎音镲</strong>：短、开、长亮金属镲片分层</li>
           <li><strong>电贝斯</strong>：锯齿低音 + 低通滤波</li>
-          <li><strong>钢琴</strong>：FM 三角载波 + 极短调制（击弦起音）+ EQ 提亮延音尾</li>
+          <li><strong>钢琴</strong>：按音高分参 FM（低音编钟非谐波、极短调制敲击）+ 高通/EQ</li>
           <li><strong>合成主音</strong>：MonoSynth 锯齿 + 滤波扫频</li>
           <li><strong>和弦铺底</strong>：PolySynth + AMSynth 方波垫音</li>
           <li><strong>电吉他</strong>：PluckSynth 拨弦</li>

@@ -43,10 +43,63 @@ const AudioEngine = (() => {
     return Tone.Frequency(midi, "midi").toNote();
   }
 
-  /** 钢琴按键按住：够让 decay 展开，但短于弦乐长音 */
+  /**
+   * 按音高区分钢琴击弦/编钟感参数（低音非谐波、极短调制，避免中低音像管乐）
+   * @param {number} noteMidi
+   */
+  function getPianoStrikeParams(noteMidi) {
+    const m = typeof noteMidi === "number" ? noteMidi : 60;
+    const modEnv = { attack: 0.001, sustain: 0, release: 0.008 };
+    const ampEnv = { attack: 0.001, sustain: 0 };
+
+    if (m < 50) {
+      return {
+        harmonicity: 7.8,
+        modulationIndex: 3.2,
+        oscillator: { type: "sine" },
+        modulation: { type: "sine" },
+        envelope: { ...ampEnv, decay: 0.5, release: 0.72 },
+        modulationEnvelope: { ...modEnv, decay: 0.01 },
+      };
+    }
+    if (m < 62) {
+      return {
+        harmonicity: 6.2,
+        modulationIndex: 3.8,
+        oscillator: { type: "sine" },
+        modulation: { type: "sine" },
+        envelope: { ...ampEnv, decay: 0.44, release: 0.65 },
+        modulationEnvelope: { ...modEnv, decay: 0.014 },
+      };
+    }
+    if (m < 72) {
+      return {
+        harmonicity: 3.8,
+        modulationIndex: 5.2,
+        oscillator: { type: "triangle" },
+        modulation: { type: "sine" },
+        envelope: { ...ampEnv, decay: 0.36, release: 0.58 },
+        modulationEnvelope: { ...modEnv, decay: 0.02 },
+      };
+    }
+    return {
+      harmonicity: 2.01,
+      modulationIndex: 6.5,
+      oscillator: { type: "triangle" },
+      modulation: { type: "sine" },
+      envelope: { ...ampEnv, decay: 0.34, release: 0.55 },
+      modulationEnvelope: { ...modEnv, decay: 0.032 },
+    };
+  }
+
+  function applyPianoStrikeParams(synth, noteMidi) {
+    if (synth?.set) synth.set(getPianoStrikeParams(noteMidi));
+  }
+
+  /** 钢琴按键按住：够让 decay 展开，偏敲击衰减 */
   function pianoGateDuration(stepDuration) {
     const step = Math.max(stepDuration, 0.06);
-    return Math.min(step * 0.5, 0.34);
+    return Math.min(step * 0.48, 0.32);
   }
 
   function pianoNoteDuration(stepDuration) {
@@ -151,22 +204,7 @@ const AudioEngine = (() => {
           maxPolyphony: 8,
           voice: {
             volume: -2,
-            harmonicity: 2.01,
-            modulationIndex: 6.5,
-            oscillator: { type: "triangle" },
-            modulation: { type: "sine" },
-            envelope: {
-              attack: 0.001,
-              decay: 0.34,
-              sustain: 0,
-              release: 0.55,
-            },
-            modulationEnvelope: {
-              attack: 0.001,
-              decay: 0.04,
-              sustain: 0,
-              release: 0.015,
-            },
+            ...getPianoStrikeParams(60),
           },
         });
       case "eguitar":
@@ -287,16 +325,18 @@ const AudioEngine = (() => {
       synth.connect(destination);
       return { synth, extras: [] };
     }
+    const mudCut = new Tone.Filter(140, "highpass", -12);
     const bright = new Tone.EQ3({
-      low: -2.5,
-      mid: 0.5,
-      high: 4.5,
+      low: -3.5,
+      mid: 1,
+      high: 5,
       lowFrequency: 200,
-      highFrequency: 3200,
+      highFrequency: 3600,
     });
-    synth.connect(bright);
+    synth.connect(mudCut);
+    mudCut.connect(bright);
     bright.connect(destination);
-    return { synth, extras: [bright] };
+    return { synth, extras: [mudCut, bright] };
   }
 
   function disposeTrackSynth(trackId) {
@@ -532,8 +572,9 @@ const AudioEngine = (() => {
       }
       case "piano": {
         if (noteMidi == null) return;
+        applyPianoStrikeParams(synth, noteMidi);
         const gate = pianoGateDuration(duration);
-        synth.triggerAttackRelease(midiToNote(noteMidi), gate, t, velocity * 0.88);
+        synth.triggerAttackRelease(midiToNote(noteMidi), gate, t, velocity * 0.92);
         break;
       }
       case "violin":
