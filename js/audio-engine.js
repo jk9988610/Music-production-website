@@ -137,109 +137,171 @@ const AudioEngine = (() => {
   }
 
   /**
-   * 弓弦合成（参考 bowed string 模型，非简单锯齿+低通）：
-   * - 锯齿波模拟弓毛激励
-   * - 起音短噪声模拟弓毛抓弦
-   * - 低通扫频模拟琴身共鸣建立
-   * - 延迟 LFO 揉弦（约 4–5.5 Hz）
+   * 弓弦 — 琴身共振峰 + 三角主体（避免铜管式低通扫频）：
+   * - 激励以三角波为主、少量锯齿
+   * - 并行 peaking 模拟琴箱共鸣，不做 500→4kHz 号嘴扫频
+   * - 持续弓毛摩擦噪声 + 延迟揉弦
    */
   function playBowedString(c, out, time, midi, duration, gain, preset) {
     const freq = midiToFreq(midi);
-    const stopAt = time + duration + 0.2;
-
-    const bowLen = preset.bowNoiseDur ?? 0.04;
-    const bowBuf = Math.floor(c.sampleRate * bowLen);
-    const bow = c.createBuffer(1, bowBuf, c.sampleRate);
-    const bowData = bow.getChannelData(0);
-    for (let i = 0; i < bowBuf; i++) {
-      bowData[i] = (Math.random() * 2 - 1) * (1 - i / bowBuf);
-    }
-    const bowSrc = c.createBufferSource();
-    bowSrc.buffer = bow;
-    const bowF = c.createBiquadFilter();
-    bowF.type = "bandpass";
-    bowF.frequency.value = preset.bowFilterHz ?? 1800;
-    bowF.Q.value = 0.9;
-    const bowE = c.createGain();
-    bowE.gain.setValueAtTime(gain * (preset.bowNoiseGain ?? 0.12), time);
-    bowE.gain.exponentialRampToValueAtTime(0.001, time + bowLen);
-    bowSrc.connect(bowF);
-    bowF.connect(bowE);
-    bowE.connect(out);
-    bowSrc.start(time);
-    bowSrc.stop(time + bowLen + 0.01);
-
-    const partials = preset.detuneCents ?? [-7, 0, 7];
-    const atk = preset.attack ?? 0.06;
+    const stopAt = time + duration + 0.3;
+    const atk = preset.attack ?? 0.12;
     const rel = duration * (preset.releaseMul ?? 0.9);
 
-    partials.forEach((cents, idx) => {
-      const osc = c.createOscillator();
-      osc.type = "sawtooth";
-      osc.frequency.value = freq;
-      osc.detune.value = cents;
+    const master = c.createGain();
+    master.gain.setValueAtTime(0, time);
+    master.gain.linearRampToValueAtTime(gain, time + atk);
+    master.gain.setValueAtTime(gain * (preset.sustain ?? 0.85), time + atk + 0.12);
+    master.gain.exponentialRampToValueAtTime(0.001, time + rel);
+    master.connect(out);
 
-      const vib = c.createOscillator();
-      vib.type = "sine";
-      vib.frequency.value = preset.vibratoHz ?? 5;
-      const vibDepth = c.createGain();
-      vibDepth.gain.value = preset.vibratoCents ?? 18;
-      vib.connect(vibDepth);
-      vibDepth.connect(osc.detune);
-      const vibStart = time + (preset.vibratoDelay ?? 0.14);
-      vib.start(vibStart);
-      vib.stop(stopAt);
+    const mix = c.createGain();
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    const lpHz = Math.min(
+      preset.lpMax ?? 5000,
+      freq * (preset.lpFreqMul ?? 7) + (preset.lpBase ?? 350)
+    );
+    lp.frequency.setValueAtTime(lpHz * 0.92, time);
+    lp.frequency.linearRampToValueAtTime(lpHz, time + atk * 2);
+    lp.Q.value = 0.4;
+    mix.connect(lp);
+    lp.connect(master);
 
-      const body = c.createBiquadFilter();
-      body.type = "lowpass";
-      body.Q.value = preset.resonance ?? 1.6;
-      const lpLo = preset.lpAttackHz ?? 400;
-      const lpHi = preset.lpSustainHz ?? 3500;
-      body.frequency.setValueAtTime(lpLo, time);
-      body.frequency.exponentialRampToValueAtTime(lpHi, time + atk);
+    const exciter = c.createGain();
+    exciter.gain.value = 1;
+    const waves = preset.waves ?? [
+      { type: "triangle", amp: 0.55 },
+      { type: "sawtooth", amp: 0.14 },
+    ];
 
-      const amp = c.createGain();
-      const pGain = gain * (idx === 1 ? 0.42 : 0.28);
-      amp.gain.setValueAtTime(0, time);
-      amp.gain.linearRampToValueAtTime(pGain, time + atk);
-      amp.gain.setValueAtTime(pGain * (preset.sustain ?? 0.75), time + atk + 0.04);
-      amp.gain.exponentialRampToValueAtTime(0.001, time + rel);
+    (preset.detuneCents ?? [-6, 0, 6]).forEach((cents, idx) => {
+      const spread = idx === 1 ? 1 : 0.68;
+      waves.forEach(({ type, amp }) => {
+        const osc = c.createOscillator();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, time);
+        osc.detune.setValueAtTime(cents, time);
 
-      osc.connect(body);
-      body.connect(amp);
-      amp.connect(out);
-      osc.start(time);
-      osc.stop(stopAt);
+        const vib = c.createOscillator();
+        vib.type = "sine";
+        vib.frequency.value = preset.vibratoHz ?? 5;
+        const vibDepth = c.createGain();
+        vibDepth.gain.value = preset.vibratoCents ?? 12;
+        vib.connect(vibDepth);
+        vibDepth.connect(osc.detune);
+        const vibStart = time + (preset.vibratoDelay ?? 0.2);
+        vib.start(vibStart);
+        vib.stop(stopAt);
+
+        const vGain = c.createGain();
+        vGain.gain.value = amp * spread;
+        osc.connect(vGain);
+        vGain.connect(exciter);
+        osc.start(time);
+        osc.stop(stopAt);
+      });
     });
+
+    (preset.bodyResonances ?? [{ ratio: 1, q: 2.5, gain: 5, mix: 0.38 }]).forEach((res) => {
+      const peak = c.createBiquadFilter();
+      peak.type = "peaking";
+      peak.frequency.value = Math.max(
+        90,
+        Math.min(preset.peakMaxHz ?? 6500, freq * res.ratio)
+      );
+      peak.Q.value = res.q ?? 3;
+      peak.gain.value = res.gain ?? 4;
+      const branch = c.createGain();
+      branch.gain.value = res.mix ?? 0.35;
+      exciter.connect(peak);
+      peak.connect(branch);
+      branch.connect(mix);
+    });
+
+    const dry = c.createGain();
+    dry.gain.value = preset.dryMix ?? 0.22;
+    exciter.connect(dry);
+    dry.connect(mix);
+
+    const bowDur = Math.min(duration * 0.9, preset.bowSustainDur ?? 0.2);
+    const bowLen = Math.max(8, Math.floor(c.sampleRate * bowDur));
+    const bowBuf = c.createBuffer(1, bowLen, c.sampleRate);
+    const bowData = bowBuf.getChannelData(0);
+    for (let i = 0; i < bowLen; i++) {
+      bowData[i] = (Math.random() * 2 - 1) * (0.65 + 0.35 * Math.random());
+    }
+    const bowSrc = c.createBufferSource();
+    bowSrc.buffer = bowBuf;
+    const bowF = c.createBiquadFilter();
+    bowF.type = "bandpass";
+    bowF.frequency.value = preset.bowFilterHz ?? 2000;
+    bowF.Q.value = 1.4;
+    const bowE = c.createGain();
+    const bGain = gain * (preset.bowNoiseGain ?? 0.08);
+    bowE.gain.setValueAtTime(0, time);
+    bowE.gain.linearRampToValueAtTime(bGain, time + atk * 0.6);
+    bowE.gain.setValueAtTime(bGain * 0.75, time + atk + 0.08);
+    bowE.gain.exponentialRampToValueAtTime(0.001, time + atk + bowDur);
+    bowSrc.connect(bowF);
+    bowF.connect(bowE);
+    bowE.connect(master);
+    bowSrc.start(time);
+    bowSrc.stop(time + bowDur + 0.02);
   }
 
   const BOW_VIOLIN = {
-    attack: 0.05,
-    lpAttackHz: 520,
-    lpSustainHz: 4800,
-    vibratoHz: 5.4,
-    vibratoCents: 20,
-    vibratoDelay: 0.1,
-    resonance: 2,
-    releaseMul: 0.85,
-    sustain: 0.7,
-    bowNoiseGain: 0.14,
-    bowFilterHz: 2200,
+    attack: 0.11,
+    sustain: 0.86,
+    releaseMul: 0.92,
+    vibratoHz: 5.1,
+    vibratoCents: 12,
+    vibratoDelay: 0.22,
+    lpMax: 6500,
+    lpFreqMul: 8.5,
+    lpBase: 480,
+    bowNoiseGain: 0.075,
+    bowFilterHz: 2600,
+    bowSustainDur: 0.24,
+    detuneCents: [-7, 0, 7],
+    dryMix: 0.2,
+    waves: [
+      { type: "triangle", amp: 0.6 },
+      { type: "sawtooth", amp: 0.1 },
+    ],
+    bodyResonances: [
+      { ratio: 1, q: 2.8, gain: 6, mix: 0.42 },
+      { ratio: 2.6, q: 5, gain: 4, mix: 0.3 },
+      { ratio: 5.2, q: 7, gain: -2, mix: 0.2 },
+    ],
+    peakMaxHz: 7500,
   };
 
   const BOW_CELLO = {
-    attack: 0.07,
-    lpAttackHz: 220,
-    lpSustainHz: 1600,
-    vibratoHz: 4.2,
-    vibratoCents: 14,
-    vibratoDelay: 0.16,
-    resonance: 2.4,
-    releaseMul: 0.92,
-    sustain: 0.8,
-    bowNoiseGain: 0.16,
-    bowFilterHz: 900,
+    attack: 0.15,
+    sustain: 0.9,
+    releaseMul: 0.95,
+    vibratoHz: 4,
+    vibratoCents: 9,
+    vibratoDelay: 0.26,
+    lpMax: 2600,
+    lpFreqMul: 4.2,
+    lpBase: 160,
+    bowNoiseGain: 0.085,
+    bowFilterHz: 1050,
+    bowSustainDur: 0.3,
     detuneCents: [-5, 0, 5],
+    dryMix: 0.28,
+    waves: [
+      { type: "triangle", amp: 0.65 },
+      { type: "sawtooth", amp: 0.06 },
+    ],
+    bodyResonances: [
+      { ratio: 1, q: 2.2, gain: 5, mix: 0.48 },
+      { ratio: 2.1, q: 3.5, gain: 3, mix: 0.3 },
+      { ratio: 3.6, q: 5, gain: -1, mix: 0.16 },
+    ],
+    peakMaxHz: 3800,
   };
 
   function playViolinOn(c, out, time, midi, duration, gain = 0.4) {
@@ -330,7 +392,10 @@ const AudioEngine = (() => {
     if (voice === "bass" || voice === "cello" || voice === "trombone") {
       return Math.max(stepDuration, 0.32);
     }
-    if (voice === "violin" || voice === "sax" || voice === "trumpet") {
+    if (voice === "violin" || voice === "cello") {
+      return Math.max(stepDuration, 0.42);
+    }
+    if (voice === "sax" || voice === "trumpet") {
       return Math.max(stepDuration, 0.36);
     }
     return stepDuration;
@@ -340,8 +405,8 @@ const AudioEngine = (() => {
     const map = {
       piano: 0.62,
       bass: 0.42,
-      cello: 0.52,
-      violin: 0.48,
+      cello: 0.58,
+      violin: 0.54,
       sax: 0.46,
       trumpet: 0.44,
       trombone: 0.48,
