@@ -16,7 +16,7 @@
 - **布局**：顶栏「布局」可调模块顺序、显示、间距与格子尺寸（随草稿保存）
 - **草稿 / 存读**：自动保存草稿；顶栏存、读、清
 - **导出格式**：JSON 工程（默认）、WAV、MP3 音频（编曲时间轴混音）
-- **Beat Battle 联动**（v1.1.0）：顶栏「评阅站」「发布」；与 [Beat Battle](https://jk9988610.github.io/Beat-Battle/) 共享昵称会话，一键发布到制作库
+- **Beat Battle 联动**（v1.1.0+）：顶栏「评阅站」「发布」；与 [Beat Battle](https://jk9988610.github.io/Beat-Battle/) 共享昵称会话，发布时上传 MP3 与编曲 JSON（`project_json`）
 - **音序跟随**：播放编曲时自动切换至当前段落的 Pattern，仅在对应类型页显示播放头
 
 ## 本地预览
