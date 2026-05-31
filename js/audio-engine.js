@@ -43,8 +43,14 @@ const AudioEngine = (() => {
     return Tone.Frequency(midi, "midi").toNote();
   }
 
+  /** 钢琴按键按住时长（短、偏断奏；不用满步长，避免听成弓弦长音） */
+  function pianoGateDuration(stepDuration) {
+    const step = Math.max(stepDuration, 0.06);
+    return Math.min(step * 0.42, 0.26);
+  }
+
   function pianoNoteDuration(stepDuration) {
-    return Math.max(stepDuration, 0.45);
+    return pianoGateDuration(stepDuration);
   }
 
   function leadNoteDuration(stepDuration) {
@@ -63,7 +69,7 @@ const AudioEngine = (() => {
 
   function previewDurationForVoice(voice) {
     const map = {
-      piano: 0.62,
+      piano: 0.3,
       bass: 0.42,
       cello: 0.78,
       violin: 0.74,
@@ -151,15 +157,15 @@ const AudioEngine = (() => {
             modulation: { type: "square" },
             envelope: {
               attack: 0.001,
-              decay: 0.32,
-              sustain: 0.02,
-              release: 1.35,
+              decay: 0.24,
+              sustain: 0,
+              release: 0.28,
             },
             modulationEnvelope: {
               attack: 0.001,
-              decay: 0.18,
+              decay: 0.1,
               sustain: 0,
-              release: 0.12,
+              release: 0.04,
             },
           },
         });
@@ -493,10 +499,12 @@ const AudioEngine = (() => {
         synth.triggerAttackRelease(notes, dur, t, velocity * 0.42);
         break;
       }
-      case "piano":
+      case "piano": {
         if (noteMidi == null) return;
-        synth.triggerAttackRelease(midiToNote(noteMidi), dur, t, velocity * 0.88);
+        const gate = pianoGateDuration(duration);
+        synth.triggerAttackRelease(midiToNote(noteMidi), gate, t, velocity * 0.88);
         break;
+      }
       case "violin":
       case "cello":
         if (noteMidi == null) return;
