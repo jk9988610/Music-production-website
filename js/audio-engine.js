@@ -147,15 +147,25 @@ const AudioEngine = (() => {
     const stopAt = time + noteLen + 0.35;
     const baseAtk = preset.attack ?? 0.1;
     const rel = noteLen * (preset.releaseMul ?? 0.98);
+    const harmWaveFrom = preset.harmonicWaveFromN ?? 99;
+    const harmWave = preset.harmonicWave ?? "triangle";
 
     const master = c.createGain();
     master.gain.setValueAtTime(0, time);
     master.gain.linearRampToValueAtTime(gain, time + baseAtk);
-    master.gain.setValueAtTime(gain * (preset.sustain ?? 0.92), time + baseAtk + 0.12);
+    master.gain.setValueAtTime(gain * (preset.sustain ?? 0.92), time + baseAtk + 0.08);
     master.gain.exponentialRampToValueAtTime(0.001, time + rel);
 
     const bus = c.createGain();
     let chain = bus;
+    if (preset.highpassHz) {
+      const hp = c.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = preset.highpassHz;
+      hp.Q.value = preset.highpassQ ?? 0.65;
+      chain.connect(hp);
+      chain = hp;
+    }
     (preset.bodyPeaks ?? []).forEach((body) => {
       const pk = c.createBiquadFilter();
       pk.type = "peaking";
@@ -193,20 +203,22 @@ const AudioEngine = (() => {
       if (f > (preset.maxHz ?? 11000)) return;
 
       const osc = c.createOscillator();
-      osc.type = "sine";
+      osc.type = p.wave ?? (n >= harmWaveFrom ? harmWave : "sine");
       osc.frequency.setValueAtTime(f, time);
-      vibDepth.connect(osc.detune);
+      if (n === 1 || preset.vibratoOnFundamental !== false) {
+        vibDepth.connect(osc.detune);
+      }
       if (p.detuneCents != null) {
         osc.detune.setValueAtTime(p.detuneCents, time);
       }
 
       const amp = c.createGain();
       const peak = gain * (p.amp ?? 0.25);
-      const atk = p.atk ?? Math.max(0.008, baseAtk - n * 0.012);
+      const atk = p.atk ?? Math.max(0.004, baseAtk - n * 0.008);
       const pRel = Math.max(0.2, noteLen * (p.decayMul ?? 0.96));
       amp.gain.setValueAtTime(0, time);
       amp.gain.linearRampToValueAtTime(peak, time + atk);
-      amp.gain.setValueAtTime(peak * (p.sustain ?? 0.88), time + atk + 0.06);
+      amp.gain.setValueAtTime(peak * (p.sustain ?? 0.9), time + atk + 0.04);
       amp.gain.exponentialRampToValueAtTime(0.001, time + pRel);
 
       osc.connect(amp);
@@ -218,61 +230,77 @@ const AudioEngine = (() => {
 
   const BOW_VIOLIN = {
     minNoteLen: 0.68,
-    attack: 0.11,
-    sustain: 0.92,
+    attack: 0.042,
+    sustain: 0.9,
     releaseMul: 0.99,
-    vibratoHz: 5.4,
-    vibratoCents: 12,
-    vibratoDelay: 0.22,
-    inharmonicB: 0.0003,
-    lpCap: 11000,
-    lpMul: 13,
-    lpAdd: 900,
-    lpQ: 0.5,
-    maxHz: 12000,
+    vibratoHz: 5.6,
+    vibratoCents: 7,
+    vibratoDelay: 0.38,
+    vibratoOnFundamental: false,
+    inharmonicB: 0.00035,
+    harmonicWaveFromN: 3,
+    harmonicWave: "triangle",
+    highpassHz: 210,
+    highpassQ: 0.55,
+    lpCap: 15000,
+    lpMul: 17,
+    lpAdd: 1600,
+    lpQ: 0.32,
+    maxHz: 14000,
     partials: [
-      { n: 1, amp: 0.44, atk: 0.11, decayMul: 1, detuneCents: -5 },
-      { n: 1, amp: 0.44, atk: 0.11, decayMul: 1, detuneCents: 5 },
-      { n: 2, amp: 0.38, atk: 0.07, decayMul: 0.98 },
-      { n: 3, amp: 0.3, atk: 0.05, decayMul: 0.96 },
-      { n: 4, amp: 0.24, atk: 0.038, decayMul: 0.94 },
-      { n: 5, amp: 0.18, atk: 0.028, decayMul: 0.9 },
-      { n: 6, amp: 0.12, atk: 0.02, decayMul: 0.86 },
-      { n: 7, amp: 0.08, atk: 0.015, decayMul: 0.82 },
-      { n: 8, amp: 0.05, atk: 0.01, decayMul: 0.78 },
+      { n: 1, amp: 0.28, atk: 0.05, decayMul: 1, detuneCents: -4 },
+      { n: 1, amp: 0.28, atk: 0.05, decayMul: 1, detuneCents: 4 },
+      { n: 2, amp: 0.34, atk: 0.028, decayMul: 0.99 },
+      { n: 3, amp: 0.36, atk: 0.018, decayMul: 0.98 },
+      { n: 4, amp: 0.32, atk: 0.012, decayMul: 0.97 },
+      { n: 5, amp: 0.28, atk: 0.009, decayMul: 0.96 },
+      { n: 6, amp: 0.24, atk: 0.007, decayMul: 0.94 },
+      { n: 7, amp: 0.2, atk: 0.006, decayMul: 0.92 },
+      { n: 8, amp: 0.16, atk: 0.005, decayMul: 0.9 },
+      { n: 9, amp: 0.12, atk: 0.004, decayMul: 0.88 },
+      { n: 10, amp: 0.08, atk: 0.003, decayMul: 0.86 },
     ],
     bodyPeaks: [
-      { hz: 440, q: 3.5, gain: 4 },
-      { hz: 2800, q: 6, gain: 3.5 },
+      { hz: 1800, q: 2.2, gain: 3 },
+      { hz: 3400, q: 2.8, gain: 5.5 },
+      { hz: 5600, q: 3.2, gain: 4.5 },
     ],
   };
 
   const BOW_CELLO = {
     minNoteLen: 0.72,
-    attack: 0.13,
-    sustain: 0.93,
+    attack: 0.052,
+    sustain: 0.91,
     releaseMul: 0.99,
-    vibratoHz: 4.3,
-    vibratoCents: 9,
-    vibratoDelay: 0.28,
-    inharmonicB: 0.0002,
-    lpCap: 5500,
-    lpMul: 8.5,
-    lpAdd: 520,
-    lpQ: 0.48,
-    maxHz: 7500,
+    vibratoHz: 4.6,
+    vibratoCents: 6,
+    vibratoDelay: 0.42,
+    vibratoOnFundamental: false,
+    inharmonicB: 0.00028,
+    harmonicWaveFromN: 2,
+    harmonicWave: "triangle",
+    highpassHz: 155,
+    highpassQ: 0.5,
+    lpCap: 9200,
+    lpMul: 12,
+    lpAdd: 1100,
+    lpQ: 0.34,
+    maxHz: 10000,
     partials: [
-      { n: 1, amp: 0.5, atk: 0.13, decayMul: 1, detuneCents: -4 },
-      { n: 1, amp: 0.5, atk: 0.13, decayMul: 1, detuneCents: 4 },
-      { n: 2, amp: 0.36, atk: 0.09, decayMul: 0.98 },
-      { n: 3, amp: 0.26, atk: 0.07, decayMul: 0.95 },
-      { n: 4, amp: 0.18, atk: 0.05, decayMul: 0.92 },
-      { n: 5, amp: 0.11, atk: 0.035, decayMul: 0.88 },
-      { n: 6, amp: 0.06, atk: 0.025, decayMul: 0.84 },
+      { n: 1, amp: 0.34, atk: 0.06, decayMul: 1, detuneCents: -3 },
+      { n: 1, amp: 0.34, atk: 0.06, decayMul: 1, detuneCents: 3 },
+      { n: 2, amp: 0.38, atk: 0.032, decayMul: 0.99 },
+      { n: 3, amp: 0.36, atk: 0.022, decayMul: 0.98 },
+      { n: 4, amp: 0.32, atk: 0.016, decayMul: 0.97 },
+      { n: 5, amp: 0.28, atk: 0.012, decayMul: 0.96 },
+      { n: 6, amp: 0.22, atk: 0.009, decayMul: 0.94 },
+      { n: 7, amp: 0.17, atk: 0.007, decayMul: 0.92 },
+      { n: 8, amp: 0.12, atk: 0.005, decayMul: 0.9 },
     ],
     bodyPeaks: [
-      { hz: 220, q: 3, gain: 4.5 },
-      { hz: 520, q: 4, gain: 3 },
+      { hz: 1200, q: 2, gain: 2.5 },
+      { hz: 2600, q: 2.6, gain: 4.5 },
+      { hz: 4200, q: 3, gain: 3.5 },
     ],
   };
 
