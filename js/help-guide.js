@@ -58,9 +58,15 @@ const HelpGuide = (() => {
         <ul class="help-list">
           <li><strong>鼓组</strong>：底鼓、军鼓、闭镲、开镲、通鼓、吊镲</li>
           <li><strong>旋律</strong>：贝斯、钢琴、电吉他、和弦、领奏、萨克斯、小号、长号、小提琴、大提琴</li>
-          <li><strong>弓弦</strong>：小提琴 / 大提琴 — 锯齿激励 + 起弓噪声 + 体腔扫频 + 延迟揉弦</li>
-          <li><strong>钢琴</strong>：电钢琴式 FM+体（调/阶只限选音音高，不改变音色）；选音默认 C3–G5</li>
-          <li><strong>和弦</strong>：管风琴式垫音（慢起、偏暗），非钢琴音色</li>
+          <li><strong>鼓组</strong>：底鼓（下沉正弦+击点击）、军鼓（噪声+体）、镲（闭/开/吊镲分层）</li>
+          <li><strong>贝斯</strong>：电贝斯 — 正弦低音 + 锯齿谐波</li>
+          <li><strong>钢琴</strong>：电钢琴 Rhodes 式 FM+体；选音 C3–G5</li>
+          <li><strong>和弦</strong>：管风琴拉栓垫音，慢起偏暗</li>
+          <li><strong>领奏</strong>：流行合成 Lead，锯齿扫频</li>
+          <li><strong>电吉他</strong>：清音拨弦（拨片噪声 + 快衰）</li>
+          <li><strong>萨克斯</strong>：锯齿激励 + 共振峰</li>
+          <li><strong>小号 / 长号</strong>：铜管模型（亮扫频 vs 暗长号），带轻微揉弦</li>
+          <li><strong>小提琴 / 大提琴</strong>：弓弦物理简化模型</li>
           <li><strong>换乐器</strong>：点左侧轨名</li>
           <li><strong>密度</strong>：倍率按钮（½×～4×），弹窗选择。</li>
           <li><strong>±轨 / ±4步</strong>：增减轨道数与 Pattern 长度。</li>

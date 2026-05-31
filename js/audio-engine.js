@@ -1,5 +1,5 @@
 /**
- * Web Audio 合成 — 乐队常用乐器；弓弦为物理简化模型，钢琴为现代流行合成（见各 play* 注释）
+ * Web Audio 合成 — 乐队常用乐器（鼓组 / 电声 / 管乐 / 弓弦，见各 play* 注释）
  */
 const AudioEngine = (() => {
   let ctx = null;
@@ -11,17 +11,31 @@ const AudioEngine = (() => {
   }
 
   function playKickOn(c, out, time, gain = 0.9) {
+    const clickLen = Math.max(4, Math.floor(c.sampleRate * 0.004));
+    const click = c.createBuffer(1, clickLen, c.sampleRate);
+    const cd = click.getChannelData(0);
+    for (let i = 0; i < clickLen; i++) cd[i] = (Math.random() * 2 - 1) * (1 - i / clickLen);
+    const clickSrc = c.createBufferSource();
+    clickSrc.buffer = click;
+    const clickE = c.createGain();
+    clickE.gain.setValueAtTime(gain * 0.35, time);
+    clickE.gain.exponentialRampToValueAtTime(0.001, time + 0.008);
+    clickSrc.connect(clickE);
+    clickE.connect(out);
+    clickSrc.start(time);
+    clickSrc.stop(time + 0.01);
+
     const osc = c.createOscillator();
     const env = c.createGain();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(150, time);
-    osc.frequency.exponentialRampToValueAtTime(40, time + 0.08);
+    osc.frequency.setValueAtTime(165, time);
+    osc.frequency.exponentialRampToValueAtTime(42, time + 0.1);
     env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
+    env.gain.exponentialRampToValueAtTime(0.001, time + 0.38);
     osc.connect(env);
     env.connect(out);
     osc.start(time);
-    osc.stop(time + 0.4);
+    osc.stop(time + 0.42);
   }
 
   function playSnareOn(c, out, time, gain = 0.75) {
@@ -83,14 +97,43 @@ const AudioEngine = (() => {
     const osc = c.createOscillator();
     const env = c.createGain();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(220, time);
-    osc.frequency.exponentialRampToValueAtTime(80, time + 0.12);
+    osc.frequency.setValueAtTime(180, time);
+    osc.frequency.exponentialRampToValueAtTime(70, time + 0.14);
     env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
+    env.gain.exponentialRampToValueAtTime(0.001, time + 0.32);
     osc.connect(env);
     env.connect(out);
     osc.start(time);
-    osc.stop(time + 0.3);
+    osc.stop(time + 0.34);
+  }
+
+  /** 吊镲 — 比开镲更亮、更长的高频金属感 */
+  function playCymbalOn(c, out, time, gain = 0.42) {
+    const dur = 0.55;
+    const bufferSize = Math.floor(c.sampleRate * dur);
+    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize) ** 0.7;
+    }
+    const noise = c.createBufferSource();
+    noise.buffer = buffer;
+    const hp = c.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 5200;
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 9200;
+    bp.Q.value = 0.6;
+    const env = c.createGain();
+    env.gain.setValueAtTime(gain, time);
+    env.gain.exponentialRampToValueAtTime(0.001, time + dur);
+    noise.connect(hp);
+    hp.connect(bp);
+    bp.connect(env);
+    env.connect(out);
+    noise.start(time);
+    noise.stop(time + dur + 0.02);
   }
 
   /**
@@ -282,9 +325,290 @@ const AudioEngine = (() => {
     return Math.max(stepDuration, 0.45);
   }
 
+  function melodicNoteDuration(voice, stepDuration) {
+    if (voice === "piano") return pianoNoteDuration(stepDuration);
+    if (voice === "bass" || voice === "cello" || voice === "trombone") {
+      return Math.max(stepDuration, 0.32);
+    }
+    if (voice === "violin" || voice === "sax" || voice === "trumpet") {
+      return Math.max(stepDuration, 0.36);
+    }
+    return stepDuration;
+  }
+
   function previewDurationForVoice(voice) {
-    if (voice === "piano") return 0.62;
-    return 0.28;
+    const map = {
+      piano: 0.62,
+      bass: 0.42,
+      cello: 0.52,
+      violin: 0.48,
+      sax: 0.46,
+      trumpet: 0.44,
+      trombone: 0.48,
+      eguitar: 0.34,
+      lead: 0.32,
+    };
+    return map[voice] ?? 0.28;
+  }
+
+  /** 电贝斯 — 正弦低音 + 锯齿谐波，偏 Funk/R&B 电贝斯 */
+  function playBassOn(c, out, time, midi, duration, gain = 0.5) {
+    const freq = midiToFreq(midi);
+    const noteLen = Math.max(duration, 0.32);
+    const stopAt = time + noteLen + 0.1;
+
+    const env = c.createGain();
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(gain * 0.88, time + 0.008);
+    env.gain.exponentialRampToValueAtTime(gain * 0.55, time + noteLen * 0.92);
+
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(Math.min(1200, 180 + freq * 1.2), time);
+    lp.Q.value = 1.1;
+
+    const mix = c.createGain();
+    mix.connect(lp);
+    lp.connect(env);
+    env.connect(out);
+
+    const sub = c.createOscillator();
+    sub.type = "sine";
+    sub.frequency.setValueAtTime(freq, time);
+    const subG = c.createGain();
+    subG.gain.value = 0.55;
+    sub.connect(subG);
+    subG.connect(mix);
+    sub.start(time);
+    sub.stop(stopAt);
+
+    const saw = c.createOscillator();
+    saw.type = "sawtooth";
+    saw.frequency.setValueAtTime(freq, time);
+    const sawG = c.createGain();
+    sawG.gain.value = 0.28;
+    saw.connect(sawG);
+    sawG.connect(mix);
+    saw.start(time);
+    saw.stop(stopAt);
+  }
+
+  /** 领奏 — 流行合成器 Lead（锯齿 + 扫频） */
+  function playLeadOn(c, out, time, midi, duration, gain = 0.45) {
+    const freq = midiToFreq(midi);
+    const stopAt = time + duration + 0.08;
+
+    const env = c.createGain();
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(gain * 0.8, time + 0.012);
+    env.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.88);
+
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(900, time);
+    lp.frequency.exponentialRampToValueAtTime(Math.min(5200, 1200 + freq * 8), time + 0.06);
+    lp.Q.value = 2.2;
+
+    const mix = c.createGain();
+    mix.connect(lp);
+    lp.connect(env);
+    env.connect(out);
+
+    [-7, 0, 7].forEach((cents, i) => {
+      const osc = c.createOscillator();
+      osc.type = i === 1 ? "sawtooth" : "square";
+      osc.frequency.setValueAtTime(freq, time);
+      osc.detune.setValueAtTime(cents, time);
+      const g = c.createGain();
+      g.gain.value = i === 1 ? 0.38 : 0.14;
+      osc.connect(g);
+      g.connect(mix);
+      osc.start(time);
+      osc.stop(stopAt);
+    });
+  }
+
+  /** 电吉他 — 清音拨弦（起拨噪声 + 锯齿体、较快衰减） */
+  function playEguitarOn(c, out, time, midi, duration, gain = 0.48) {
+    const freq = midiToFreq(midi);
+    const noteLen = Math.max(duration, 0.22);
+    const stopAt = time + noteLen + 0.06;
+
+    const pickLen = Math.floor(c.sampleRate * 0.006);
+    const pick = c.createBuffer(1, pickLen, c.sampleRate);
+    const pd = pick.getChannelData(0);
+    for (let i = 0; i < pickLen; i++) pd[i] = (Math.random() * 2 - 1) * (1 - i / pickLen);
+    const pickSrc = c.createBufferSource();
+    pickSrc.buffer = pick;
+    const pickF = c.createBiquadFilter();
+    pickF.type = "highpass";
+    pickF.frequency.value = 1200;
+    const pickE = c.createGain();
+    pickE.gain.setValueAtTime(gain * 0.2, time);
+    pickE.gain.exponentialRampToValueAtTime(0.001, time + 0.012);
+    pickSrc.connect(pickF);
+    pickF.connect(pickE);
+    pickE.connect(out);
+    pickSrc.start(time);
+    pickSrc.stop(time + 0.02);
+
+    const env = c.createGain();
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(gain * 0.75, time + 0.004);
+    env.gain.exponentialRampToValueAtTime(0.001, time + noteLen * 0.85);
+
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(Math.min(3800, 800 + freq * 5), time);
+    lp.Q.value = 1.4;
+
+    const osc = c.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(freq, time);
+    osc.connect(lp);
+    lp.connect(env);
+    env.connect(out);
+    osc.start(time);
+    osc.stop(stopAt);
+  }
+
+  /** 簧片管（萨克斯）— 锯齿激励 + 共振峰 */
+  function playReedOn(c, out, time, midi, duration, gain, formantHz) {
+    const freq = midiToFreq(midi);
+    const stopAt = time + duration + 0.12;
+
+    const exc = c.createOscillator();
+    exc.type = "sawtooth";
+    exc.frequency.setValueAtTime(freq, time);
+    const excG = c.createGain();
+    excG.gain.value = 0.35;
+
+    const env = c.createGain();
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(gain, time + 0.05);
+    env.gain.setValueAtTime(gain * 0.78, time + duration * 0.4);
+    env.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.85);
+
+    const bus = c.createGain();
+    bus.gain.value = 1;
+    exc.connect(excG);
+    excG.connect(bus);
+
+    formantHz.forEach((hz, i) => {
+      const f = c.createBiquadFilter();
+      f.type = "bandpass";
+      f.frequency.value = hz;
+      f.Q.value = i === 1 ? 9 : 6;
+      const g = c.createGain();
+      g.gain.value = i === 1 ? 0.55 : 0.38;
+      bus.connect(f);
+      f.connect(g);
+      g.connect(env);
+    });
+
+    env.connect(out);
+    exc.start(time);
+    exc.stop(stopAt);
+  }
+
+  function playSaxOn(c, out, time, midi, duration, gain = 0.45) {
+    const f = midiToFreq(midi);
+    playReedOn(c, out, time, midi, duration, gain, [
+      Math.min(700, f * 0.75),
+      Math.min(1500, f * 1.1),
+      Math.min(3200, f * 2.5),
+    ]);
+  }
+
+  /** 铜管 — 小号 / 长号共用模型，参数区分 */
+  function playBrassOn(c, out, time, midi, duration, gain, preset) {
+    const freq = midiToFreq(midi);
+    const stopAt = time + duration + 0.15;
+
+    const env = c.createGain();
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(gain, time + preset.attack);
+    env.gain.setValueAtTime(gain * preset.sustain, time + duration * 0.42);
+    env.gain.exponentialRampToValueAtTime(0.001, time + duration * preset.releaseMul);
+
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(preset.lpStart, time);
+    lp.frequency.exponentialRampToValueAtTime(preset.lpPeak, time + 0.045);
+    lp.Q.value = preset.q ?? 2.4;
+
+    const mix = c.createGain();
+    mix.connect(lp);
+    lp.connect(env);
+    env.connect(out);
+
+    const saw = c.createOscillator();
+    saw.type = "sawtooth";
+    saw.frequency.setValueAtTime(freq, time);
+    const sawG = c.createGain();
+    sawG.gain.value = 0.5;
+    saw.connect(sawG);
+    sawG.connect(mix);
+    saw.start(time);
+    saw.stop(stopAt);
+
+    if (preset.squareMix > 0) {
+      const sq = c.createOscillator();
+      sq.type = "square";
+      sq.frequency.setValueAtTime(freq, time);
+      const sqG = c.createGain();
+      sqG.gain.value = preset.squareMix;
+      sq.connect(sqG);
+      sqG.connect(mix);
+      sq.start(time);
+      sq.stop(stopAt);
+    }
+
+    if (preset.vibratoHz) {
+      const vib = c.createOscillator();
+      vib.type = "sine";
+      vib.frequency.value = preset.vibratoHz;
+      const depth = c.createGain();
+      depth.gain.value = preset.vibratoCents ?? 10;
+      vib.connect(depth);
+      depth.connect(saw.detune);
+      const t0 = time + (preset.vibratoDelay ?? 0.1);
+      vib.start(t0);
+      vib.stop(stopAt);
+    }
+  }
+
+  const BRASS_TRUMPET = {
+    attack: 0.032,
+    sustain: 0.8,
+    releaseMul: 0.82,
+    lpStart: 480,
+    lpPeak: 4600,
+    squareMix: 0.18,
+    vibratoHz: 5.2,
+    vibratoCents: 11,
+    vibratoDelay: 0.1,
+  };
+
+  const BRASS_TROMBONE = {
+    attack: 0.055,
+    sustain: 0.86,
+    releaseMul: 0.9,
+    lpStart: 260,
+    lpPeak: 2600,
+    q: 2,
+    squareMix: 0.12,
+    vibratoHz: 4.3,
+    vibratoCents: 9,
+    vibratoDelay: 0.16,
+  };
+
+  function playTrumpetOn(c, out, time, midi, duration, gain = 0.48) {
+    playBrassOn(c, out, time, midi, duration, gain, BRASS_TRUMPET);
+  }
+
+  function playTromboneOn(c, out, time, midi, duration, gain = 0.46) {
+    playBrassOn(c, out, time, midi, duration, gain, BRASS_TROMBONE);
   }
 
   /** 和弦轨：管风琴式垫音（慢起音、偏暗），与钢琴击弦模型区分 */
@@ -363,79 +687,6 @@ const AudioEngine = (() => {
     osc.stop(time + rel + 0.05);
   }
 
-  function playSaxOn(c, out, time, midi, duration, gain = 0.45) {
-    const freq = midiToFreq(midi);
-    const osc = c.createOscillator();
-    const osc2 = c.createOscillator();
-    const env = c.createGain();
-    const f = c.createBiquadFilter();
-    osc.type = "sawtooth";
-    osc2.type = "square";
-    osc.frequency.value = freq;
-    osc2.frequency.value = freq;
-    osc2.detune.value = 3;
-    f.type = "lowpass";
-    f.frequency.setValueAtTime(800, time);
-    f.frequency.exponentialRampToValueAtTime(3200, time + 0.05);
-    f.Q.value = 2;
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(gain, time + 0.045);
-    env.gain.setValueAtTime(gain * 0.75, time + duration * 0.35);
-    env.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.82);
-    osc.connect(f);
-    osc2.connect(f);
-    f.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc2.start(time);
-    osc.stop(time + duration + 0.1);
-    osc2.stop(time + duration + 0.1);
-  }
-
-  function playTrumpetOn(c, out, time, midi, duration, gain = 0.48) {
-    const freq = midiToFreq(midi);
-    const osc = c.createOscillator();
-    const env = c.createGain();
-    const f = c.createBiquadFilter();
-    osc.type = "sawtooth";
-    osc.frequency.value = freq;
-    f.type = "lowpass";
-    f.frequency.setValueAtTime(600, time);
-    f.frequency.exponentialRampToValueAtTime(3800, time + 0.04);
-    f.Q.value = 2.5;
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(gain, time + 0.035);
-    env.gain.setValueAtTime(gain * 0.82, time + duration * 0.4);
-    env.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.8);
-    osc.connect(f);
-    f.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(time + duration + 0.1);
-  }
-
-  function playTromboneOn(c, out, time, midi, duration, gain = 0.46) {
-    const freq = midiToFreq(midi);
-    const osc = c.createOscillator();
-    const env = c.createGain();
-    const f = c.createBiquadFilter();
-    osc.type = "sawtooth";
-    osc.frequency.value = freq;
-    f.type = "lowpass";
-    f.frequency.setValueAtTime(350, time);
-    f.frequency.exponentialRampToValueAtTime(2400, time + 0.055);
-    f.Q.value = 2.2;
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(gain, time + 0.05);
-    env.gain.setValueAtTime(gain * 0.85, time + duration * 0.45);
-    env.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.88);
-    osc.connect(f);
-    f.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(time + duration + 0.12);
-  }
-
   function resolveVoice(trackId) {
     if (typeof Sequencer !== "undefined" && Sequencer.getTrack) {
       const t = Sequencer.getTrack(trackId);
@@ -446,45 +697,28 @@ const AudioEngine = (() => {
 
   function playMelodic(c, out, voice, time, noteMidi, stepDuration, gain) {
     if (noteMidi == null) return;
-    const d = stepDuration;
+    const d = melodicNoteDuration(voice, stepDuration);
     switch (voice) {
       case "bass":
-        playMono(c, out, time, noteMidi, d * 0.95, gain, {
-          wave: "sawtooth",
-          lp: 550,
-          attack: 0.006,
-          releaseMul: 0.88,
-          q: 1.5,
-        });
+        playBassOn(c, out, time, noteMidi, d, gain);
         break;
       case "lead":
-        playMono(c, out, time, noteMidi, d * 0.85, gain, {
-          wave: "square",
-          lp: 3000,
-          attack: 0.015,
-          releaseMul: 0.82,
-        });
+        playLeadOn(c, out, time, noteMidi, d * 0.9, gain);
         break;
       case "piano":
-        playPianoOn(c, out, time, noteMidi, pianoNoteDuration(d), gain);
+        playPianoOn(c, out, time, noteMidi, d, gain);
         break;
       case "eguitar":
-        playMono(c, out, time, noteMidi, d * 0.62, gain, {
-          wave: "sawtooth",
-          lp: 3400,
-          attack: 0.006,
-          releaseMul: 0.68,
-          q: 1.8,
-        });
+        playEguitarOn(c, out, time, noteMidi, d, gain);
         break;
       case "sax":
-        playSaxOn(c, out, time, noteMidi, d * 0.82, gain);
+        playSaxOn(c, out, time, noteMidi, d, gain);
         break;
       case "trumpet":
-        playTrumpetOn(c, out, time, noteMidi, d * 0.8, gain);
+        playTrumpetOn(c, out, time, noteMidi, d, gain);
         break;
       case "trombone":
-        playTromboneOn(c, out, time, noteMidi, d * 0.88, gain);
+        playTromboneOn(c, out, time, noteMidi, d, gain);
         break;
       case "violin":
         playViolinOn(c, out, time, noteMidi, d, gain);
@@ -493,7 +727,7 @@ const AudioEngine = (() => {
         playCelloOn(c, out, time, noteMidi, d, gain);
         break;
       default:
-        playMono(c, out, time, noteMidi, d * 0.8, gain, { lp: 2600, attack: 0.02 });
+        playMono(c, out, time, noteMidi, d, gain, { lp: 2600, attack: 0.02 });
         break;
     }
   }
@@ -516,7 +750,7 @@ const AudioEngine = (() => {
       case "cymbal":
       case "ride":
       case "splash":
-        playHatOn(c, out, time, true, 0.42, 5500);
+        playCymbalOn(c, out, time, 0.42);
         break;
       case "tom":
       case "wood":
@@ -571,7 +805,7 @@ const AudioEngine = (() => {
     const voice = resolveVoice(trackId);
     const dur =
       duration != null ? duration : previewDurationForVoice(voice);
-    const stepDur = voice === "piano" ? pianoNoteDuration(dur) : dur;
+    const stepDur = melodicNoteDuration(voice, dur);
     playTrackSound(trackId, ensureContext().currentTime + 0.02, midi, stepDur);
   }
 
