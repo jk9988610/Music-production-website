@@ -3,7 +3,7 @@
  * 以页面内嵌的 BUNDLED_* 为「当前运行版本」；与远端 version.json 比较决定是否可更新
  */
 const AppVersion = (() => {
-  let BUNDLED_VERSION = "1.6.0";
+  let BUNDLED_VERSION = "1.6.1";
   let BUNDLED_BUILD = "dev";
 
   (function applyMetaBundled() {

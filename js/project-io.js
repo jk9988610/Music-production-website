@@ -65,20 +65,12 @@ const ProjectIO = (() => {
     const bundle = buildBundle(project, { title: options.title || base });
     const json = JSON.stringify(bundle, null, 2);
     const blob = new Blob([json], { type: "application/json;charset=utf-8" });
-    downloadBlob(blob, filename);
+    if (typeof FileSave !== "undefined") {
+      FileSave.saveBlob(blob, filename);
+    } else {
+      throw new Error("文件保存模块未加载");
+    }
     return { filename, bytes: json.length };
-  }
-
-  function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   }
 
   async function exportProject(project, options = {}) {

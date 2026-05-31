@@ -314,6 +314,7 @@
         <input type="text" id="exportBasename" class="export-basename" placeholder="留空则用时间戳" autocomplete="off">
       </label>
       <p class="note-dialog-hint export-hint">JSON 为完整工程；WAV/MP3 导出当前编曲时间轴混音（一段循环）。</p>
+      <p class="export-download-hint note-dialog-hint" id="exportDownloadHint" hidden></p>
       <menu>
         <button type="submit" value="cancel" class="btn btn-ghost">取消</button>
         <button type="submit" value="ok" class="btn btn-sm" id="btnExportConfirm">导出</button>
@@ -340,9 +341,11 @@
   <script src="js/arranger.js"></script>
   <script src="js/track-playback.js"></script>
   <script src="js/layout.js"></script>
+  <script src="js/file-save.js"></script>
   <script src="js/project-io.js"></script>
   <script src="js/help-guide.js"></script>
   <script src="js/history.js"></script>
+  <script src="js/lame.min.js"></script>
   <script src="js/audio-export.js"></script>
   <script src="js/beat-battle-cloud.js"></script>
   <script src="js/app.js"></script>

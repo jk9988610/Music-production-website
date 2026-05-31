@@ -1129,6 +1129,11 @@
       els.btnExport.addEventListener("click", () => {
         if (els.exportFormat) els.exportFormat.value = "json";
         if (els.exportBasename) els.exportBasename.value = "";
+        const hint = document.getElementById("exportDownloadHint");
+        if (hint) {
+          hint.hidden = true;
+          hint.innerHTML = "";
+        }
         els.exportDialog.showModal();
       });
     }
@@ -1142,15 +1147,48 @@
         }
         const format = els.exportFormat?.value || "json";
         const name = els.exportBasename?.value?.trim() || undefined;
-        els.exportDialog.close();
+        const isAudio = format === "wav" || format === "mp3";
+        const btnConfirm = document.getElementById("btnExportConfirm");
+        const prevLabel = btnConfirm?.textContent;
+        if (isAudio && btnConfirm) {
+          btnConfirm.disabled = true;
+          btnConfirm.textContent = "渲染中…";
+        } else {
+          els.exportDialog.close();
+        }
         try {
-          setStatus(format === "json" ? "正在导出项目…" : "正在渲染并导出音频，请稍候…");
+          setStatus(
+            format === "json"
+              ? "正在导出项目…"
+              : isAudio
+                ? "请选择保存位置，随后将渲染音频（约数秒）…"
+                : "正在渲染并导出音频，请稍候…"
+          );
           const result = await ProjectIO.exportProject(getProjectData(), { format, name });
           AppLogger.info("已导出", result.filename);
-          setStatus(`已导出 ${result.filename}`);
+          if (result.manualLink) {
+            const hint = document.getElementById("exportDownloadHint");
+            if (hint) {
+              hint.hidden = false;
+              hint.textContent = "若未自动下载，请点击下方按钮保存：";
+              hint.appendChild(result.manualLink);
+            }
+            setStatus(`渲染完成 — 已尝试下载 ${result.filename}`);
+          } else {
+            setStatus(`已导出 ${result.filename}`);
+            if (isAudio) els.exportDialog.close();
+          }
         } catch (err) {
           AppLogger.error("导出失败", err.message);
           setStatus("导出失败：" + err.message);
+          if (err.message !== "已取消保存") {
+            alert("导出失败：\n" + err.message);
+          }
+        } finally {
+          if (btnConfirm) {
+            btnConfirm.disabled = false;
+            if (prevLabel) btnConfirm.textContent = prevLabel;
+          }
         }
       });
     }

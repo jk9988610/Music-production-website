@@ -124,7 +124,11 @@ const AudioExport = (() => {
         return;
       }
       const s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js";
+      const build =
+        typeof AppVersion !== "undefined" && AppVersion.BUILD && AppVersion.BUILD !== "dev"
+          ? `?v=${encodeURIComponent(AppVersion.BUILD)}`
+          : "";
+      s.src = `js/lame.min.js${build}`;
       s.dataset.hfLame = "1";
       s.onload = () => resolve(window.lamejs);
       s.onerror = () => reject(new Error("MP3 编码库加载失败"));
@@ -134,6 +138,9 @@ const AudioExport = (() => {
 
   async function encodeMp3(audioBuffer) {
     const lamejs = await loadLamejs();
+    if (!lamejs?.Mp3Encoder) {
+      throw new Error("MP3 编码库未正确加载，请刷新页面后重试");
+    }
     const ch0 = audioBuffer.getChannelData(0);
     const ch1 =
       audioBuffer.numberOfChannels > 1
@@ -165,18 +172,6 @@ const AudioExport = (() => {
     return out;
   }
 
-  function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
   async function renderExportBlob(project, format = "mp3") {
     const buffer = await renderArrangementBuffer(project);
     if (format === "mp3") return encodeMp3(buffer);
@@ -184,11 +179,16 @@ const AudioExport = (() => {
   }
 
   async function exportAudio(project, format, filenameBase) {
-    const blob = await renderExportBlob(project, format);
     const ext = format === "mp3" ? ".mp3" : ".wav";
+    const mime = format === "mp3" ? "audio/mpeg" : "audio/wav";
     const name = filenameBase.endsWith(ext) ? filenameBase : `${filenameBase}${ext}`;
-    downloadBlob(blob, name);
-    return { filename: name, bytes: blob.size };
+    if (typeof FileSave === "undefined") {
+      throw new Error("文件保存模块未加载");
+    }
+    const target = await FileSave.prepareTarget(name, mime);
+    const blob = await renderExportBlob(project, format);
+    const written = await FileSave.writeTarget(target, blob);
+    return { filename: name, bytes: blob.size, manualLink: written.manualLink };
   }
 
   return {
@@ -197,6 +197,5 @@ const AudioExport = (() => {
     encodeWav,
     encodeMp3,
     exportAudio,
-    downloadBlob,
   };
 })();
