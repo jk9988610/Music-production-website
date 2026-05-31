@@ -927,16 +927,22 @@ const AudioEngine = (() => {
       startKeepAlive(c);
       return c;
     }
-    if (!resumePromise) {
-      resumePromise = c.resume().finally(() => {
-        resumePromise = null;
-      });
-    }
-    await resumePromise;
-    if (c.state !== "running") {
-      throw new Error(`AudioContext 仍为 ${c.state}`);
+    try {
+      if (!resumePromise) {
+        resumePromise = c.resume().finally(() => {
+          resumePromise = null;
+        });
+      }
+      await resumePromise;
+    } catch (err) {
+      if (typeof AppLogger !== "undefined") {
+        AppLogger.warn("AudioContext resume", err.message);
+      }
     }
     startKeepAlive(c);
+    if (c.state !== "running" && typeof AppLogger !== "undefined") {
+      AppLogger.warn("AudioContext 未进入 running", c.state);
+    }
     return c;
   }
 
@@ -971,13 +977,14 @@ const AudioEngine = (() => {
     const c = ensureContext();
     const fire = () => {
       const now = c.currentTime;
-      const t = typeof time === "number" && time >= now - 0.02 ? time : now + 0.001;
+      const t = typeof time === "number" && time >= now - 0.02 ? time : now + 0.008;
       playTrackSoundOn(c, (id) => getTrackGain(id), trackId, t, noteMidi, stepDuration);
     };
     if (c.state === "running") {
       fire();
       return;
     }
+    if (playbackActive) return;
     unlockAudio().then(fire).catch(() => {});
   }
 

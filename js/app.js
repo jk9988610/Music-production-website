@@ -21,9 +21,16 @@
   let schedulerTimer = null;
   let audioWatchdogTimer = null;
   let unlockWarmTimer = null;
-  let nextStepTime = 0;
+  /** 音频时间轴：第 0 步发声时刻（AudioContext.currentTime） */
+  let playStartAnchor = 0;
+  /** 已排程到音频时间轴的最后一步索引（-1 = 尚未排任何步） */
+  let lastScheduledStepIndex = -1;
   let stepCounter = 0;
   let bpm = 120;
+
+  const SCHEDULE_LOOKAHEAD = 0.22;
+  const SCHEDULE_TICK_MS = 20;
+  const SCHEDULE_MAX_STEPS_PER_TICK = 24;
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
@@ -561,14 +568,14 @@
       if (document.visibilityState !== "visible") return;
       AudioEngine.unlockAudio()
         .then(() => {
-          if (playing) syncSchedulerClock();
+          if (playing) realignPlayAnchor();
         })
         .catch(() => {});
     });
     AudioEngine.setOnSuspendWhilePlaying(() => {
       if (!playing) return;
       AudioEngine.unlockAudio()
-        .then(() => syncSchedulerClock())
+        .then(() => realignPlayAnchor())
         .catch(() => {});
     });
   }
@@ -582,7 +589,7 @@
       }
       if (!AudioEngine.isRunning()) {
         AudioEngine.unlockAudio()
-          .then(() => syncSchedulerClock())
+          .then(() => realignPlayAnchor())
           .catch(() => {});
       }
     }, 350);
@@ -960,9 +967,7 @@
 
   function bindEvents() {
     els.btnPlay.addEventListener("click", () => {
-      AudioEngine.unlockAudio()
-        .then(() => togglePlay())
-        .catch(() => togglePlay());
+      togglePlay();
     });
     els.btnStop.addEventListener("click", stop);
     els.bpm.addEventListener("input", () => {
@@ -1326,7 +1331,9 @@
       }
       if (e.code === "Space") {
         e.preventDefault();
-        togglePlay();
+        AudioEngine.unlockAudio()
+          .catch(() => {})
+          .finally(() => togglePlay());
       }
       if (e.key >= "1" && e.key <= "9") {
         const pi = Number(e.key) - 1;
@@ -1350,37 +1357,37 @@
     startPlay("arrange");
   }
 
-  function syncSchedulerClock() {
+  function getStepAudioTime(stepIndex) {
+    return playStartAnchor + stepIndex * getStepDuration();
+  }
+
+  /** 重算锚点，使「下一待排步」落在当前音频时间附近（BPM 变更 / 挂起恢复） */
+  function realignPlayAnchor() {
+    if (!playing) return;
     const ctx = AudioEngine.getContext();
     if (!ctx) return;
     const now = ctx.currentTime;
-    if (nextStepTime < now + 0.015) {
-      nextStepTime = now + 0.02;
-    }
+    const dur = getStepDuration();
+    const nextIdx = Math.max(0, lastScheduledStepIndex + 1);
+    playStartAnchor = now + 0.06 - nextIdx * dur;
   }
 
-  /** BPM 变更时让步进时钟对齐当前音频时间，避免音符排到过去被丢弃 */
   function resyncSchedulerForBpmChange() {
     if (!playing) return;
-    syncSchedulerClock();
-    if (AudioEngine.isRunning()) {
-      schedule();
-    }
+    realignPlayAnchor();
+    if (AudioEngine.isRunning()) schedule();
   }
 
   async function startPlay(mode) {
-    try {
-      await AudioEngine.unlockAudio();
-    } catch (err) {
-      AppLogger.error("无法启动音频", err.message);
-      setStatus("音频未就绪，请再点一次播放");
-      return;
-    }
+    await AudioEngine.unlockAudio().catch((err) => {
+      AppLogger.warn("启动音频", err?.message || "unlock 未完成，仍将尝试播放");
+    });
     AudioEngine.setPlaybackActive(true);
     startAudioWatchdog();
     playing = true;
     playMode = mode;
     stepCounter = 0;
+    lastScheduledStepIndex = -1;
     currentStep = -1;
     currentArrangeSection = -1;
     playingPatternIndex = -1;
@@ -1393,7 +1400,7 @@
       loopStepIndex = Math.min(loopStepIndex, Sequencer.steps - 1);
       renderStepLabels();
     }
-    nextStepTime = AudioEngine.getContext().currentTime + 0.05;
+    playStartAnchor = AudioEngine.getContext().currentTime + 0.08;
     if (mode === "arrange") {
       els.btnPlay.classList.add("playing");
       els.btnPlay.textContent = "⏸";
@@ -1439,6 +1446,7 @@
     currentArrangeSection = -1;
     playingPatternIndex = -1;
     stepCounter = 0;
+    lastScheduledStepIndex = -1;
     setStatus("已停止");
   }
 
@@ -1451,43 +1459,48 @@
       AudioEngine.unlockAudio()
         .then(() => {
           if (!playing) return;
-          syncSchedulerClock();
+          realignPlayAnchor();
           schedule();
         })
         .catch(() => {});
-      schedulerTimer = setTimeout(schedule, 40);
+      schedulerTimer = setTimeout(schedule, 50);
       return;
     }
 
-    const lookAhead = 0.15;
-    let now = ctx.currentTime;
-    syncSchedulerClock();
-    now = ctx.currentTime;
+    const now = ctx.currentTime;
+    const horizon = now + SCHEDULE_LOOKAHEAD;
+    let queued = 0;
 
-    let guard = 0;
-    while (nextStepTime < now + lookAhead && guard < 48) {
-      guard += 1;
-      const nowLoop = ctx.currentTime;
-      const stepDur = getStepDuration();
-      let t = Math.max(nextStepTime, nowLoop + 0.015);
-      if (t < nowLoop) t = nowLoop + 0.015;
-      playStepAt(t);
-      nextStepTime = t + stepDur;
-      stepCounter++;
-      now = ctx.currentTime;
+    while (queued < SCHEDULE_MAX_STEPS_PER_TICK) {
+      const stepIndex = lastScheduledStepIndex + 1;
+      const t = getStepAudioTime(stepIndex);
+      if (t >= horizon) break;
+
+      if (t < now - 0.1) {
+        lastScheduledStepIndex = stepIndex;
+        stepCounter = stepIndex;
+        queued += 1;
+        continue;
+      }
+
+      const playT = Math.max(t, now + 0.008);
+      playStepAt(playT, stepIndex);
+      lastScheduledStepIndex = stepIndex;
+      stepCounter = stepIndex;
+      queued += 1;
     }
 
-    schedulerTimer = setTimeout(schedule, 25);
+    schedulerTimer = setTimeout(schedule, SCHEDULE_TICK_MS);
   }
 
-  function playStepAt(time) {
+  function playStepAt(time, stepIndex) {
     let patternIndex;
     let step;
     const sections = Arranger.getSections();
 
     if (playMode === "arrange") {
       const totalSteps = sections.length * Sequencer.steps;
-      const globalStep = stepCounter % totalSteps;
+      const globalStep = stepIndex % totalSteps;
       currentArrangeSection = Math.floor(globalStep / Sequencer.steps);
       step = globalStep % Sequencer.steps;
       patternIndex = sections[currentArrangeSection]?.patternIndex ?? 0;
@@ -1496,7 +1509,7 @@
       step = loopStepIndex;
     } else {
       patternIndex = Sequencer.currentPattern();
-      step = stepCounter % Sequencer.steps;
+      step = stepIndex % Sequencer.steps;
     }
 
     currentStep = step;
@@ -1516,7 +1529,7 @@
 
     if (playMode === "arrange" && step === Sequencer.steps - 1) {
       const nextSec = (currentArrangeSection + 1) % sections.length;
-      if (nextSec === 0 && stepCounter > 0) {
+      if (nextSec === 0 && stepIndex > 0) {
         setStatus("编曲循环播放中…");
       }
     }
