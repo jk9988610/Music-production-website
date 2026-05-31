@@ -1353,8 +1353,17 @@
     const ctx = AudioEngine.getContext();
     if (!ctx) return;
     const now = ctx.currentTime;
-    if (nextStepTime < now - 0.05) {
+    if (nextStepTime < now + 0.015) {
       nextStepTime = now + 0.02;
+    }
+  }
+
+  /** BPM 变更时让步进时钟对齐当前音频时间，避免音符排到过去被丢弃 */
+  function resyncSchedulerForBpmChange() {
+    if (!playing) return;
+    syncSchedulerClock();
+    if (AudioEngine.isRunning()) {
+      schedule();
     }
   }
 
