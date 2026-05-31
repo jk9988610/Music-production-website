@@ -11,10 +11,10 @@ const HelpGuide = (() => {
         <p>HarmonyForge 把「节奏 → 和声 → 旋律 → 段落」拆开，用 <strong>类型</strong> 存短循环，用 <strong>时间轴</strong> 拼成完整曲式。建议按下面顺序操作。</p>
         <ol class="help-steps">
           <li><strong>定调</strong>：点旋律格子打开选音弹窗，在弹窗里设「调」「阶」（未改时默认 C 大调）。节奏类音色无音高。</li>
-          <li><strong>做节奏</strong>：在音序器选 Pattern A，用地脉 / 裂帛 / 星屑等，做出 1 小节节奏模板。</li>
-          <li><strong>做渊鸣</strong>：仍在 A（或新建 B），在渊鸣轨填根音 — 通常落在强拍，与地脉对齐。</li>
-          <li><strong>做绒霭</strong>：在绒霭轨填块状和弦根音（见「音高与配器」），常每 4 步换一次。</li>
-          <li><strong>做星织</strong>：在星织轨用音阶内音填句，避开与绒霭打架的密集区。</li>
+          <li><strong>做节奏</strong>：在音序器选 Pattern A，用底鼓 / 军鼓 / 闭镲等，做出 1 小节节奏模板。</li>
+          <li><strong>做贝斯</strong>：仍在 A（或新建 B），在电贝斯轨填根音 — 通常落在强拍，与底鼓对齐。</li>
+          <li><strong>做和弦</strong>：在和弦铺底轨填块状和弦根音（见「音高与配器」），常每 4 步换一次。</li>
+          <li><strong>做主旋律</strong>：在合成主音轨用音阶内音填句，避开与和弦铺底打架的密集区。</li>
           <li><strong>复制变型</strong>：用「+型」复制出 B/C/D，做加花、过门或副歌加密度。</li>
           <li><strong>排段落</strong>：在编曲模块用时间轴把 §1§2§… 指到 A/B/C/D；「+段」会弹窗选类型。</li>
           <li><strong>混音</strong>：平衡各轨音量；音序轨旁可设「密度」½×～4×。</li>
@@ -44,7 +44,7 @@ const HelpGuide = (() => {
         <p><strong>典型曲式示例：</strong></p>
         <ul class="help-list">
           <li>§1–§2 → A（前奏 / 主歌节奏）</li>
-          <li>§3–§6 → B（主歌加渊鸣与绒霭）</li>
+          <li>§3–§6 → B（主歌加贝斯与和弦铺底）</li>
           <li>§7–§8 → C（副歌更满）</li>
           <li>§9 → D（过门或 breakdown）</li>
         </ul>
@@ -55,21 +55,21 @@ const HelpGuide = (() => {
       label: "音序",
       html: `
         <h4>步进音序器</h4>
-        <p>默认 7 轨，可用「+轨」「−轨」增减（1～12 轨）。<strong>点击轨名</strong>切换音色（共 16 种听感命名音色）。</p>
+        <p>默认 7 轨，可用「+轨」「−轨」增减（1～12 轨）。<strong>点击轨名</strong>切换音色（共 16 种标准制作用语命名）。</p>
         <ul class="help-list">
-          <li><strong>节奏类</strong>：地脉、裂帛、星屑、破晓、木霆、沧澜</li>
-          <li><strong>旋律类</strong>：渊鸣、瓷釉、流光、绒霭、星织、烟簧、金翎、暮铜、霜弓、幽沼</li>
-          <li><strong>地脉</strong>：低频正弦 + 击点击</li>
-          <li><strong>裂帛</strong>：噪声 + 体共鸣</li>
-          <li><strong>星屑 / 破晓 / 沧澜</strong>：短、开、长亮金属擦音分层</li>
-          <li><strong>渊鸣</strong>：正弦低音 + 锯齿谐波</li>
-          <li><strong>瓷釉</strong>：FM 击齿 + 体；选音 C3–G5</li>
-          <li><strong>星织</strong>：主旋律 — 明亮锯齿、长延音</li>
-          <li><strong>绒霭</strong>：管风琴式垫音，适合铺底</li>
-          <li><strong>流光</strong>：清拨快衰</li>
-          <li><strong>烟簧</strong>：锯齿激励 + 共振峰</li>
-          <li><strong>金翎 / 暮铜</strong>：亮扫频 vs 暗厚铜色</li>
-          <li><strong>霜弓 / 幽沼</strong>：爽朗清亮弓弦谐波；连弓长音，无噪声层</li>
+          <li><strong>节奏类</strong>：底鼓、军鼓、闭镲、开镲、通鼓、碎音镲</li>
+          <li><strong>旋律类</strong>：电贝斯、钢琴、电吉他、和弦铺底、合成主音、萨克斯、小号、长号、小提琴、大提琴</li>
+          <li><strong>底鼓</strong>：低频膜片合成 + 击点击</li>
+          <li><strong>军鼓</strong>：噪声 + 体共鸣</li>
+          <li><strong>闭镲 / 开镲 / 碎音镲</strong>：短、开、长亮金属镲片分层</li>
+          <li><strong>电贝斯</strong>：锯齿低音 + 低通滤波</li>
+          <li><strong>钢琴</strong>：FM 击齿 + 共鸣体；选音 C3–G5</li>
+          <li><strong>合成主音</strong>：主旋律 — 明亮锯齿、长延音</li>
+          <li><strong>和弦铺底</strong>：振幅调制垫音，适合铺底</li>
+          <li><strong>电吉他</strong>：拨弦快衰</li>
+          <li><strong>萨克斯</strong>：FM 管乐音色</li>
+          <li><strong>小号 / 长号</strong>：亮铜管 vs 暗厚铜管</li>
+          <li><strong>小提琴 / 大提琴</strong>：弓弦类；大提琴偏连弓长音</li>
           <li><strong>换音色</strong>：点左侧轨名</li>
           <li><strong>密度</strong>：倍率按钮（½×～4×），弹窗选择。</li>
           <li><strong>±轨 / ±4步</strong>：增减轨道数与 Pattern 长度。</li>
@@ -89,7 +89,7 @@ const HelpGuide = (() => {
         <p>音序模块每轨名称旁的 <strong>密度</strong>（½× / 1× / 2× / 4×）表示相对主步进的触发倍率：</p>
         <ul class="help-list">
           <li><strong>1×</strong>：每个主步最多触发一次（默认）</li>
-          <li><strong>2× / 4×</strong>：同一主步内细分多次（适合星屑、装饰音）</li>
+          <li><strong>2× / 4×</strong>：同一主步内细分多次（适合闭镲、装饰音）</li>
           <li><strong>½×</strong>：每隔一个主步才读该列格子（适合慢一倍的气垫）</li>
         </ul>
         <p>网格仍按主步编辑；密度只改变播放与导出时的触发时机，不改变段落长度。</p>
@@ -100,35 +100,35 @@ const HelpGuide = (() => {
       label: "音高与配器",
       html: `
         <h4>程序音高基础</h4>
-        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。点格子打开<strong>选音弹窗</strong>，在弹窗顶部设「调」「阶」——<strong>只决定可选音列表，不改变该轨音色</strong>。瓷釉选音限定在 C3–G5，避免过低像渊鸣。未设时默认 <strong>C 大调</strong>。</p>
+        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。点格子打开<strong>选音弹窗</strong>，在弹窗顶部设「调」「阶」——<strong>只决定可选音列表，不改变该轨音色</strong>。钢琴选音限定在 C3–G5，避免过低像电贝斯。未设时默认 <strong>C 大调</strong>。</p>
         <p>选音弹窗默认勾选 <strong>试听</strong>：点击音高会用该轨当前音色预听一次，并会停止编曲 / 类型循环 / 单步循环播放；满意后点「选用」写入格子。</p>
 
-        <h4>地脉 · 裂帛 · 擦音类</h4>
+        <h4>底鼓 · 军鼓 · 镲片类</h4>
         <p><strong>无音高。</strong>只负责节奏框架。</p>
         <ul class="help-list">
-          <li>地脉：常放在第 1、5、9、13 步（四拍底）</li>
-          <li>裂帛：常放在第 5、13 步（2、4 拍）</li>
-          <li>星屑：八分或十六分均匀；破晓：偶尔在第 16 步或反拍点缀</li>
+          <li>底鼓：常放在第 1、5、9、13 步（四拍底）</li>
+          <li>军鼓：常放在第 5、13 步（2、4 拍）</li>
+          <li>闭镲：八分或十六分均匀；开镲：偶尔在第 16 步或反拍点缀</li>
         </ul>
 
-        <h4>渊鸣轨</h4>
+        <h4>电贝斯轨</h4>
         <p><strong>单音</strong>，跟根音走。在 C 大调里优先选 C、F、G 等音阶音，低八度（如 C2–G2）。</p>
         <ul class="help-list">
-          <li>强拍（1、3 拍）放根音，与地脉对齐</li>
+          <li>强拍（1、3 拍）放根音，与底鼓对齐</li>
           <li>可每 4 步换一个音，形成 I–IV–V 进行（如 C → F → G → C）</li>
-          <li>避免与绒霭轨音高完全重复同一八度，渊鸣应更低</li>
+          <li>避免与和弦铺底轨音高完全重复同一八度，贝斯应更低</li>
         </ul>
 
-        <h4>绒霭轨</h4>
+        <h4>和弦铺底轨</h4>
         <p>格内音高是<strong>和弦根音</strong>。程序会自动叠 <strong>根音 + 大三度 + 纯五度</strong>（大三和弦）。</p>
         <ul class="help-list">
           <li>同一和弦常持续 4 步或 8 步再换</li>
           <li>C 大调：I=C，IV=F，V=G — 选对应根音即可</li>
-          <li>绒霭偏中低区（如 C3–G3），不要比渊鸣还低</li>
+          <li>和弦铺底偏中低区（如 C3–G3），不要比贝斯还低</li>
         </ul>
 
-        <h4>星织轨</h4>
-        <p><strong>单音</strong>，最亮。常用比绒霭高一个八度以上（如 C4–G4）。</p>
+        <h4>合成主音轨</h4>
+        <p><strong>单音</strong>，最亮。常用比和弦铺底高一个八度以上（如 C4–G4）。</p>
         <ul class="help-list">
           <li>从音阶音开始，先写短 motive（3～5 个音）再重复变奏</li>
           <li>强拍可用音阶 1 度或 5 度，弱拍用经过音</li>
@@ -140,16 +140,16 @@ const HelpGuide = (() => {
         <table class="help-table">
           <thead><tr><th>音色</th><th>音区</th><th>节奏</th><th>作用</th></tr></thead>
           <tbody>
-            <tr><td>地脉</td><td>—</td><td>四拍</td><td>脉动</td></tr>
-            <tr><td>裂帛</td><td>—</td><td>2/4 拍</td><td>骨架</td></tr>
-            <tr><td>渊鸣</td><td>C2–G2</td><td>根音在强拍</td><td>和声底座</td></tr>
-            <tr><td>绒霭</td><td>C3–G3</td><td>每 4 步换根</td><td>和声填充</td></tr>
-            <tr><td>星织</td><td>C4–G4</td><td>句型</td><td>记忆点</td></tr>
+            <tr><td>底鼓</td><td>—</td><td>四拍</td><td>节奏底座</td></tr>
+            <tr><td>军鼓</td><td>—</td><td>2/4 拍</td><td>节奏骨架</td></tr>
+            <tr><td>电贝斯</td><td>C2–G2</td><td>根音在强拍</td><td>和声底座</td></tr>
+            <tr><td>和弦铺底</td><td>C3–G3</td><td>每 4 步换根</td><td>和声填充</td></tr>
+            <tr><td>合成主音</td><td>C4–G4</td><td>句型</td><td>记忆点</td></tr>
           </tbody>
         </table>
 
         <h4>不同调式</h4>
-        <p>换「阶」为五声时选音变少；蓝调适合爵士句；小调时渊鸣 / 绒霭优先 i、iv、V 级。每格可单独选调/阶。改调/阶后已填音不会自动移调，需手动重选。</p>
+        <p>换「阶」为五声时选音变少；蓝调适合爵士句；小调时贝斯 / 和弦铺底优先 i、iv、V 级。每格可单独选调/阶。改调/阶后已填音不会自动移调，需手动重选。</p>
       `,
     },
     {
@@ -159,9 +159,9 @@ const HelpGuide = (() => {
         <h4>混音</h4>
         <p>混音模块各轨一条音量滑条。建议起点：</p>
         <ul class="help-list">
-          <li>节奏类合计最大（地脉、裂帛、擦音约 80～90%）</li>
-          <li>渊鸣次之（约 75%），再绒霭（约 70%）</li>
-          <li>星织略低于节奏、高于绒霭（约 65～75%），避免盖过主唱想象位</li>
+          <li>节奏类合计最大（底鼓、军鼓、镲片约 80～90%）</li>
+          <li>电贝斯次之（约 75%），再和弦铺底（约 70%）</li>
+          <li>合成主音略低于节奏、高于和弦铺底（约 65～75%），避免盖过主唱想象位</li>
         </ul>
         <p>随草稿自动保存。</p>
         <h4>播放</h4>
