@@ -1,390 +1,25 @@
 /**
- * Web Audio 合成 — 16 种听感音色（地脉裂帛星屑 / 渊鸣瓷釉绒霭星织 / 烟簧金翎暮铜霜弓幽沼等，见各 play* 注释）
+ * HarmonyForge 音频引擎 — Tone.js 合成与调度
+ * @see https://tonejs.github.io/
  */
 const AudioEngine = (() => {
-  let ctx = null;
-  let masterGain = null;
-  let resumePromise = null;
-  let keepAliveSrc = null;
+  const MASTER_GAIN = 0.85;
+  let ready = false;
   let playbackActive = false;
   let onSuspendWhilePlaying = null;
-  const trackGains = {};
+  const trackChannels = {};
+  const trackSynths = {};
 
-  function midiToFreq(midi) {
-    return 440 * Math.pow(2, (midi - 69) / 12);
-  }
-
-  function playKickOn(c, out, time, gain = 0.9) {
-    const clickLen = Math.max(4, Math.floor(c.sampleRate * 0.004));
-    const click = c.createBuffer(1, clickLen, c.sampleRate);
-    const cd = click.getChannelData(0);
-    for (let i = 0; i < clickLen; i++) cd[i] = (Math.random() * 2 - 1) * (1 - i / clickLen);
-    const clickSrc = c.createBufferSource();
-    clickSrc.buffer = click;
-    const clickE = c.createGain();
-    clickE.gain.setValueAtTime(gain * 0.35, time);
-    clickE.gain.exponentialRampToValueAtTime(0.001, time + 0.008);
-    clickSrc.connect(clickE);
-    clickE.connect(out);
-    clickSrc.start(time);
-    clickSrc.stop(time + 0.01);
-
-    const osc = c.createOscillator();
-    const env = c.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(165, time);
-    osc.frequency.exponentialRampToValueAtTime(42, time + 0.1);
-    env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + 0.38);
-    osc.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(time + 0.42);
-  }
-
-  function playSnareOn(c, out, time, gain = 0.75) {
-    const bufferSize = c.sampleRate * 0.2;
-    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+  function resolveVoice(trackId) {
+    if (typeof Sequencer !== "undefined" && Sequencer.getTrack) {
+      const t = Sequencer.getTrack(trackId);
+      if (t?.voice) return t.voice;
     }
-    const noise = c.createBufferSource();
-    noise.buffer = buffer;
-    const filter = c.createBiquadFilter();
-    filter.type = "highpass";
-    filter.frequency.value = 800;
-    const env = c.createGain();
-    env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
-    noise.connect(filter);
-    filter.connect(env);
-    env.connect(out);
-    noise.start(time);
-    noise.stop(time + 0.2);
-    const tone = c.createOscillator();
-    const toneEnv = c.createGain();
-    tone.type = "triangle";
-    tone.frequency.value = 180;
-    toneEnv.gain.setValueAtTime(gain * 0.4, time);
-    toneEnv.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
-    tone.connect(toneEnv);
-    toneEnv.connect(out);
-    tone.start(time);
-    tone.stop(time + 0.1);
+    return trackId;
   }
 
-  function playHatOn(c, out, time, open = false, gain = 0.5, filterHz = 7000) {
-    const dur = open ? 0.25 : 0.05;
-    const bufferSize = Math.floor(c.sampleRate * dur);
-    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * (open ? 1 - i / bufferSize : 1);
-    }
-    const noise = c.createBufferSource();
-    noise.buffer = buffer;
-    const filter = c.createBiquadFilter();
-    filter.type = "highpass";
-    filter.frequency.value = filterHz;
-    const env = c.createGain();
-    env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + dur);
-    noise.connect(filter);
-    filter.connect(env);
-    env.connect(out);
-    noise.start(time);
-    noise.stop(time + dur + 0.02);
-  }
-
-  function playTomOn(c, out, time, gain = 0.8) {
-    const osc = c.createOscillator();
-    const env = c.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(180, time);
-    osc.frequency.exponentialRampToValueAtTime(70, time + 0.14);
-    env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + 0.32);
-    osc.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(time + 0.34);
-  }
-
-  /** 沧澜 — 比破晓更亮、更长的高频金属感 */
-  function playCymbalOn(c, out, time, gain = 0.42) {
-    const dur = 0.55;
-    const bufferSize = Math.floor(c.sampleRate * dur);
-    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize) ** 0.7;
-    }
-    const noise = c.createBufferSource();
-    noise.buffer = buffer;
-    const hp = c.createBiquadFilter();
-    hp.type = "highpass";
-    hp.frequency.value = 5200;
-    const bp = c.createBiquadFilter();
-    bp.type = "bandpass";
-    bp.frequency.value = 9200;
-    bp.Q.value = 0.6;
-    const env = c.createGain();
-    env.gain.setValueAtTime(gain, time);
-    env.gain.exponentialRampToValueAtTime(0.001, time + dur);
-    noise.connect(hp);
-    hp.connect(bp);
-    bp.connect(env);
-    env.connect(out);
-    noise.start(time);
-    noise.stop(time + dur + 0.02);
-  }
-
-  /**
-   * 霜弓 / 幽沼 — 纯谐波加法（无噪声）：正弦分音 + 轻微失谐 + 明亮低通。
-   * 仅幅度起弓，不做管乐式低通扫频；高音分音较快起音以增强穿透。
-   */
-  function playBowedString(c, out, time, midi, duration, gain, preset) {
-    const freq = midiToFreq(midi);
-    const inharmonicB = preset.inharmonicB ?? 0.00028;
-    const noteLen = Math.max(duration, preset.minNoteLen ?? 0.65);
-    const stopAt = time + noteLen + 0.35;
-    const baseAtk = preset.attack ?? 0.1;
-    const rel = noteLen * (preset.releaseMul ?? 0.98);
-    const harmWaveFrom = preset.harmonicWaveFromN ?? 99;
-    const harmWave = preset.harmonicWave ?? "triangle";
-
-    const master = c.createGain();
-    master.gain.setValueAtTime(0, time);
-    master.gain.linearRampToValueAtTime(gain, time + baseAtk);
-    master.gain.setValueAtTime(gain * (preset.sustain ?? 0.92), time + baseAtk + 0.08);
-    master.gain.exponentialRampToValueAtTime(0.001, time + rel);
-
-    const bus = c.createGain();
-    let chain = bus;
-    if (preset.highpassHz) {
-      const hp = c.createBiquadFilter();
-      hp.type = "highpass";
-      hp.frequency.value = preset.highpassHz;
-      hp.Q.value = preset.highpassQ ?? 0.65;
-      chain.connect(hp);
-      chain = hp;
-    }
-    (preset.bodyPeaks ?? []).forEach((body) => {
-      const pk = c.createBiquadFilter();
-      pk.type = "peaking";
-      pk.frequency.value = body.hz;
-      pk.Q.value = body.q ?? 4;
-      pk.gain.value = body.gain ?? 3;
-      chain.connect(pk);
-      chain = pk;
-    });
-
-    const lp = c.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.value = Math.min(
-      preset.lpCap ?? 9000,
-      freq * (preset.lpMul ?? 11) + (preset.lpAdd ?? 650)
-    );
-    lp.Q.value = preset.lpQ ?? 0.6;
-    chain.connect(lp);
-    lp.connect(master);
-    master.connect(out);
-
-    const vib = c.createOscillator();
-    vib.type = "sine";
-    vib.frequency.value = preset.vibratoHz ?? 5.2;
-    const vibDepth = c.createGain();
-    vibDepth.gain.value = preset.vibratoCents ?? 11;
-    vib.connect(vibDepth);
-    const vibStart = time + (preset.vibratoDelay ?? 0.24);
-    vib.start(vibStart);
-    vib.stop(stopAt);
-
-    (preset.partials ?? []).forEach((p) => {
-      const n = p.n ?? 1;
-      const f = freq * n * Math.sqrt(1 + inharmonicB * n * n);
-      if (f > (preset.maxHz ?? 11000)) return;
-
-      const osc = c.createOscillator();
-      osc.type = p.wave ?? (n >= harmWaveFrom ? harmWave : "sine");
-      osc.frequency.setValueAtTime(f, time);
-      if (n === 1 || preset.vibratoOnFundamental !== false) {
-        vibDepth.connect(osc.detune);
-      }
-      if (p.detuneCents != null) {
-        osc.detune.setValueAtTime(p.detuneCents, time);
-      }
-
-      const amp = c.createGain();
-      const peak = gain * (p.amp ?? 0.25);
-      const atk = p.atk ?? Math.max(0.004, baseAtk - n * 0.008);
-      const pRel = Math.max(0.2, noteLen * (p.decayMul ?? 0.96));
-      amp.gain.setValueAtTime(0, time);
-      amp.gain.linearRampToValueAtTime(peak, time + atk);
-      amp.gain.setValueAtTime(peak * (p.sustain ?? 0.9), time + atk + 0.04);
-      amp.gain.exponentialRampToValueAtTime(0.001, time + pRel);
-
-      osc.connect(amp);
-      amp.connect(bus);
-      osc.start(time);
-      osc.stop(stopAt);
-    });
-  }
-
-  const BOW_VIOLIN = {
-    minNoteLen: 0.68,
-    attack: 0.042,
-    sustain: 0.9,
-    releaseMul: 0.99,
-    vibratoHz: 5.6,
-    vibratoCents: 7,
-    vibratoDelay: 0.38,
-    vibratoOnFundamental: false,
-    inharmonicB: 0.00035,
-    harmonicWaveFromN: 3,
-    harmonicWave: "triangle",
-    highpassHz: 210,
-    highpassQ: 0.55,
-    lpCap: 15000,
-    lpMul: 17,
-    lpAdd: 1600,
-    lpQ: 0.32,
-    maxHz: 14000,
-    partials: [
-      { n: 1, amp: 0.28, atk: 0.05, decayMul: 1, detuneCents: -4 },
-      { n: 1, amp: 0.28, atk: 0.05, decayMul: 1, detuneCents: 4 },
-      { n: 2, amp: 0.34, atk: 0.028, decayMul: 0.99 },
-      { n: 3, amp: 0.36, atk: 0.018, decayMul: 0.98 },
-      { n: 4, amp: 0.32, atk: 0.012, decayMul: 0.97 },
-      { n: 5, amp: 0.28, atk: 0.009, decayMul: 0.96 },
-      { n: 6, amp: 0.24, atk: 0.007, decayMul: 0.94 },
-      { n: 7, amp: 0.2, atk: 0.006, decayMul: 0.92 },
-      { n: 8, amp: 0.16, atk: 0.005, decayMul: 0.9 },
-      { n: 9, amp: 0.12, atk: 0.004, decayMul: 0.88 },
-      { n: 10, amp: 0.08, atk: 0.003, decayMul: 0.86 },
-    ],
-    bodyPeaks: [
-      { hz: 1800, q: 2.2, gain: 3 },
-      { hz: 3400, q: 2.8, gain: 5.5 },
-      { hz: 5600, q: 3.2, gain: 4.5 },
-    ],
-  };
-
-  const BOW_CELLO = {
-    minNoteLen: 0.72,
-    attack: 0.052,
-    sustain: 0.91,
-    releaseMul: 0.99,
-    vibratoHz: 4.6,
-    vibratoCents: 6,
-    vibratoDelay: 0.42,
-    vibratoOnFundamental: false,
-    inharmonicB: 0.00028,
-    harmonicWaveFromN: 2,
-    harmonicWave: "triangle",
-    highpassHz: 155,
-    highpassQ: 0.5,
-    lpCap: 9200,
-    lpMul: 12,
-    lpAdd: 1100,
-    lpQ: 0.34,
-    maxHz: 10000,
-    partials: [
-      { n: 1, amp: 0.34, atk: 0.06, decayMul: 1, detuneCents: -3 },
-      { n: 1, amp: 0.34, atk: 0.06, decayMul: 1, detuneCents: 3 },
-      { n: 2, amp: 0.38, atk: 0.032, decayMul: 0.99 },
-      { n: 3, amp: 0.36, atk: 0.022, decayMul: 0.98 },
-      { n: 4, amp: 0.32, atk: 0.016, decayMul: 0.97 },
-      { n: 5, amp: 0.28, atk: 0.012, decayMul: 0.96 },
-      { n: 6, amp: 0.22, atk: 0.009, decayMul: 0.94 },
-      { n: 7, amp: 0.17, atk: 0.007, decayMul: 0.92 },
-      { n: 8, amp: 0.12, atk: 0.005, decayMul: 0.9 },
-    ],
-    bodyPeaks: [
-      { hz: 1200, q: 2, gain: 2.5 },
-      { hz: 2600, q: 2.6, gain: 4.5 },
-      { hz: 4200, q: 3, gain: 3.5 },
-    ],
-  };
-
-  function playViolinOn(c, out, time, midi, duration, gain = 0.46) {
-    playBowedString(c, out, time, midi, duration, gain, BOW_VIOLIN);
-  }
-
-  function playCelloOn(c, out, time, midi, duration, gain = 0.48) {
-    playBowedString(c, out, time, midi, duration, gain, BOW_CELLO);
-  }
-
-  /**
-   * 瓷釉 — FM 击齿 + 锯波体（Rhodes 式）：
-   * 调/阶不参与发声，只影响选音列表；音长取 max(步长, 0.45s) 避免高密度轨听成拨弦。
-   */
-  function playPianoOn(c, out, time, midi, duration, gain = 0.5) {
-    const freq = midiToFreq(midi);
-    const noteLen = Math.max(duration, 0.45);
-    const stopAt = time + noteLen + 0.2;
-
-    const env = c.createGain();
-    const peak = gain * 0.9;
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(peak, time + 0.01);
-    env.gain.exponentialRampToValueAtTime(peak * 0.68, time + 0.14);
-    env.gain.setValueAtTime(peak * 0.6, time + noteLen * 0.5);
-    env.gain.exponentialRampToValueAtTime(0.001, time + noteLen * 0.98);
-
-    const lp = c.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.setValueAtTime(Math.min(5800, 700 + freq * 7.5), time);
-    lp.Q.value = 0.85;
-
-    const mix = c.createGain();
-    mix.connect(lp);
-    lp.connect(env);
-    env.connect(out);
-
-    const carrier = c.createOscillator();
-    carrier.type = "sine";
-    carrier.frequency.setValueAtTime(freq, time);
-    const mod = c.createOscillator();
-    mod.type = "sine";
-    mod.frequency.setValueAtTime(freq * 4, time);
-    const modDepth = c.createGain();
-    modDepth.gain.setValueAtTime(freq * 0.16, time);
-    modDepth.gain.exponentialRampToValueAtTime(freq * 0.008, time + 0.11);
-    mod.connect(modDepth);
-    modDepth.connect(carrier.frequency);
-    const tineG = c.createGain();
-    tineG.gain.value = 0.52;
-    carrier.connect(tineG);
-    tineG.connect(mix);
-    carrier.start(time);
-    carrier.stop(stopAt);
-    mod.start(time);
-    mod.stop(stopAt);
-
-    [-4, 4].forEach((cents) => {
-      const saw = c.createOscillator();
-      saw.type = "sawtooth";
-      saw.frequency.setValueAtTime(freq, time);
-      saw.detune.setValueAtTime(cents, time);
-      const g = c.createGain();
-      g.gain.value = 0.16;
-      saw.connect(g);
-      g.connect(mix);
-      saw.start(time);
-      saw.stop(stopAt);
-    });
-
-    const body = c.createOscillator();
-    body.type = "triangle";
-    body.frequency.setValueAtTime(freq, time);
-    const bodyG = c.createGain();
-    bodyG.gain.value = 0.22;
-    body.connect(bodyG);
-    bodyG.connect(mix);
-    body.start(time);
-    body.stop(stopAt);
+  function midiToNote(midi) {
+    return Tone.Frequency(midi, "midi").toNote();
   }
 
   function pianoNoteDuration(stepDuration) {
@@ -400,12 +35,8 @@ const AudioEngine = (() => {
     if (voice === "violin") return Math.max(stepDuration, 0.68);
     if (voice === "cello") return Math.max(stepDuration, 0.72);
     if (voice === "lead") return leadNoteDuration(stepDuration);
-    if (voice === "bass" || voice === "trombone") {
-      return Math.max(stepDuration, 0.32);
-    }
-    if (voice === "sax" || voice === "trumpet") {
-      return Math.max(stepDuration, 0.36);
-    }
+    if (voice === "bass" || voice === "trombone") return Math.max(stepDuration, 0.32);
+    if (voice === "sax" || voice === "trumpet") return Math.max(stepDuration, 0.36);
     return stepDuration;
   }
 
@@ -424,530 +55,181 @@ const AudioEngine = (() => {
     return map[voice] ?? 0.28;
   }
 
-  /** 渊鸣 — 正弦低音 + 锯齿谐波 */
-  function playBassOn(c, out, time, midi, duration, gain = 0.5) {
-    const freq = midiToFreq(midi);
-    const noteLen = Math.max(duration, 0.32);
-    const stopAt = time + noteLen + 0.1;
-
-    const env = c.createGain();
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(gain * 0.88, time + 0.008);
-    env.gain.exponentialRampToValueAtTime(gain * 0.55, time + noteLen * 0.92);
-
-    const lp = c.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.setValueAtTime(Math.min(1200, 180 + freq * 1.2), time);
-    lp.Q.value = 1.1;
-
-    const mix = c.createGain();
-    mix.connect(lp);
-    lp.connect(env);
-    env.connect(out);
-
-    const sub = c.createOscillator();
-    sub.type = "sine";
-    sub.frequency.setValueAtTime(freq, time);
-    const subG = c.createGain();
-    subG.gain.value = 0.55;
-    sub.connect(subG);
-    subG.connect(mix);
-    sub.start(time);
-    sub.stop(stopAt);
-
-    const saw = c.createOscillator();
-    saw.type = "sawtooth";
-    saw.frequency.setValueAtTime(freq, time);
-    const sawG = c.createGain();
-    sawG.gain.value = 0.28;
-    saw.connect(sawG);
-    sawG.connect(mix);
-    saw.start(time);
-    saw.stop(stopAt);
-  }
-
-  /** 星织 — 主旋律：明亮、延音足，适合唱句 */
-  function playLeadOn(c, out, time, midi, duration, gain = 0.52) {
-    const freq = midiToFreq(midi);
-    const noteLen = leadNoteDuration(duration);
-    const stopAt = time + noteLen + 0.12;
-
-    const env = c.createGain();
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(gain * 0.88, time + 0.03);
-    env.gain.setValueAtTime(gain * 0.84, time + noteLen * 0.45);
-    env.gain.setValueAtTime(gain * 0.8, time + noteLen * 0.72);
-    env.gain.exponentialRampToValueAtTime(0.001, time + noteLen * 0.98);
-
-    const lp = c.createBiquadFilter();
-    lp.type = "lowpass";
-    const lpHz = Math.min(7200, 1600 + freq * 10);
-    lp.frequency.setValueAtTime(lpHz, time);
-    lp.Q.value = 0.85;
-
-    const presence = c.createBiquadFilter();
-    presence.type = "peaking";
-    presence.frequency.value = Math.min(3800, freq * 3.2 + 1200);
-    presence.Q.value = 0.9;
-    presence.gain.value = 4.5;
-
-    const mix = c.createGain();
-    mix.connect(presence);
-    presence.connect(lp);
-    lp.connect(env);
-    env.connect(out);
-
-    const vib = c.createOscillator();
-    vib.type = "sine";
-    vib.frequency.value = 5.6;
-    const vibG = c.createGain();
-    vibG.gain.value = 14;
-    vib.connect(vibG);
-    const vibStart = time + 0.18;
-    vib.start(vibStart);
-    vib.stop(stopAt);
-
-    [-8, 0, 8].forEach((cents, i) => {
-      const osc = c.createOscillator();
-      osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(freq, time);
-      osc.detune.setValueAtTime(cents, time);
-      if (i === 1) vibG.connect(osc.detune);
-      const g = c.createGain();
-      g.gain.value = i === 1 ? 0.42 : 0.22;
-      osc.connect(g);
-      g.connect(mix);
-      osc.start(time);
-      osc.stop(stopAt);
-    });
-
-    const shine = c.createOscillator();
-    shine.type = "sine";
-    shine.frequency.setValueAtTime(freq * 2, time);
-    const shineG = c.createGain();
-    shineG.gain.value = 0.12;
-    shine.connect(shineG);
-    shineG.connect(mix);
-    shine.start(time);
-    shine.stop(stopAt);
-  }
-
-  /** 流光 — 清拨（起拨噪声 + 锯齿体、较快衰减） */
-  function playEguitarOn(c, out, time, midi, duration, gain = 0.48) {
-    const freq = midiToFreq(midi);
-    const noteLen = Math.max(duration, 0.22);
-    const stopAt = time + noteLen + 0.06;
-
-    const pickLen = Math.floor(c.sampleRate * 0.006);
-    const pick = c.createBuffer(1, pickLen, c.sampleRate);
-    const pd = pick.getChannelData(0);
-    for (let i = 0; i < pickLen; i++) pd[i] = (Math.random() * 2 - 1) * (1 - i / pickLen);
-    const pickSrc = c.createBufferSource();
-    pickSrc.buffer = pick;
-    const pickF = c.createBiquadFilter();
-    pickF.type = "highpass";
-    pickF.frequency.value = 1200;
-    const pickE = c.createGain();
-    pickE.gain.setValueAtTime(gain * 0.2, time);
-    pickE.gain.exponentialRampToValueAtTime(0.001, time + 0.012);
-    pickSrc.connect(pickF);
-    pickF.connect(pickE);
-    pickE.connect(out);
-    pickSrc.start(time);
-    pickSrc.stop(time + 0.02);
-
-    const env = c.createGain();
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(gain * 0.75, time + 0.004);
-    env.gain.exponentialRampToValueAtTime(0.001, time + noteLen * 0.85);
-
-    const lp = c.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.setValueAtTime(Math.min(3800, 800 + freq * 5), time);
-    lp.Q.value = 1.4;
-
-    const osc = c.createOscillator();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(freq, time);
-    osc.connect(lp);
-    lp.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(stopAt);
-  }
-
-  /** 烟簧 — 锯齿激励 + 管体低通 + 固定共振峰（峰位不随基频同比下移，避免试听区无声） */
-  function playReedOn(c, out, time, midi, duration, gain, formantHz) {
-    const freq = midiToFreq(midi);
-    const stopAt = time + duration + 0.12;
-
-    const env = c.createGain();
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(gain, time + 0.05);
-    env.gain.setValueAtTime(gain * 0.78, time + duration * 0.4);
-    env.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.85);
-
-    const exc = c.createOscillator();
-    exc.type = "sawtooth";
-    exc.frequency.setValueAtTime(freq, time);
-
-    const bodyLp = c.createBiquadFilter();
-    bodyLp.type = "lowpass";
-    bodyLp.frequency.setValueAtTime(Math.min(3200, freq * 5.5 + 400), time);
-    bodyLp.Q.value = 0.85;
-    const bodyG = c.createGain();
-    bodyG.gain.value = 0.48;
-    exc.connect(bodyG);
-    bodyG.connect(bodyLp);
-    bodyLp.connect(env);
-
-    const bus = c.createGain();
-    bus.gain.value = 0.55;
-    exc.connect(bus);
-
-    formantHz.forEach((hz, i) => {
-      const f = c.createBiquadFilter();
-      f.type = "bandpass";
-      f.frequency.value = hz;
-      f.Q.value = i === 1 ? 7 : 5;
-      const g = c.createGain();
-      g.gain.value = i === 1 ? 0.5 : 0.36;
-      bus.connect(f);
-      f.connect(g);
-      g.connect(env);
-    });
-
-    env.connect(out);
-    exc.start(time);
-    exc.stop(stopAt);
-  }
-
-  function playSaxOn(c, out, time, midi, duration, gain = 0.52) {
-    const f = midiToFreq(midi);
-    playReedOn(c, out, time, midi, duration, gain, [
-      Math.max(420, Math.min(980, 560 + f * 0.1)),
-      Math.max(1000, Math.min(1900, 1320 + f * 0.15)),
-      Math.max(2400, Math.min(3800, 2850 + f * 0.06)),
-    ]);
-  }
-
-  /** 金翎 / 暮铜 — 共用铜色模型，参数区分亮/暗 */
-  function playBrassOn(c, out, time, midi, duration, gain, preset) {
-    const freq = midiToFreq(midi);
-    const stopAt = time + duration + 0.15;
-
-    const env = c.createGain();
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(gain, time + preset.attack);
-    env.gain.setValueAtTime(gain * preset.sustain, time + duration * 0.42);
-    env.gain.exponentialRampToValueAtTime(0.001, time + duration * preset.releaseMul);
-
-    const lp = c.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.setValueAtTime(preset.lpStart, time);
-    lp.frequency.exponentialRampToValueAtTime(preset.lpPeak, time + 0.045);
-    lp.Q.value = preset.q ?? 2.4;
-
-    const mix = c.createGain();
-    mix.connect(lp);
-    lp.connect(env);
-    env.connect(out);
-
-    const saw = c.createOscillator();
-    saw.type = "sawtooth";
-    saw.frequency.setValueAtTime(freq, time);
-    const sawG = c.createGain();
-    sawG.gain.value = 0.5;
-    saw.connect(sawG);
-    sawG.connect(mix);
-    saw.start(time);
-    saw.stop(stopAt);
-
-    if (preset.squareMix > 0) {
-      const sq = c.createOscillator();
-      sq.type = "square";
-      sq.frequency.setValueAtTime(freq, time);
-      const sqG = c.createGain();
-      sqG.gain.value = preset.squareMix;
-      sq.connect(sqG);
-      sqG.connect(mix);
-      sq.start(time);
-      sq.stop(stopAt);
-    }
-
-    if (preset.vibratoHz) {
-      const vib = c.createOscillator();
-      vib.type = "sine";
-      vib.frequency.value = preset.vibratoHz;
-      const depth = c.createGain();
-      depth.gain.value = preset.vibratoCents ?? 10;
-      vib.connect(depth);
-      depth.connect(saw.detune);
-      const t0 = time + (preset.vibratoDelay ?? 0.1);
-      vib.start(t0);
-      vib.stop(stopAt);
-    }
-  }
-
-  const BRASS_TRUMPET = {
-    attack: 0.032,
-    sustain: 0.8,
-    releaseMul: 0.82,
-    lpStart: 480,
-    lpPeak: 4600,
-    squareMix: 0.18,
-    vibratoHz: 5.2,
-    vibratoCents: 11,
-    vibratoDelay: 0.1,
-  };
-
-  const BRASS_TROMBONE = {
-    attack: 0.055,
-    sustain: 0.86,
-    releaseMul: 0.9,
-    lpStart: 260,
-    lpPeak: 2600,
-    q: 2,
-    squareMix: 0.12,
-    vibratoHz: 4.3,
-    vibratoCents: 9,
-    vibratoDelay: 0.16,
-  };
-
-  function playTrumpetOn(c, out, time, midi, duration, gain = 0.48) {
-    playBrassOn(c, out, time, midi, duration, gain, BRASS_TRUMPET);
-  }
-
-  function playTromboneOn(c, out, time, midi, duration, gain = 0.46) {
-    playBrassOn(c, out, time, midi, duration, gain, BRASS_TROMBONE);
-  }
-
-  /** 绒霭 — 管风琴式垫音（慢起音、偏暗），与瓷釉模型区分 */
-  function playChordPadTone(c, out, time, midi, duration, noteGain, detuneCents) {
-    const freq = midiToFreq(midi);
-    const bus = c.createGain();
-    bus.gain.value = 1;
-    const lp = c.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.setValueAtTime(720, time);
-    lp.frequency.exponentialRampToValueAtTime(1100, time + 0.12);
-    lp.frequency.exponentialRampToValueAtTime(850, time + duration * 0.7);
-    lp.Q.value = 1.2;
-
-    const drawbars = [
-      { mult: 1, wave: "sawtooth", amp: 0.55 },
-      { mult: 2, wave: "square", amp: 0.22 },
-      { mult: 3, wave: "sine", amp: 0.12 },
-    ];
-
-    drawbars.forEach(({ mult, wave, amp }) => {
-      const osc = c.createOscillator();
-      const env = c.createGain();
-      osc.type = wave;
-      osc.frequency.setValueAtTime(freq * mult, time);
-      osc.detune.setValueAtTime(detuneCents, time);
-      const rel = duration * 0.92;
-      env.gain.setValueAtTime(0, time);
-      env.gain.linearRampToValueAtTime(noteGain * amp, time + 0.07);
-      env.gain.setValueAtTime(noteGain * amp * 0.82, time + duration * 0.35);
-      env.gain.exponentialRampToValueAtTime(0.001, time + rel);
-      osc.connect(env);
-      env.connect(bus);
-      osc.start(time);
-      osc.stop(time + rel + 0.08);
-    });
-
-    bus.connect(lp);
-    lp.connect(out);
-  }
-
-  function playChordOn(c, out, time, rootMidi, duration, gain) {
-    const detunes = [-9, 0, 7];
-    [0, 4, 7].forEach((semi, i) => {
-      playChordPadTone(
-        c,
-        out,
-        time,
-        rootMidi + semi,
-        duration,
-        gain * (i === 0 ? 0.38 : 0.3),
-        detunes[i]
-      );
-    });
-  }
-
-  function playMono(c, out, time, midi, duration, gain, cfg) {
-    const freq = midiToFreq(midi);
-    const osc = c.createOscillator();
-    const env = c.createGain();
-    const f = c.createBiquadFilter();
-    osc.type = cfg.wave || "sawtooth";
-    osc.frequency.value = freq;
-    f.type = "lowpass";
-    f.frequency.value = cfg.lp ?? 2500;
-    f.Q.value = cfg.q ?? 2;
-    const atk = cfg.attack ?? 0.02;
-    const rel = duration * (cfg.releaseMul ?? 0.85);
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(gain, time + atk);
-    env.gain.exponentialRampToValueAtTime(0.001, time + rel);
-    osc.connect(f);
-    f.connect(env);
-    env.connect(out);
-    osc.start(time);
-    osc.stop(time + rel + 0.05);
-  }
-
-  function resolveVoice(trackId) {
-    if (typeof Sequencer !== "undefined" && Sequencer.getTrack) {
-      const t = Sequencer.getTrack(trackId);
-      if (t?.voice) return t.voice;
-    }
-    return trackId;
-  }
-
-  function playMelodic(c, out, voice, time, noteMidi, stepDuration, gain) {
-    if (noteMidi == null) return;
-    const d = melodicNoteDuration(voice, stepDuration);
-    switch (voice) {
-      case "bass":
-        playBassOn(c, out, time, noteMidi, d, gain);
-        break;
-      case "lead":
-        playLeadOn(c, out, time, noteMidi, d, gain * 1.05);
-        break;
-      case "piano":
-        playPianoOn(c, out, time, noteMidi, d, gain);
-        break;
-      case "eguitar":
-        playEguitarOn(c, out, time, noteMidi, d, gain);
-        break;
-      case "sax":
-        playSaxOn(c, out, time, noteMidi, d, gain);
-        break;
-      case "trumpet":
-        playTrumpetOn(c, out, time, noteMidi, d, gain);
-        break;
-      case "trombone":
-        playTromboneOn(c, out, time, noteMidi, d, gain);
-        break;
-      case "violin":
-        playViolinOn(c, out, time, noteMidi, d, gain);
-        break;
-      case "cello":
-        playCelloOn(c, out, time, noteMidi, d, gain);
-        break;
-      default:
-        playMono(c, out, time, noteMidi, d, gain, { lp: 2600, attack: 0.02 });
-        break;
-    }
-  }
-
-  function playVoiceOn(c, out, voice, time, noteMidi, stepDuration) {
+  function createVoiceSynth(voice) {
     switch (voice) {
       case "kick":
-        playKickOn(c, out, time);
-        break;
+        return new Tone.MembraneSynth({
+          pitchDecay: 0.04,
+          octaves: 8,
+          envelope: { attack: 0.001, decay: 0.35, sustain: 0, release: 0.05 },
+        });
       case "snare":
       case "clap":
-        playSnareOn(c, out, time);
-        break;
+        return new Tone.NoiseSynth({
+          noise: { type: "white" },
+          envelope: { attack: 0.001, decay: 0.18, sustain: 0, release: 0.05 },
+        });
       case "hihat":
-        playHatOn(c, out, time, false);
-        break;
+        return new Tone.MetalSynth({
+          envelope: { attack: 0.001, decay: 0.04, release: 0.02 },
+          harmonicity: 5.2,
+          modulationIndex: 22,
+          resonance: 7000,
+          octaves: 0.8,
+        });
       case "openhat":
-        playHatOn(c, out, time, true, 0.55);
-        break;
+        return new Tone.MetalSynth({
+          envelope: { attack: 0.001, decay: 0.22, release: 0.08 },
+          harmonicity: 4.5,
+          modulationIndex: 18,
+          resonance: 5000,
+          octaves: 1.2,
+        });
       case "cymbal":
       case "ride":
       case "splash":
-        playCymbalOn(c, out, time, 0.42);
-        break;
+        return new Tone.MetalSynth({
+          envelope: { attack: 0.001, decay: 0.5, release: 0.15 },
+          harmonicity: 5.8,
+          modulationIndex: 28,
+          resonance: 8000,
+          octaves: 1.5,
+        });
       case "tom":
       case "wood":
       case "tri":
       case "perc":
-        playTomOn(c, out, time);
-        break;
+        return new Tone.MembraneSynth({
+          pitchDecay: 0.03,
+          octaves: 4,
+          envelope: { attack: 0.001, decay: 0.28, sustain: 0, release: 0.06 },
+        });
+      case "bass":
+        return new Tone.MonoSynth({
+          oscillator: { type: "sawtooth" },
+          filter: { Q: 2, type: "lowpass", rolloff: -24 },
+          envelope: { attack: 0.02, decay: 0.25, sustain: 0.35, release: 0.2 },
+        });
+      case "piano":
+        return new Tone.PolySynth(Tone.FMSynth, {
+          maxPolyphony: 6,
+          voice: {
+            modulationIndex: 1.2,
+            harmonicity: 3.5,
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.01, decay: 0.3, sustain: 0.45, release: 0.8 },
+          },
+        });
+      case "eguitar":
+        return new Tone.PluckSynth({
+          attackNoise: 0.6,
+          dampening: 3200,
+          resonance: 0.85,
+          release: 0.4,
+        });
       case "chord":
-        if (noteMidi != null) playChordOn(c, out, time, noteMidi, stepDuration * 0.9, 0.42);
-        break;
+        return new Tone.PolySynth(Tone.AMSynth, {
+          maxPolyphony: 8,
+          voice: {
+            harmonicity: 1.5,
+            envelope: { attack: 0.08, decay: 0.35, sustain: 0.55, release: 0.9 },
+          },
+        });
+      case "lead":
+        return new Tone.MonoSynth({
+          oscillator: { type: "sawtooth" },
+          filter: { type: "lowpass", Q: 1.8, rolloff: -12 },
+          envelope: { attack: 0.03, decay: 0.2, sustain: 0.65, release: 0.45 },
+        });
+      case "sax":
+        return new Tone.FMSynth({
+          harmonicity: 1.8,
+          modulationIndex: 2.2,
+          oscillator: { type: "sawtooth" },
+          envelope: { attack: 0.05, decay: 0.2, sustain: 0.5, release: 0.35 },
+        });
+      case "trumpet":
+        return new Tone.FMSynth({
+          harmonicity: 2,
+          modulationIndex: 3.5,
+          oscillator: { type: "square" },
+          envelope: { attack: 0.03, decay: 0.15, sustain: 0.55, release: 0.3 },
+        });
+      case "trombone":
+        return new Tone.MonoSynth({
+          oscillator: { type: "sawtooth" },
+          filter: { type: "lowpass", frequency: 1800, Q: 2 },
+          envelope: { attack: 0.06, decay: 0.25, sustain: 0.7, release: 0.4 },
+        });
+      case "violin":
+        return new Tone.Synth({
+          oscillator: { type: "triangle" },
+          envelope: { attack: 0.12, decay: 0.15, sustain: 0.85, release: 0.55 },
+        });
+      case "cello":
+        return new Tone.Synth({
+          oscillator: { type: "sine" },
+          envelope: { attack: 0.14, decay: 0.2, sustain: 0.88, release: 0.65 },
+        });
       default:
-        playMelodic(c, out, voice, time, noteMidi, stepDuration, 0.42);
-        break;
+        return new Tone.Synth({
+          oscillator: { type: "sawtooth" },
+          envelope: { attack: 0.02, decay: 0.2, sustain: 0.5, release: 0.3 },
+        });
     }
   }
 
-  function playTrackSoundOn(c, outGetter, trackId, time, noteMidi, stepDuration) {
-    playVoiceOn(c, outGetter(trackId), resolveVoice(trackId), time, noteMidi, stepDuration);
+  function disposeTrackSynth(trackId) {
+    const entry = trackSynths[trackId];
+    if (entry?.synth?.dispose) {
+      try {
+        entry.synth.dispose();
+      } catch (_) {}
+    }
+    delete trackSynths[trackId];
+  }
+
+  function ensureTrackSynth(trackId, voice) {
+    const channel = getTrackChannel(trackId);
+    const entry = trackSynths[trackId];
+    if (entry && entry.voice === voice) return entry.synth;
+    if (entry) disposeTrackSynth(trackId);
+    const synth = createVoiceSynth(voice);
+    synth.connect(channel);
+    trackSynths[trackId] = { synth, voice, channel };
+    return synth;
+  }
+
+  function initEngine() {
+    if (ready) return;
+    Tone.getDestination().volume.value = Tone.gainToDb(MASTER_GAIN);
+    ready = true;
+    if (typeof AppLogger !== "undefined") {
+      AppLogger.info("Tone.js 引擎就绪", `v${Tone.version}`);
+    }
   }
 
   function ensureContext() {
-    if (!ctx) {
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
-      masterGain = ctx.createGain();
-      masterGain.gain.value = 0.85;
-      masterGain.connect(ctx.destination);
-      ctx.addEventListener("statechange", () => {
-        if (ctx.state === "suspended") {
-          if (typeof AppLogger !== "undefined") {
-            AppLogger.warn("音频引擎已挂起", playbackActive ? "正在尝试恢复…" : "再点播放可恢复");
-          }
-          if (playbackActive && typeof onSuspendWhilePlaying === "function") {
-            onSuspendWhilePlaying();
-          }
-        }
-      });
+    initEngine();
+    return Tone.getContext().rawContext;
+  }
+
+  async function unlockAudio() {
+    await Tone.start();
+    initEngine();
+    const ctx = Tone.getContext().rawContext;
+    if (ctx.state !== "running" && typeof AppLogger !== "undefined") {
+      AppLogger.warn("AudioContext 状态", ctx.state);
     }
     return ctx;
   }
 
-  function startKeepAlive(c) {
-    if (keepAliveSrc || !c || !masterGain) return;
-    try {
-      const buf = c.createBuffer(1, 1, c.sampleRate);
-      const src = c.createBufferSource();
-      src.buffer = buf;
-      src.loop = true;
-      const mute = c.createGain();
-      mute.gain.value = 0;
-      src.connect(mute);
-      mute.connect(masterGain);
-      src.start(Math.max(c.currentTime, 0));
-      keepAliveSrc = src;
-    } catch {
-      /* ignore */
-    }
-  }
-
-  /** 等待 AudioContext 进入 running（浏览器自动播放策略要求用户手势后 resume） */
-  async function unlockAudio() {
-    const c = ensureContext();
-    if (c.state === "running") {
-      startKeepAlive(c);
-      return c;
-    }
-    try {
-      if (!resumePromise) {
-        resumePromise = c.resume().finally(() => {
-          resumePromise = null;
-        });
-      }
-      await resumePromise;
-    } catch (err) {
-      if (typeof AppLogger !== "undefined") {
-        AppLogger.warn("AudioContext resume", err.message);
-      }
-    }
-    startKeepAlive(c);
-    if (c.state !== "running" && typeof AppLogger !== "undefined") {
-      AppLogger.warn("AudioContext 未进入 running", c.state);
-    }
-    return c;
-  }
-
   function isRunning() {
-    return ctx != null && ctx.state === "running";
+    return Tone.getContext().state === "running";
+  }
+
+  function now() {
+    return Tone.now();
   }
 
   function setPlaybackActive(active) {
@@ -956,80 +238,173 @@ const AudioEngine = (() => {
 
   function setOnSuspendWhilePlaying(fn) {
     onSuspendWhilePlaying = typeof fn === "function" ? fn : null;
+    if (onSuspendWhilePlaying && !Tone._hfSuspendHook) {
+      Tone._hfSuspendHook = true;
+      Tone.getContext().rawContext.addEventListener("statechange", () => {
+        const state = Tone.getContext().state;
+        if (state === "suspended" && playbackActive && onSuspendWhilePlaying) {
+          onSuspendWhilePlaying();
+        }
+      });
+    }
   }
 
-  function getTrackGain(trackId, defaultVol = 0.8) {
-    ensureContext();
-    if (!trackGains[trackId]) {
-      const g = ctx.createGain();
-      g.gain.value = defaultVol;
-      g.connect(masterGain);
-      trackGains[trackId] = g;
+  function getTrackChannel(trackId, defaultVol = 0.8) {
+    initEngine();
+    if (!trackChannels[trackId]) {
+      trackChannels[trackId] = new Tone.Gain(defaultVol).connect(Tone.getDestination());
     }
-    return trackGains[trackId];
+    return trackChannels[trackId];
   }
 
   function setTrackVolume(trackId, vol) {
-    getTrackGain(trackId).gain.setTargetAtTime(vol, ctx.currentTime, 0.02);
+    const ch = getTrackChannel(trackId, vol);
+    ch.gain.rampTo(vol, 0.02);
+  }
+
+  function triggerVoice(trackId, voice, time, noteMidi, duration, velocity = 0.9) {
+    const synth = ensureTrackSynth(trackId, voice);
+    const t = Math.max(time, Tone.now() + 0.001);
+    triggerOnSynth(synth, voice, t, noteMidi, duration, velocity);
+  }
+
+  function playVoiceOn(trackId, voice, time, noteMidi, stepDuration) {
+    const dur = melodicNoteDuration(voice, stepDuration);
+    if (voice === "chord" && noteMidi != null) {
+      triggerVoice(trackId, voice, time, noteMidi, stepDuration * 0.9, 0.42);
+      return;
+    }
+    if (
+      voice === "kick" ||
+      voice === "snare" ||
+      voice === "clap" ||
+      voice === "hihat" ||
+      voice === "openhat" ||
+      voice === "cymbal" ||
+      voice === "tom"
+    ) {
+      triggerVoice(trackId, voice, time, null, dur, 0.85);
+      return;
+    }
+    triggerVoice(trackId, voice, time, noteMidi, dur, 0.42);
+  }
+
+  function playTrackSoundOn(_c, _outGetter, trackId, time, noteMidi, stepDuration) {
+    const voice = resolveVoice(trackId);
+    playVoiceOn(trackId, voice, time, noteMidi, stepDuration);
   }
 
   function playTrackSound(trackId, time, noteMidi, stepDuration) {
-    const c = ensureContext();
-    const fire = () => {
-      const now = c.currentTime;
-      const t = typeof time === "number" && time >= now - 0.02 ? time : now + 0.008;
-      playTrackSoundOn(c, (id) => getTrackGain(id), trackId, t, noteMidi, stepDuration);
-    };
-    if (c.state === "running") {
-      fire();
+    initEngine();
+    const voice = resolveVoice(trackId);
+    const dur =
+      voice === "chord" && noteMidi != null
+        ? stepDuration * 0.9
+        : melodicNoteDuration(voice, stepDuration);
+    const t = typeof time === "number" ? time : Tone.now() + 0.01;
+    if (!isRunning()) {
+      if (playbackActive) return;
+      unlockAudio()
+        .then(() => triggerVoice(trackId, voice, Tone.now() + 0.02, noteMidi, dur, 0.85))
+        .catch(() => {});
       return;
     }
-    if (playbackActive) return;
-    unlockAudio().then(fire).catch(() => {});
+    triggerVoice(trackId, voice, t, noteMidi, dur, 0.85);
   }
 
   function previewTrackNote(trackId, midi, duration) {
     const voice = resolveVoice(trackId);
-    const dur =
-      duration != null ? duration : previewDurationForVoice(voice);
-    const stepDur = melodicNoteDuration(voice, dur);
+    const stepDur = melodicNoteDuration(
+      voice,
+      duration != null ? duration : previewDurationForVoice(voice)
+    );
     unlockAudio()
       .then(() => {
-        const c = ensureContext();
-        playTrackSoundOn(
-          c,
-          (id) => getTrackGain(id),
-          trackId,
-          c.currentTime + 0.02,
-          midi,
-          stepDur
-        );
+        triggerVoice(trackId, voice, Tone.now() + 0.03, midi, stepDur, 0.8);
       })
       .catch(() => {});
   }
 
-  function createOfflineScheduler(volumes) {
-    const gains = {};
+  function setTransportBpm(bpm) {
+    Tone.Transport.bpm.value = bpm;
+  }
+
+  function createOfflineScheduler(volumes, trackVoiceMap) {
+    const offlineTracks = {};
     return {
-      schedule(c, master, trackId, time, noteMidi, stepDuration) {
-        if (!gains[trackId]) {
-          const g = c.createGain();
-          g.gain.value = volumes[trackId] ?? 0.75;
-          g.connect(master);
-          gains[trackId] = g;
+      schedule(_ctx, _master, trackId, time, noteMidi, stepDuration) {
+        const voice = trackVoiceMap?.[trackId] || resolveVoice(trackId);
+        if (!offlineTracks[trackId]) {
+          const ch = new Tone.Gain(volumes[trackId] ?? 0.75).toDestination();
+          const synth = createVoiceSynth(voice);
+          synth.connect(ch);
+          offlineTracks[trackId] = { channel: ch, synth, voice };
         }
-        playTrackSoundOn(c, (id) => gains[id], trackId, time, noteMidi, stepDuration);
+        const { channel, synth, voice: v } = offlineTracks[trackId];
+        const dur =
+          v === "chord" && noteMidi != null
+            ? stepDuration * 0.9
+            : melodicNoteDuration(v, stepDuration);
+        triggerOnSynth(synth, v, time, noteMidi, dur, 0.85);
       },
     };
+  }
+
+  function triggerOnSynth(synth, voice, time, noteMidi, duration, velocity) {
+    const t = Math.max(time, 0);
+    const dur = Math.max(duration * 0.92, 0.03);
+    switch (voice) {
+      case "kick":
+        synth.triggerAttackRelease("C1", dur, t, velocity);
+        break;
+      case "snare":
+      case "clap":
+        synth.triggerAttackRelease(dur, t, velocity);
+        break;
+      case "hihat":
+        synth.triggerAttackRelease("C6", "32n", t, velocity * 0.7);
+        break;
+      case "openhat":
+        synth.triggerAttackRelease("C6", "8n", t, velocity * 0.65);
+        break;
+      case "cymbal":
+      case "ride":
+      case "splash":
+        synth.triggerAttackRelease("C6", "2n", t, velocity * 0.55);
+        break;
+      case "tom":
+      case "wood":
+      case "tri":
+      case "perc":
+        synth.triggerAttackRelease("G2", dur, t, velocity * 0.85);
+        break;
+      case "chord": {
+        if (noteMidi == null) return;
+        const n = Tone.Frequency(midiToNote(noteMidi)).toMidi();
+        const notes = [n, n + 4, n + 7].map((m) => midiToNote(m));
+        synth.triggerAttackRelease(notes, dur, t, velocity * 0.42);
+        break;
+      }
+      default:
+        if (noteMidi == null) return;
+        synth.triggerAttackRelease(midiToNote(noteMidi), dur, t, velocity);
+        break;
+    }
+  }
+
+  function midiToFreq(midi) {
+    return Tone.Frequency(midi, "midi").toFrequency();
   }
 
   return {
     ensureContext,
     unlockAudio,
     isRunning,
+    now,
     setPlaybackActive,
     setOnSuspendWhilePlaying,
     setTrackVolume,
+    setTransportBpm,
     playTrackSound,
     playTrackSoundOn,
     playVoiceOn,

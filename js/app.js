@@ -19,7 +19,6 @@
   let arrangeSectionClipboard = null;
   let arrangeClipboardFromCut = false;
   let schedulerTimer = null;
-  let audioWatchdogTimer = null;
   let unlockWarmTimer = null;
   /** 音频时间轴：第 0 步发声时刻（AudioContext.currentTime） */
   let playStartAnchor = 0;
@@ -559,7 +558,7 @@
       if (unlockWarmTimer) return;
       unlockWarmTimer = window.setTimeout(() => {
         unlockWarmTimer = null;
-      }, 200);
+      }, 250);
       AudioEngine.unlockAudio().catch(() => {});
     };
     document.addEventListener("pointerdown", warm, { capture: true });
@@ -578,28 +577,6 @@
         .then(() => realignPlayAnchor())
         .catch(() => {});
     });
-  }
-
-  function startAudioWatchdog() {
-    stopAudioWatchdog();
-    audioWatchdogTimer = window.setInterval(() => {
-      if (!playing) {
-        stopAudioWatchdog();
-        return;
-      }
-      if (!AudioEngine.isRunning()) {
-        AudioEngine.unlockAudio()
-          .then(() => realignPlayAnchor())
-          .catch(() => {});
-      }
-    }, 350);
-  }
-
-  function stopAudioWatchdog() {
-    if (audioWatchdogTimer) {
-      clearInterval(audioWatchdogTimer);
-      audioWatchdogTimer = null;
-    }
   }
 
   function setTypeLoopEnabled(on) {
@@ -766,8 +743,7 @@
       });
       if (!wasOn && cell.on) {
         AudioEngine.unlockAudio().then(() => {
-          const c = AudioEngine.getContext();
-          AudioEngine.playTrackSound(track.id, c.currentTime + 0.02, null, getStepDuration());
+          AudioEngine.playTrackSound(track.id, AudioEngine.now() + 0.02, null, getStepDuration());
         });
       }
     }
@@ -973,6 +949,9 @@
     els.bpm.addEventListener("input", () => {
       bpm = Number(els.bpm.value);
       els.bpmValue.textContent = bpm;
+      if (typeof AudioEngine.setTransportBpm === "function") {
+        AudioEngine.setTransportBpm(bpm);
+      }
       resyncSchedulerForBpmChange();
       scheduleAutosave();
     });
@@ -1364,9 +1343,8 @@
   /** 重算锚点，使「下一待排步」落在当前音频时间附近（BPM 变更 / 挂起恢复） */
   function realignPlayAnchor() {
     if (!playing) return;
-    const ctx = AudioEngine.getContext();
-    if (!ctx) return;
-    const now = ctx.currentTime;
+    if (!AudioEngine.isRunning()) return;
+    const now = AudioEngine.now();
     const dur = getStepDuration();
     const nextIdx = Math.max(0, lastScheduledStepIndex + 1);
     playStartAnchor = now + 0.06 - nextIdx * dur;
@@ -1383,7 +1361,6 @@
       AppLogger.warn("启动音频", err?.message || "unlock 未完成，仍将尝试播放");
     });
     AudioEngine.setPlaybackActive(true);
-    startAudioWatchdog();
     playing = true;
     playMode = mode;
     stepCounter = 0;
@@ -1400,7 +1377,8 @@
       loopStepIndex = Math.min(loopStepIndex, Sequencer.steps - 1);
       renderStepLabels();
     }
-    playStartAnchor = AudioEngine.getContext().currentTime + 0.08;
+    playStartAnchor = AudioEngine.now() + 0.08;
+    AudioEngine.setTransportBpm(bpm);
     if (mode === "arrange") {
       els.btnPlay.classList.add("playing");
       els.btnPlay.textContent = "⏸";
@@ -1422,7 +1400,6 @@
     const { keepLoopFlags = false } = options;
     playing = false;
     AudioEngine.setPlaybackActive(false);
-    stopAudioWatchdog();
     if (schedulerTimer) {
       clearTimeout(schedulerTimer);
       schedulerTimer = null;
@@ -1452,8 +1429,6 @@
 
   function schedule() {
     if (!playing) return;
-    const ctx = AudioEngine.getContext();
-    if (!ctx) return;
 
     if (!AudioEngine.isRunning()) {
       AudioEngine.unlockAudio()
@@ -1467,7 +1442,7 @@
       return;
     }
 
-    const now = ctx.currentTime;
+    const now = AudioEngine.now();
     const horizon = now + SCHEDULE_LOOKAHEAD;
     let queued = 0;
 

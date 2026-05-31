@@ -81,7 +81,8 @@ python3 -m http.server 8080
 index.html          # 主页面
 css/styles.css      # 基础样式
 css/layout.css      # 布局与模块外壳
-js/audio-engine.js  # Web Audio 合成
+js/tone.min.js      # Tone.js 音频引擎（v14）
+js/audio-engine.js  # 音色合成与轨道路由
 js/sequencer.js     # Pattern 与音序数据
 js/arranger.js      # 编曲时间轴
 js/app.js           # 应用逻辑与 UI
