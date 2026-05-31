@@ -44,6 +44,7 @@
           title="Beat Battle 评阅站"
         >评阅站</a>
         <button type="button" class="btn btn-ghost btn-compact" id="btnPublish" title="发布编曲到 Beat Battle 制作库">发布</button>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnPublishStore" title="浏览并下载其他玩家的编曲 JSON">发布商店</button>
         <span class="header-review-badge" id="reviewSessionBadge" hidden title="评阅站登录昵称">
           评阅：<span id="reviewSessionName">—</span>
         </span>
@@ -297,6 +298,21 @@
         <button type="submit" value="ok" class="btn btn-sm" id="btnPublishConfirm">发布</button>
       </menu>
     </form>
+  </dialog>
+
+  <dialog id="publishStoreDialog" class="note-dialog publish-store-dialog">
+    <h3>发布商店</h3>
+    <p class="note-dialog-hint publish-store-hint">
+      展示制作库中含编曲 JSON 的公开作品，可下载 <code>.hfproj</code>，或下载并加载到当前编辑器。
+    </p>
+    <div class="publish-store-toolbar">
+      <button type="button" class="btn btn-sm" id="btnPublishStoreRefresh">刷新列表</button>
+      <span class="publish-store-status" id="publishStoreStatus" aria-live="polite"></span>
+    </div>
+    <ul class="publish-store-list" id="publishStoreList"></ul>
+    <menu>
+      <button type="button" class="btn btn-ghost" id="btnPublishStoreClose">关闭</button>
+    </menu>
   </dialog>
 
   <dialog id="exportDialog" class="note-dialog export-dialog">

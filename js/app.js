@@ -455,7 +455,11 @@
     AppVersion.initUI();
     wireAudioUnlock();
     if (typeof BeatBattleCloud !== "undefined") {
-      BeatBattleCloud.initUI({ getProjectData, setStatus });
+      BeatBattleCloud.initUI({
+        getProjectData,
+        setStatus,
+        onLoadPublishedProject: loadPublishedStoreProject,
+      });
     }
     if (typeof HelpGuide !== "undefined") HelpGuide.init();
     LayoutManager.init({
@@ -1557,6 +1561,20 @@
       bpm: Number(els.bpm.value),
       layout: typeof LayoutManager !== "undefined" ? LayoutManager.exportState() : undefined,
     };
+  }
+
+  function loadPublishedStoreProject(project, meta = {}) {
+    if (!project) return false;
+    const label = meta.title ? `「${meta.title}」` : "该作品";
+    if (!confirm(`加载 ${label} 将替换当前编曲，是否继续？`)) return false;
+    applyProjectData(project);
+    scheduleAutosave();
+    setStatus(
+      meta.filename
+        ? `已从发布商店加载：${meta.title || "作品"}（已下载 ${meta.filename}）`
+        : `已从发布商店加载：${meta.title || "作品"}`
+    );
+    return true;
   }
 
   function applyProjectData(data, silent) {
