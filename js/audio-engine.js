@@ -1,5 +1,5 @@
 /**
- * Web Audio 合成 — 乐队常用乐器（鼓组 / 电声 / 管乐 / 弓弦噪声-模态模型，见各 play* 注释）
+ * Web Audio 合成 — 乐队常用乐器（鼓组 / 电声 / 管乐 / 弓弦谐波模型，见各 play* 注释）
  */
 const AudioEngine = (() => {
   let ctx = null;
@@ -136,183 +136,139 @@ const AudioEngine = (() => {
     noise.stop(time + dur + 0.02);
   }
 
-  function fillBowNoiseBuffer(channel, sampleRate, seconds) {
-    const len = Math.max(8, Math.floor(sampleRate * seconds));
-    let pink = 0;
-    for (let i = 0; i < len; i++) {
-      const white = Math.random() * 2 - 1;
-      pink = pink * 0.992 + white * 0.008;
-      channel[i] = white * 0.55 + pink * 0.45;
-    }
-    return len;
-  }
-
   /**
-   * 弓弦 — 弓毛噪声激励 + 高 Q 弦模态 + 固定琴箱峰（无锯齿/扫频，区别于管乐）：
-   * - 宽带弓摩擦噪声经窄带通激发各次谐波模态
-   * - 琴身为固定频率 peaking（木箱），不随音高扫掠
-   * - 极弱基音正弦仅稳定音高；揉弦控制音高与弓带通
+   * 弓弦 — 纯谐波加法（无噪声）：正弦分音 + 轻微失谐 + 固定明亮低通。
+   * 仅幅度起弓，不做管乐式低通扫频；高音分音较快起音以增强穿透。
    */
   function playBowedString(c, out, time, midi, duration, gain, preset) {
     const freq = midiToFreq(midi);
-    const stopAt = time + duration + 0.35;
-    const atk = preset.attack ?? 0.14;
+    const inharmonicB = preset.inharmonicB ?? 0.00028;
+    const stopAt = time + duration + 0.25;
+    const baseAtk = preset.attack ?? 0.1;
     const rel = duration * (preset.releaseMul ?? 0.92);
 
     const master = c.createGain();
     master.gain.setValueAtTime(0, time);
-    master.gain.linearRampToValueAtTime(gain, time + atk);
-    master.gain.setValueAtTime(gain * (preset.sustain ?? 0.88), time + atk + 0.15);
+    master.gain.linearRampToValueAtTime(gain, time + baseAtk);
+    master.gain.setValueAtTime(gain * (preset.sustain ?? 0.86), time + baseAtk + 0.1);
     master.gain.exponentialRampToValueAtTime(0.001, time + rel);
 
-    const tone = c.createGain();
+    const bus = c.createGain();
+    let chain = bus;
+    (preset.bodyPeaks ?? []).forEach((body) => {
+      const pk = c.createBiquadFilter();
+      pk.type = "peaking";
+      pk.frequency.value = body.hz;
+      pk.Q.value = body.q ?? 4;
+      pk.gain.value = body.gain ?? 3;
+      chain.connect(pk);
+      chain = pk;
+    });
+
     const lp = c.createBiquadFilter();
     lp.type = "lowpass";
-    lp.frequency.value = preset.lpStatic ?? 5000;
-    lp.Q.value = 0.35;
-    tone.connect(lp);
+    lp.frequency.value = Math.min(
+      preset.lpCap ?? 9000,
+      freq * (preset.lpMul ?? 11) + (preset.lpAdd ?? 650)
+    );
+    lp.Q.value = preset.lpQ ?? 0.6;
+    chain.connect(lp);
     lp.connect(master);
     master.connect(out);
-
-    const bowSeconds = Math.min(Math.max(duration, 0.35), 1.2);
-    const bowBuf = c.createBuffer(1, Math.ceil(c.sampleRate * bowSeconds), c.sampleRate);
-    fillBowNoiseBuffer(bowBuf.getChannelData(0), c.sampleRate, bowSeconds);
-    const bowSrc = c.createBufferSource();
-    bowSrc.buffer = bowBuf;
-    bowSrc.loop = true;
-
-    const bowAmp = c.createGain();
-    const bowDrive = gain * (preset.bowDrive ?? 0.62);
-    bowAmp.gain.setValueAtTime(0, time);
-    bowAmp.gain.linearRampToValueAtTime(bowDrive, time + atk * 0.85);
-    bowAmp.gain.setValueAtTime(bowDrive * 0.9, time + atk + 0.1);
-    bowAmp.gain.exponentialRampToValueAtTime(0.001, time + rel);
-
-    const bowBp = c.createBiquadFilter();
-    bowBp.type = "bandpass";
-    bowBp.frequency.setValueAtTime(preset.bowCenterHz ?? 2800, time);
-    bowBp.Q.value = preset.bowQ ?? 0.65;
 
     const vib = c.createOscillator();
     vib.type = "sine";
     vib.frequency.value = preset.vibratoHz ?? 5.2;
-    const vibPitch = c.createGain();
-    vibPitch.gain.value = preset.vibratoCents ?? 10;
-    vib.connect(vibPitch);
-
-    const vibBp = c.createGain();
-    vibBp.gain.value = preset.bowVibratoHz ?? 120;
-    vib.connect(vibBp);
-    vibBp.connect(bowBp.frequency);
-
-    const vibStart = time + (preset.vibratoDelay ?? 0.28);
+    const vibDepth = c.createGain();
+    vibDepth.gain.value = preset.vibratoCents ?? 11;
+    vib.connect(vibDepth);
+    const vibStart = time + (preset.vibratoDelay ?? 0.24);
     vib.start(vibStart);
     vib.stop(stopAt);
 
-    bowSrc.connect(bowBp);
-    bowBp.connect(bowAmp);
-    const driver = c.createGain();
-    driver.gain.value = 1;
-    bowAmp.connect(driver);
+    (preset.partials ?? []).forEach((p) => {
+      const n = p.n ?? 1;
+      const f = freq * n * Math.sqrt(1 + inharmonicB * n * n);
+      if (f > (preset.maxHz ?? 11000)) return;
 
-    (preset.stringModes ?? []).forEach((mode) => {
-      const n = mode.n ?? 1;
-      const f = freq * n;
-      if (f > (preset.maxModeHz ?? 7000)) return;
-      const bp = c.createBiquadFilter();
-      bp.type = "bandpass";
-      bp.frequency.setValueAtTime(f, time);
-      bp.Q.value = mode.q ?? 25;
-      const branch = c.createGain();
-      branch.gain.value = mode.amp ?? 0.3;
-      driver.connect(bp);
-      bp.connect(branch);
-      branch.connect(tone);
+      const osc = c.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(f, time);
+      vibDepth.connect(osc.detune);
+      if (p.detuneCents != null) {
+        osc.detune.setValueAtTime(p.detuneCents, time);
+      }
+
+      const amp = c.createGain();
+      const peak = gain * (p.amp ?? 0.25);
+      const atk = p.atk ?? Math.max(0.008, baseAtk - n * 0.012);
+      const pRel = Math.max(0.1, duration * (p.decayMul ?? 0.88));
+      amp.gain.setValueAtTime(0, time);
+      amp.gain.linearRampToValueAtTime(peak, time + atk);
+      amp.gain.setValueAtTime(peak * (p.sustain ?? 0.78), time + atk + 0.04);
+      amp.gain.exponentialRampToValueAtTime(0.001, time + pRel);
+
+      osc.connect(amp);
+      amp.connect(bus);
+      osc.start(time);
+      osc.stop(stopAt);
     });
-
-    (preset.bodyPeaks ?? []).forEach((body) => {
-      const peak = c.createBiquadFilter();
-      peak.type = "peaking";
-      peak.frequency.value = body.hz;
-      peak.Q.value = body.q ?? 4;
-      peak.gain.value = body.gain ?? 4;
-      const branch = c.createGain();
-      branch.gain.value = body.mix ?? 0.32;
-      driver.connect(peak);
-      peak.connect(branch);
-      branch.connect(tone);
-    });
-
-    const fund = c.createOscillator();
-    fund.type = "sine";
-    fund.frequency.setValueAtTime(freq, time);
-    vibPitch.connect(fund.detune);
-    const fundG = c.createGain();
-    fundG.gain.value = preset.fundGain ?? 0.06;
-    fund.connect(fundG);
-    fundG.connect(tone);
-    fund.start(time);
-    fund.stop(stopAt);
-
-    bowSrc.start(time);
-    bowSrc.stop(time + bowSeconds + 0.02);
   }
 
   const BOW_VIOLIN = {
-    attack: 0.14,
-    sustain: 0.9,
-    releaseMul: 0.94,
-    vibratoHz: 5.3,
-    vibratoCents: 10,
-    vibratoDelay: 0.3,
-    lpStatic: 5600,
-    bowCenterHz: 3400,
-    bowQ: 0.6,
-    bowDrive: 0.68,
-    bowVibratoHz: 140,
-    fundGain: 0.045,
-    maxModeHz: 7500,
-    stringModes: [
-      { n: 1, q: 38, amp: 0.55 },
-      { n: 2, q: 32, amp: 0.34 },
-      { n: 3, q: 26, amp: 0.22 },
-      { n: 4, q: 22, amp: 0.13 },
-      { n: 5, q: 18, amp: 0.07 },
-      { n: 6, q: 15, amp: 0.04 },
+    attack: 0.1,
+    sustain: 0.88,
+    releaseMul: 0.93,
+    vibratoHz: 5.4,
+    vibratoCents: 12,
+    vibratoDelay: 0.26,
+    inharmonicB: 0.00032,
+    lpCap: 9500,
+    lpMul: 12,
+    lpAdd: 750,
+    lpQ: 0.65,
+    maxHz: 11000,
+    partials: [
+      { n: 1, amp: 0.4, atk: 0.1, decayMul: 1, detuneCents: -5 },
+      { n: 1, amp: 0.4, atk: 0.1, decayMul: 1, detuneCents: 5 },
+      { n: 2, amp: 0.36, atk: 0.065, decayMul: 0.94 },
+      { n: 3, amp: 0.28, atk: 0.045, decayMul: 0.86 },
+      { n: 4, amp: 0.21, atk: 0.032, decayMul: 0.78 },
+      { n: 5, amp: 0.15, atk: 0.022, decayMul: 0.7 },
+      { n: 6, amp: 0.1, atk: 0.016, decayMul: 0.62 },
+      { n: 7, amp: 0.065, atk: 0.012, decayMul: 0.54 },
+      { n: 8, amp: 0.04, atk: 0.008, decayMul: 0.46 },
     ],
     bodyPeaks: [
-      { hz: 280, q: 3.5, gain: 4.5, mix: 0.38 },
-      { hz: 440, q: 4.5, gain: 5.5, mix: 0.42 },
-      { hz: 870, q: 5.5, gain: 2.5, mix: 0.28 },
-      { hz: 2620, q: 7, gain: 3, mix: 0.22 },
+      { hz: 440, q: 4, gain: 3.5 },
+      { hz: 900, q: 5, gain: 2 },
     ],
   };
 
   const BOW_CELLO = {
-    attack: 0.18,
-    sustain: 0.92,
-    releaseMul: 0.96,
-    vibratoHz: 4.2,
-    vibratoCents: 8,
-    vibratoDelay: 0.34,
-    lpStatic: 2100,
-    bowCenterHz: 1550,
-    bowQ: 0.75,
-    bowDrive: 0.72,
-    bowVibratoHz: 70,
-    fundGain: 0.065,
-    maxModeHz: 4000,
-    stringModes: [
-      { n: 1, q: 32, amp: 0.58 },
-      { n: 2, q: 28, amp: 0.36 },
-      { n: 3, q: 24, amp: 0.2 },
-      { n: 4, q: 20, amp: 0.1 },
+    attack: 0.12,
+    sustain: 0.9,
+    releaseMul: 0.95,
+    vibratoHz: 4.3,
+    vibratoCents: 9,
+    vibratoDelay: 0.3,
+    inharmonicB: 0.00022,
+    lpCap: 4200,
+    lpMul: 7.5,
+    lpAdd: 380,
+    lpQ: 0.55,
+    maxHz: 6500,
+    partials: [
+      { n: 1, amp: 0.48, atk: 0.12, decayMul: 1, detuneCents: -4 },
+      { n: 1, amp: 0.48, atk: 0.12, decayMul: 1, detuneCents: 4 },
+      { n: 2, amp: 0.34, atk: 0.08, decayMul: 0.92 },
+      { n: 3, amp: 0.22, atk: 0.06, decayMul: 0.84 },
+      { n: 4, amp: 0.14, atk: 0.045, decayMul: 0.76 },
+      { n: 5, amp: 0.08, atk: 0.03, decayMul: 0.66 },
     ],
     bodyPeaks: [
-      { hz: 125, q: 3, gain: 4, mix: 0.4 },
-      { hz: 220, q: 3.8, gain: 5, mix: 0.44 },
-      { hz: 440, q: 4.5, gain: 3.5, mix: 0.32 },
-      { hz: 880, q: 5.5, gain: 2, mix: 0.2 },
+      { hz: 220, q: 3.5, gain: 4 },
+      { hz: 440, q: 4, gain: 2.5 },
     ],
   };
 

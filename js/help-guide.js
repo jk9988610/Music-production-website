@@ -66,7 +66,7 @@ const HelpGuide = (() => {
           <li><strong>电吉他</strong>：清音拨弦（拨片噪声 + 快衰）</li>
           <li><strong>萨克斯</strong>：锯齿激励 + 共振峰</li>
           <li><strong>小号 / 长号</strong>：铜管模型（亮扫频 vs 暗长号），带轻微揉弦</li>
-          <li><strong>小提琴 / 大提琴</strong>：弓毛噪声 → 弦模态窄带 + 木箱固定共鸣（非管乐锯齿）</li>
+          <li><strong>小提琴 / 大提琴</strong>：纯谐波加法、无噪声，明亮固定低通 + 木箱峰</li>
           <li><strong>换乐器</strong>：点左侧轨名</li>
           <li><strong>密度</strong>：倍率按钮（½×～4×），弹窗选择。</li>
           <li><strong>±轨 / ±4步</strong>：增减轨道数与 Pattern 长度。</li>
