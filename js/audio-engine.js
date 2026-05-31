@@ -137,7 +137,7 @@ const AudioEngine = (() => {
   }
 
   /**
-   * 弓清 / 弓深 — 纯谐波加法（无噪声）：正弦分音 + 轻微失谐 + 明亮低通。
+   * 霜弓 / 幽沼 — 纯谐波加法（无噪声）：正弦分音 + 轻微失谐 + 明亮低通。
    * 仅幅度起弓，不做管乐式低通扫频；高音分音较快起音以增强穿透。
    */
   function playBowedString(c, out, time, midi, duration, gain, preset) {
