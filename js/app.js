@@ -968,6 +968,7 @@
     els.bpm.addEventListener("input", () => {
       bpm = Number(els.bpm.value);
       els.bpmValue.textContent = bpm;
+      resyncSchedulerForBpmChange();
       scheduleAutosave();
     });
     if (els.chkTypeLoop) {
@@ -1459,14 +1460,21 @@
     }
 
     const lookAhead = 0.15;
-    const now = ctx.currentTime;
+    let now = ctx.currentTime;
     syncSchedulerClock();
+    now = ctx.currentTime;
 
-    while (nextStepTime < now + lookAhead) {
-      const t = Math.max(nextStepTime, now + 0.001);
+    let guard = 0;
+    while (nextStepTime < now + lookAhead && guard < 48) {
+      guard += 1;
+      const nowLoop = ctx.currentTime;
+      const stepDur = getStepDuration();
+      let t = Math.max(nextStepTime, nowLoop + 0.015);
+      if (t < nowLoop) t = nowLoop + 0.015;
       playStepAt(t);
-      nextStepTime += getStepDuration();
+      nextStepTime = t + stepDur;
       stepCounter++;
+      now = ctx.currentTime;
     }
 
     schedulerTimer = setTimeout(schedule, 25);

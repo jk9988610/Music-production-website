@@ -913,7 +913,7 @@ const AudioEngine = (() => {
       mute.gain.value = 0;
       src.connect(mute);
       mute.connect(masterGain);
-      src.start(0);
+      src.start(Math.max(c.currentTime, 0));
       keepAliveSrc = src;
     } catch {
       /* ignore */
