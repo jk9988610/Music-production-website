@@ -143,6 +143,116 @@ const BeatBattleCloud = (() => {
     });
   }
 
+  async function listMyPublishedWorks(userName) {
+    const user = await ensureUser(userName);
+    const sb = await ensureClient();
+    const { data, error } = await sb
+      .from("published_works")
+      .select("id,user_id,user_name,title,audio_path,published_at,project_json")
+      .eq("user_id", user.id)
+      .order("published_at", { ascending: false })
+      .limit(80);
+    if (error) throw error;
+    return (data || []).map(mapPublishedRow);
+  }
+
+  async function fetchMyPublishedWork(workId, userName) {
+    const user = await ensureUser(userName);
+    const sb = await ensureClient();
+    const { data, error } = await sb
+      .from("published_works")
+      .select("id,user_id,user_name,title,audio_path,published_at,project_json")
+      .eq("id", workId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error("作品不存在或无权访问");
+    return mapPublishedRow(data);
+  }
+
+  async function deletePublishedWork(workId, userName) {
+    const user = await ensureUser(userName);
+    const sb = await ensureClient();
+    const { data: row, error: fetchErr } = await sb
+      .from("published_works")
+      .select("audio_path,user_id")
+      .eq("id", workId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (fetchErr) throw fetchErr;
+    if (!row) throw new Error("作品不存在或无权删除");
+    if (row.audio_path) {
+      await sb.storage.from("audio").remove([row.audio_path]).catch(() => {});
+    }
+    const { error } = await sb.from("published_works").delete().eq("id", workId).eq("user_id", user.id);
+    if (error) throw error;
+  }
+
+  async function renamePublishedWork(workId, title, userName) {
+    const user = await ensureUser(userName);
+    const trimmed = title?.trim();
+    if (!trimmed) throw new Error("标题不能为空");
+    const sb = await ensureClient();
+    const { data, error } = await sb
+      .from("published_works")
+      .update({ title: trimmed })
+      .eq("id", workId)
+      .eq("user_id", user.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return mapPublishedRow(data);
+  }
+
+  async function republishWork(workId, { title, project, userName }) {
+    const user = await ensureUser(userName);
+    const sb = await ensureClient();
+    const { data: existing, error: fetchErr } = await sb
+      .from("published_works")
+      .select("id,audio_path,user_id,title")
+      .eq("id", workId)
+      .eq("user_id", user.id)
+      .single();
+    if (fetchErr) throw fetchErr;
+
+    if (typeof AudioExport === "undefined" || !AudioExport.renderExportBlob) {
+      throw new Error("音频导出模块未加载");
+    }
+    const projectJson = buildPublishProjectJson(project, {
+      title: title || existing.title,
+      source: "republish",
+      workId,
+    });
+    const bytes = new TextEncoder().encode(JSON.stringify(projectJson)).length;
+    if (bytes > MAX_PROJECT_JSON_BYTES) {
+      throw new Error(`编曲 JSON 过大（上限 ${MAX_PROJECT_JSON_BYTES / 1024 / 1024}MB）`);
+    }
+
+    const blob = await AudioExport.renderExportBlob(project, "mp3");
+    const ext = (blob.type || "audio/mpeg").split("/")[1]?.split(";")[0] || "mp3";
+    let audioPath = existing.audio_path;
+    if (!audioPath) {
+      audioPath = `published/${user.id}/${workId}.${ext}`;
+    }
+    await uploadAudioToCloud(audioPath, blob);
+
+    const updates = {
+      title: (title || existing.title).trim(),
+      audio_path: audioPath,
+      project_json: projectJson,
+      published_at: new Date().toISOString(),
+    };
+    const { data, error } = await sb
+      .from("published_works")
+      .update(updates)
+      .eq("id", workId)
+      .eq("user_id", user.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return mapPublishedRow(data);
+  }
+
   async function publishWork({ title, audioBlob, userName, projectJson }) {
     const user = await ensureUser(userName);
     if (!title?.trim()) throw new Error("请填写作品标题");
@@ -270,6 +380,243 @@ const BeatBattleCloud = (() => {
     return name;
   }
 
+  function initWorksRepoUI({
+    setStatus,
+    getProjectData,
+    onLoadPublishedProject,
+    getEditingWorkId,
+    setEditingWorkId,
+  }) {
+    const btn = document.getElementById("btnWorksRepo");
+    const dialog = document.getElementById("worksRepoDialog");
+    const listEl = document.getElementById("worksRepoList");
+    const statusEl = document.getElementById("worksRepoStatus");
+    const btnRefresh = document.getElementById("btnWorksRepoRefresh");
+    const btnClose = document.getElementById("btnWorksRepoClose");
+
+    if (!btn || !dialog || !listEl) return;
+
+    let loading = false;
+
+    function setRepoStatus(text) {
+      if (statusEl) statusEl.textContent = text || "";
+    }
+
+    function renderEmpty(msg) {
+      listEl.innerHTML = "";
+      const li = document.createElement("li");
+      li.className = "publish-store-empty";
+      li.textContent = msg;
+      listEl.appendChild(li);
+    }
+
+    async function ensureWorkJson(work) {
+      if (work.projectJson) return work;
+      const session = loadSession();
+      const full = await fetchMyPublishedWork(work.id, session?.userName);
+      if (!full.projectJson) throw new Error("该作品没有编曲 JSON，无法编辑");
+      return full;
+    }
+
+    async function refreshRepo() {
+      if (loading) return;
+      const session = loadSession();
+      if (!session?.userId) {
+        renderEmpty("请先在评阅站加入赛季并登录昵称");
+        setRepoStatus("");
+        return;
+      }
+      loading = true;
+      btnRefresh.disabled = true;
+      setRepoStatus("加载中…");
+      renderEmpty("正在加载…");
+      try {
+        const works = await listMyPublishedWorks(session.userName);
+        listEl.innerHTML = "";
+        if (!works.length) {
+          renderEmpty("你还没有发布作品，请先点「发布」");
+          setRepoStatus("0 个作品");
+          return;
+        }
+        const editingId = getEditingWorkId?.();
+        works.forEach((work) => {
+          const li = document.createElement("li");
+          li.className = "publish-store-item";
+          if (work.id === editingId) li.classList.add("works-repo-item-active");
+
+          const head = document.createElement("div");
+          head.className = "publish-store-item-head";
+          const titleEl = document.createElement("div");
+          titleEl.className = "publish-store-item-title";
+          titleEl.textContent = work.title || "未命名";
+          const time = document.createElement("div");
+          time.className = "publish-store-item-meta";
+          time.textContent = formatStoreTime(work.publishedAt);
+          head.append(titleEl, time);
+
+          const sub = document.createElement("div");
+          sub.className = "publish-store-item-author";
+          sub.textContent = work.hasProjectJson ? "含编曲 JSON" : "仅音频";
+
+          const actions = document.createElement("div");
+          actions.className = "publish-store-item-actions";
+
+          const btnEdit = document.createElement("button");
+          btnEdit.type = "button";
+          btnEdit.className = "btn btn-xs";
+          btnEdit.textContent = "编辑编曲";
+          btnEdit.disabled = !work.hasProjectJson;
+          btnEdit.addEventListener("click", async () => {
+            try {
+              setStatus?.("正在获取工程…");
+              const full = await ensureWorkJson(work);
+              const project = projectJsonToProject(full.projectJson);
+              const ok = onLoadPublishedProject?.(project, {
+                title: full.title,
+                workId: full.id,
+                archiveReason: `编辑「${full.title}」前备份`,
+              });
+              if (ok !== false) {
+                setEditingWorkId?.(full.id);
+                dialog.close();
+                setStatus?.(`正在编辑「${full.title}」— 修改后可点「重新发布」`);
+              }
+            } catch (err) {
+              alert(err.message);
+            }
+          });
+
+          const btnRepublish = document.createElement("button");
+          btnRepublish.type = "button";
+          btnRepublish.className = "btn btn-xs btn-ghost";
+          btnRepublish.textContent = "重新发布";
+          btnRepublish.addEventListener("click", async () => {
+            try {
+              if (typeof getProjectData !== "function") throw new Error("无法读取当前工程");
+              const session = loadSession();
+              let project = getProjectData();
+              if (getEditingWorkId?.() !== work.id) {
+                if (!confirm(`当前编辑器不是「${work.title}」。是否先从云端加载该作品再发布？`)) return;
+                const full = await ensureWorkJson(work);
+                project = projectJsonToProject(full.projectJson);
+                onLoadPublishedProject?.(project, {
+                  title: full.title,
+                  workId: full.id,
+                  skipConfirm: true,
+                  archiveReason: `重新发布「${full.title}」前备份`,
+                });
+                setEditingWorkId?.(full.id);
+              }
+              if (!confirm(`用当前编曲覆盖云端作品「${work.title}」？`)) return;
+              setStatus?.("正在重新发布…");
+              btnRepublish.disabled = true;
+              await republishWork(work.id, {
+                title: work.title,
+                project: getProjectData(),
+                userName: session.userName,
+              });
+              setStatus?.(`已更新「${work.title}」`);
+              AppLogger?.info("重新发布", work.title);
+              refreshRepo();
+            } catch (err) {
+              alert("重新发布失败：\n" + err.message);
+            } finally {
+              btnRepublish.disabled = false;
+            }
+          });
+
+          const btnRename = document.createElement("button");
+          btnRename.type = "button";
+          btnRename.className = "btn btn-xs btn-ghost";
+          btnRename.textContent = "改名";
+          btnRename.addEventListener("click", async () => {
+            const next = prompt("作品名称", work.title || "");
+            if (next == null) return;
+            try {
+              const session = loadSession();
+              await renamePublishedWork(work.id, next, session.userName);
+              refreshRepo();
+              setStatus?.("已改名");
+            } catch (err) {
+              alert(err.message);
+            }
+          });
+
+          const btnDel = document.createElement("button");
+          btnDel.type = "button";
+          btnDel.className = "btn btn-xs btn-ghost";
+          btnDel.textContent = "删除";
+          btnDel.addEventListener("click", async () => {
+            if (!confirm(`确定删除「${work.title}」？不可恢复。`)) return;
+            try {
+              const session = loadSession();
+              await deletePublishedWork(work.id, session.userName);
+              if (getEditingWorkId?.() === work.id) setEditingWorkId?.(null);
+              refreshRepo();
+              setStatus?.("已删除作品");
+            } catch (err) {
+              alert(err.message);
+            }
+          });
+
+          if (work.hasProjectJson) {
+            const btnDown = document.createElement("button");
+            btnDown.type = "button";
+            btnDown.className = "btn btn-xs btn-ghost";
+            btnDown.textContent = "下载 JSON";
+            btnDown.addEventListener("click", async () => {
+              try {
+                const full = await ensureWorkJson(work);
+                downloadPublishedJson(full);
+              } catch (err) {
+                alert(err.message);
+              }
+            });
+            actions.append(btnDown);
+          }
+
+          if (work.audioUrl) {
+            const link = document.createElement("a");
+            link.className = "btn btn-xs btn-ghost";
+            link.href = work.audioUrl;
+            link.target = "_blank";
+            link.rel = "noopener";
+            link.textContent = "试听";
+            actions.append(link);
+          }
+
+          actions.prepend(btnEdit, btnRepublish, btnRename, btnDel);
+          li.append(head, sub, actions);
+          listEl.appendChild(li);
+        });
+        setRepoStatus(`共 ${works.length} 个作品`);
+      } catch (err) {
+        renderEmpty("加载失败");
+        AppLogger?.error("作品仓库", err.message);
+        alert(err.message);
+      } finally {
+        loading = false;
+        btnRefresh.disabled = false;
+      }
+    }
+
+    btn.addEventListener("click", () => {
+      if (!isCloudEnabled()) {
+        alert("请先在评阅站配置云同步");
+        return;
+      }
+      if (!loadSession()?.userId) {
+        alert("请先在评阅站用昵称加入赛季");
+        return;
+      }
+      dialog.showModal();
+      refreshRepo();
+    });
+
+    btnRefresh?.addEventListener("click", refreshRepo);
+    btnClose?.addEventListener("click", () => dialog.close());
+  }
+
   function initPublishStoreUI({ setStatus, onLoadPublishedProject }) {
     const btnStore = document.getElementById("btnPublishStore");
     const dialog = document.getElementById("publishStoreDialog");
@@ -352,6 +699,7 @@ const BeatBattleCloud = (() => {
               title: work.title,
               userName: work.userName,
               filename: name,
+              archiveReason: `加载「${work.title}」前备份`,
             });
             if (ok !== false) {
               dialog.close();
@@ -435,7 +783,13 @@ const BeatBattleCloud = (() => {
     }
   }
 
-  function initUI({ getProjectData, setStatus, onLoadPublishedProject }) {
+  function initUI({
+    getProjectData,
+    setStatus,
+    onLoadPublishedProject,
+    getEditingWorkId,
+    setEditingWorkId,
+  }) {
     syncHeaderBadge();
     window.addEventListener("storage", (e) => {
       if (e.key === LS_SESSION) syncHeaderBadge();
@@ -518,6 +872,13 @@ const BeatBattleCloud = (() => {
     }
 
     initPublishStoreUI({ setStatus, onLoadPublishedProject });
+    initWorksRepoUI({
+      setStatus,
+      getProjectData,
+      onLoadPublishedProject,
+      getEditingWorkId,
+      setEditingWorkId,
+    });
   }
 
   return {
@@ -529,6 +890,11 @@ const BeatBattleCloud = (() => {
     publishWork,
     buildPublishProjectJson,
     listPublishStoreWorks,
+    listMyPublishedWorks,
+    fetchMyPublishedWork,
+    deletePublishedWork,
+    renamePublishedWork,
+    republishWork,
     downloadPublishedJson,
     syncHeaderBadge,
     initUI,

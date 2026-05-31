@@ -44,7 +44,9 @@
           title="Beat Battle 评阅站"
         >评阅站</a>
         <button type="button" class="btn btn-ghost btn-compact" id="btnPublish" title="发布编曲到 Beat Battle 制作库">发布</button>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnWorksRepo" title="管理自己发布的作品">作品仓库</button>
         <button type="button" class="btn btn-ghost btn-compact" id="btnPublishStore" title="浏览并下载其他玩家的编曲 JSON">发布商店</button>
+        <button type="button" class="btn btn-ghost btn-compact" id="btnDraftStation" title="本地多份编曲草稿">草稿站</button>
         <span class="header-review-badge" id="reviewSessionBadge" hidden title="评阅站登录昵称">
           评阅：<span id="reviewSessionName">—</span>
         </span>
@@ -300,6 +302,35 @@
     </form>
   </dialog>
 
+  <dialog id="worksRepoDialog" class="note-dialog publish-store-dialog works-repo-dialog">
+    <h3>作品仓库</h3>
+    <p class="note-dialog-hint publish-store-hint">
+      管理你发布到制作库的作品：编辑编曲、重新发布、改名、删除。编辑时若本地无工程会从云端拉取 JSON。
+    </p>
+    <div class="publish-store-toolbar">
+      <button type="button" class="btn btn-sm" id="btnWorksRepoRefresh">刷新</button>
+      <span class="publish-store-status" id="worksRepoStatus" aria-live="polite"></span>
+    </div>
+    <ul class="publish-store-list" id="worksRepoList"></ul>
+    <menu>
+      <button type="button" class="btn btn-ghost" id="btnWorksRepoClose">关闭</button>
+    </menu>
+  </dialog>
+
+  <dialog id="draftStationDialog" class="note-dialog publish-store-dialog draft-station-dialog">
+    <h3>草稿站</h3>
+    <p class="note-dialog-hint publish-store-hint">
+      本地保存多份编曲备份。从发布商店或作品仓库加载他人/自己的其他作品前，会自动把当前编辑器内容存入此处。
+    </p>
+    <div class="publish-store-toolbar">
+      <button type="button" class="btn btn-sm" id="btnDraftStationSaveCurrent">保存当前到草稿站</button>
+    </div>
+    <ul class="publish-store-list" id="draftStationList"></ul>
+    <menu>
+      <button type="button" class="btn btn-ghost" id="btnDraftStationClose">关闭</button>
+    </menu>
+  </dialog>
+
   <dialog id="publishStoreDialog" class="note-dialog publish-store-dialog">
     <h3>发布商店</h3>
     <p class="note-dialog-hint publish-store-hint">
@@ -365,6 +396,7 @@
   <script src="js/history.js"></script>
   <script src="js/lame.min.js"></script>
   <script src="js/audio-export.js"></script>
+  <script src="js/draft-station.js"></script>
   <script src="js/beat-battle-cloud.js"></script>
   <script src="js/app.js"></script>
 </body>

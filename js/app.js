@@ -26,6 +26,8 @@
   let lastScheduledStepIndex = -1;
   let stepCounter = 0;
   let bpm = 120;
+  /** 正在编辑的云端作品 id（作品仓库「编辑」后设置） */
+  let editingPublishedWorkId = null;
 
   const SCHEDULE_LOOKAHEAD = 0.22;
   const SCHEDULE_TICK_MS = 20;
@@ -454,11 +456,30 @@
     AppLogger.info("HarmonyForge 启动", `v${AppVersion.CURRENT} · build ${AppVersion.BUILD}`);
     AppVersion.initUI();
     wireAudioUnlock();
+    if (typeof DraftStation !== "undefined") {
+      DraftStation.initUI({
+        getProjectData,
+        setStatus,
+        onLoadDraft: (project, meta) => {
+          if (!confirm(`加载草稿「${meta.name}」将替换当前编曲，是否继续？`)) return false;
+          return loadExternalProject(project, {
+            ...meta,
+            fromDraftStation: true,
+            skipConfirm: true,
+            archiveReason: `加载草稿「${meta.name}」前备份`,
+          });
+        },
+      });
+    }
     if (typeof BeatBattleCloud !== "undefined") {
       BeatBattleCloud.initUI({
         getProjectData,
         setStatus,
-        onLoadPublishedProject: loadPublishedStoreProject,
+        onLoadPublishedProject: loadExternalProject,
+        getEditingWorkId: () => editingPublishedWorkId,
+        setEditingWorkId: (id) => {
+          editingPublishedWorkId = id;
+        },
       });
     }
     if (typeof HelpGuide !== "undefined") HelpGuide.init();
@@ -1250,7 +1271,11 @@
         if (!file) return;
         try {
           if (!confirm(`导入「${file.name}」将覆盖当前编曲与布局，是否继续？`)) return;
+          if (typeof DraftStation !== "undefined") {
+            DraftStation.archiveBeforeLoad(getProjectData, "导入文件前备份");
+          }
           const project = await ProjectIO.importFromFile(file);
+          editingPublishedWorkId = null;
           applyProjectData(project);
           if (typeof EditHistory !== "undefined") {
             EditHistory.reset(getProjectData());
@@ -1563,17 +1588,30 @@
     };
   }
 
-  function loadPublishedStoreProject(project, meta = {}) {
+  function loadExternalProject(project, meta = {}) {
     if (!project) return false;
-    const label = meta.title ? `「${meta.title}」` : "该作品";
-    if (!confirm(`加载 ${label} 将替换当前编曲，是否继续？`)) return false;
+    if (!meta.skipConfirm) {
+      const label = meta.title ? `「${meta.title}」` : meta.name ? `「${meta.name}」` : "该作品";
+      if (!confirm(`加载 ${label} 将替换当前编曲，是否继续？`)) return false;
+    }
+    if (typeof DraftStation !== "undefined") {
+      DraftStation.archiveBeforeLoad(
+        getProjectData,
+        meta.archiveReason || "切换前自动保存"
+      );
+    }
     applyProjectData(project);
     scheduleAutosave();
-    setStatus(
-      meta.filename
-        ? `已从发布商店加载：${meta.title || "作品"}（已下载 ${meta.filename}）`
-        : `已从发布商店加载：${meta.title || "作品"}`
-    );
+    if (meta.workId) editingPublishedWorkId = meta.workId;
+    else if (!meta.fromDraftStation) editingPublishedWorkId = null;
+
+    let statusMsg = meta.fromDraftStation
+      ? `已从草稿站加载：${meta.name || "草稿"}`
+      : meta.filename
+        ? `已加载：${meta.title || "作品"}（${meta.filename}）`
+        : `已加载：${meta.title || "作品"}`;
+    if (meta.workId) statusMsg += " — 修改后可在作品仓库「重新发布」";
+    setStatus(statusMsg);
     return true;
   }
 
@@ -1669,6 +1707,7 @@
 
   function clearProject() {
     if (!confirm("确定清空所有 Pattern 与编曲？此操作不可撤销。")) return;
+    editingPublishedWorkId = null;
     Sequencer.importState({ steps: 16, patterns: Sequencer.createEmptyPatterns(Sequencer.DEFAULT_PATTERN_COUNT) });
     Arranger.init(Sequencer.patternCount);
     Sequencer.loadDemoPatterns();

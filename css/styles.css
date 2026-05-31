@@ -958,6 +958,11 @@ kbd {
   font-size: 0.85rem;
 }
 
+.works-repo-item-active {
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+}
+
 
 .footer-meta {
   display: flex;

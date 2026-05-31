@@ -21,7 +21,9 @@ const HelpGuide = (() => {
           <li><strong>播放检查</strong>：点播放走完整时间轴；不满意回到对应 Pattern 改步格。</li>
           <li><strong>保存</strong>：自动草稿 +「导出」.hfproj 备份。</li>
           <li><strong>参赛发布</strong>：先在评阅站加入赛季 → 本页「发布」到制作库（含 MP3 + 编曲 JSON）→ 回评阅站「制作库」提交参赛。</li>
-          <li><strong>发布商店</strong>：顶栏打开可浏览他人含 JSON 的作品，支持「下载 JSON」或「下载并加载」到编辑器。</li>
+          <li><strong>作品仓库</strong>：管理自己已发布作品 — 编辑、重新发布、改名、删除；编辑时无本地工程会从云端下载 JSON。</li>
+          <li><strong>发布商店</strong>：浏览他人作品，「下载 JSON」或「下载并加载」（加载前自动存入草稿站）。</li>
+          <li><strong>草稿站</strong>：本地多份备份；切换加载他人作品前自动归档当前编曲。</li>
         </ol>
         <p class="help-tip">小技巧：先 8～16 步做短循环，确认好听后再「+4步」扩展；时间轴先 4～8 段试结构，再加长。</p>
       `,
