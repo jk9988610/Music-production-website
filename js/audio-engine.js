@@ -1,8 +1,29 @@
 /**
  * HarmonyForge 音频引擎 — Tone.js 合成与调度
+ * voice → 合成器（与 instruments.js 中 voice 字段一一对应）
  * @see https://tonejs.github.io/
  */
 const AudioEngine = (() => {
+  /** @type {Record<string, string>} 音色与 Tone 合成器类型对照（便于维护） */
+  const VOICE_SYNTH_KIND = {
+    kick: "MembraneSynth",
+    snare: "NoiseSynth",
+    clap: "NoiseSynth",
+    hihat: "MetalSynth",
+    openhat: "MetalSynth",
+    cymbal: "MetalSynth",
+    tom: "MembraneSynth",
+    bass: "MonoSynth",
+    piano: "PolySynth(FMSynth)",
+    eguitar: "PluckSynth",
+    chord: "PolySynth(AMSynth)",
+    lead: "MonoSynth",
+    sax: "MonoSynth",
+    trumpet: "FMSynth",
+    trombone: "MonoSynth",
+    violin: "MonoSynth",
+    cello: "MonoSynth",
+  };
   const MASTER_GAIN = 0.85;
   let ready = false;
   let playbackActive = false;
@@ -59,119 +80,195 @@ const AudioEngine = (() => {
     switch (voice) {
       case "kick":
         return new Tone.MembraneSynth({
-          pitchDecay: 0.04,
-          octaves: 8,
-          envelope: { attack: 0.001, decay: 0.35, sustain: 0, release: 0.05 },
+          pitchDecay: 0.05,
+          octaves: 10,
+          oscillator: { type: "sine" },
+          envelope: { attack: 0.001, decay: 0.4, sustain: 0, release: 0.08 },
         });
       case "snare":
       case "clap":
         return new Tone.NoiseSynth({
-          noise: { type: "white" },
-          envelope: { attack: 0.001, decay: 0.18, sustain: 0, release: 0.05 },
+          noise: { type: "pink" },
+          envelope: { attack: 0.001, decay: 0.22, sustain: 0, release: 0.06 },
         });
       case "hihat":
         return new Tone.MetalSynth({
-          envelope: { attack: 0.001, decay: 0.04, release: 0.02 },
-          harmonicity: 5.2,
-          modulationIndex: 22,
-          resonance: 7000,
-          octaves: 0.8,
+          envelope: { attack: 0.001, decay: 0.035, release: 0.01 },
+          harmonicity: 5.1,
+          modulationIndex: 32,
+          resonance: 7500,
+          octaves: 0.6,
         });
       case "openhat":
         return new Tone.MetalSynth({
-          envelope: { attack: 0.001, decay: 0.22, release: 0.08 },
-          harmonicity: 4.5,
-          modulationIndex: 18,
-          resonance: 5000,
-          octaves: 1.2,
+          envelope: { attack: 0.001, decay: 0.28, release: 0.12 },
+          harmonicity: 4.2,
+          modulationIndex: 24,
+          resonance: 5200,
+          octaves: 1.4,
         });
       case "cymbal":
       case "ride":
       case "splash":
         return new Tone.MetalSynth({
-          envelope: { attack: 0.001, decay: 0.5, release: 0.15 },
-          harmonicity: 5.8,
-          modulationIndex: 28,
-          resonance: 8000,
-          octaves: 1.5,
+          envelope: { attack: 0.001, decay: 0.65, release: 0.2 },
+          harmonicity: 5.5,
+          modulationIndex: 36,
+          resonance: 9000,
+          octaves: 1.8,
         });
       case "tom":
       case "wood":
       case "tri":
       case "perc":
         return new Tone.MembraneSynth({
-          pitchDecay: 0.03,
-          octaves: 4,
-          envelope: { attack: 0.001, decay: 0.28, sustain: 0, release: 0.06 },
+          pitchDecay: 0.04,
+          octaves: 5,
+          envelope: { attack: 0.001, decay: 0.32, sustain: 0, release: 0.08 },
         });
       case "bass":
         return new Tone.MonoSynth({
           oscillator: { type: "sawtooth" },
-          filter: { Q: 2, type: "lowpass", rolloff: -24 },
-          envelope: { attack: 0.02, decay: 0.25, sustain: 0.35, release: 0.2 },
+          filter: { Q: 2.5, type: "lowpass", rolloff: -24, frequency: 380 },
+          filterEnvelope: {
+            attack: 0.01,
+            decay: 0.18,
+            sustain: 0.25,
+            release: 0.2,
+            baseFrequency: 90,
+            octaves: 3.8,
+          },
+          envelope: { attack: 0.008, decay: 0.24, sustain: 0.3, release: 0.22 },
         });
       case "piano":
         return new Tone.PolySynth(Tone.FMSynth, {
-          maxPolyphony: 6,
+          maxPolyphony: 8,
           voice: {
-            modulationIndex: 1.2,
+            volume: -3,
             harmonicity: 3.5,
+            modulationIndex: 14,
             oscillator: { type: "sine" },
-            envelope: { attack: 0.01, decay: 0.3, sustain: 0.45, release: 0.8 },
+            modulation: { type: "square" },
+            envelope: {
+              attack: 0.001,
+              decay: 0.32,
+              sustain: 0.02,
+              release: 1.35,
+            },
+            modulationEnvelope: {
+              attack: 0.001,
+              decay: 0.18,
+              sustain: 0,
+              release: 0.12,
+            },
           },
         });
       case "eguitar":
         return new Tone.PluckSynth({
-          attackNoise: 0.6,
-          dampening: 3200,
-          resonance: 0.85,
-          release: 0.4,
+          attackNoise: 0.85,
+          dampening: 2400,
+          resonance: 0.78,
+          release: 0.55,
         });
       case "chord":
         return new Tone.PolySynth(Tone.AMSynth, {
           maxPolyphony: 8,
           voice: {
-            harmonicity: 1.5,
-            envelope: { attack: 0.08, decay: 0.35, sustain: 0.55, release: 0.9 },
+            harmonicity: 2.2,
+            oscillator: { type: "square" },
+            envelope: { attack: 0.06, decay: 0.3, sustain: 0.62, release: 1.1 },
           },
         });
       case "lead":
         return new Tone.MonoSynth({
           oscillator: { type: "sawtooth" },
-          filter: { type: "lowpass", Q: 1.8, rolloff: -12 },
-          envelope: { attack: 0.03, decay: 0.2, sustain: 0.65, release: 0.45 },
+          filter: { type: "lowpass", frequency: 2800, Q: 2, rolloff: -12 },
+          filterEnvelope: {
+            attack: 0.02,
+            decay: 0.15,
+            sustain: 0.55,
+            release: 0.35,
+            baseFrequency: 600,
+            octaves: 2.8,
+          },
+          envelope: { attack: 0.02, decay: 0.18, sustain: 0.7, release: 0.4 },
         });
       case "sax":
-        return new Tone.FMSynth({
-          harmonicity: 1.8,
-          modulationIndex: 2.2,
+        return new Tone.MonoSynth({
           oscillator: { type: "sawtooth" },
-          envelope: { attack: 0.05, decay: 0.2, sustain: 0.5, release: 0.35 },
+          filter: { type: "bandpass", frequency: 1100, Q: 2.8, rolloff: -12 },
+          filterEnvelope: {
+            attack: 0.07,
+            decay: 0.16,
+            sustain: 0.55,
+            release: 0.28,
+            baseFrequency: 700,
+            octaves: 2.6,
+          },
+          envelope: { attack: 0.09, decay: 0.16, sustain: 0.58, release: 0.32 },
         });
       case "trumpet":
         return new Tone.FMSynth({
-          harmonicity: 2,
-          modulationIndex: 3.5,
-          oscillator: { type: "square" },
-          envelope: { attack: 0.03, decay: 0.15, sustain: 0.55, release: 0.3 },
+          harmonicity: 2.4,
+          modulationIndex: 6.5,
+          oscillator: { type: "sine" },
+          modulation: { type: "square" },
+          envelope: { attack: 0.02, decay: 0.14, sustain: 0.52, release: 0.28 },
+          modulationEnvelope: {
+            attack: 0.01,
+            decay: 0.1,
+            sustain: 0.25,
+            release: 0.12,
+          },
         });
       case "trombone":
         return new Tone.MonoSynth({
           oscillator: { type: "sawtooth" },
-          filter: { type: "lowpass", frequency: 1800, Q: 2 },
-          envelope: { attack: 0.06, decay: 0.25, sustain: 0.7, release: 0.4 },
+          filter: { type: "lowpass", frequency: 1200, Q: 2.2, rolloff: -24 },
+          filterEnvelope: {
+            attack: 0.08,
+            decay: 0.2,
+            sustain: 0.65,
+            release: 0.38,
+            baseFrequency: 280,
+            octaves: 2.2,
+          },
+          envelope: { attack: 0.07, decay: 0.22, sustain: 0.72, release: 0.42 },
         });
       case "violin":
-        return new Tone.Synth({
-          oscillator: { type: "triangle" },
-          envelope: { attack: 0.12, decay: 0.15, sustain: 0.85, release: 0.55 },
+        return new Tone.MonoSynth({
+          portamento: 0.04,
+          oscillator: { type: "sawtooth" },
+          filter: { type: "lowpass", frequency: 2200, Q: 1.6, rolloff: -12 },
+          filterEnvelope: {
+            attack: 0.22,
+            decay: 0.14,
+            sustain: 0.72,
+            release: 0.35,
+            baseFrequency: 900,
+            octaves: 2.4,
+          },
+          envelope: { attack: 0.2, decay: 0.1, sustain: 0.9, release: 0.48 },
         });
       case "cello":
-        return new Tone.Synth({
-          oscillator: { type: "sine" },
-          envelope: { attack: 0.14, decay: 0.2, sustain: 0.88, release: 0.65 },
+        return new Tone.MonoSynth({
+          portamento: 0.05,
+          oscillator: { type: "fatsawtooth", spread: 18, count: 3 },
+          filter: { type: "lowpass", frequency: 750, Q: 1.4, rolloff: -24 },
+          filterEnvelope: {
+            attack: 0.26,
+            decay: 0.18,
+            sustain: 0.75,
+            release: 0.45,
+            baseFrequency: 320,
+            octaves: 1.6,
+          },
+          envelope: { attack: 0.24, decay: 0.14, sustain: 0.92, release: 0.62 },
         });
       default:
+        if (typeof AppLogger !== "undefined" && VOICE_SYNTH_KIND[voice] === undefined) {
+          AppLogger.warn("未知音色 voice，使用默认 Synth", voice);
+        }
         return new Tone.Synth({
           oscillator: { type: "sawtooth" },
           envelope: { attack: 0.02, decay: 0.2, sustain: 0.5, release: 0.3 },
@@ -187,6 +284,11 @@ const AudioEngine = (() => {
       } catch (_) {}
     }
     delete trackSynths[trackId];
+  }
+
+  /** 切换轨音色后调用，避免仍用旧合成器发声 */
+  function invalidateTrack(trackId) {
+    disposeTrackSynth(trackId);
   }
 
   function ensureTrackSynth(trackId, voice) {
@@ -334,13 +436,19 @@ const AudioEngine = (() => {
     return {
       schedule(_ctx, _master, trackId, time, noteMidi, stepDuration) {
         const voice = trackVoiceMap?.[trackId] || resolveVoice(trackId);
-        if (!offlineTracks[trackId]) {
+        const cached = offlineTracks[trackId];
+        if (!cached || cached.voice !== voice) {
+          if (cached?.synth?.dispose) {
+            try {
+              cached.synth.dispose();
+            } catch (_) {}
+          }
           const ch = new Tone.Gain(volumes[trackId] ?? 0.75).toDestination();
           const synth = createVoiceSynth(voice);
           synth.connect(ch);
           offlineTracks[trackId] = { channel: ch, synth, voice };
         }
-        const { channel, synth, voice: v } = offlineTracks[trackId];
+        const { synth, voice: v } = offlineTracks[trackId];
         const dur =
           v === "chord" && noteMidi != null
             ? stepDuration * 0.9
@@ -385,6 +493,23 @@ const AudioEngine = (() => {
         synth.triggerAttackRelease(notes, dur, t, velocity * 0.42);
         break;
       }
+      case "piano":
+        if (noteMidi == null) return;
+        synth.triggerAttackRelease(midiToNote(noteMidi), dur, t, velocity * 0.88);
+        break;
+      case "violin":
+      case "cello":
+        if (noteMidi == null) return;
+        synth.triggerAttackRelease(midiToNote(noteMidi), dur, t, velocity * 0.52);
+        break;
+      case "bass":
+        if (noteMidi == null) return;
+        synth.triggerAttackRelease(midiToNote(noteMidi), dur, t, velocity * 0.75);
+        break;
+      case "eguitar":
+        if (noteMidi == null) return;
+        synth.triggerAttackRelease(midiToNote(noteMidi), dur * 0.85, t, velocity * 0.7);
+        break;
       default:
         if (noteMidi == null) return;
         synth.triggerAttackRelease(midiToNote(noteMidi), dur, t, velocity);
@@ -409,8 +534,10 @@ const AudioEngine = (() => {
     playTrackSoundOn,
     playVoiceOn,
     previewTrackNote,
+    invalidateTrack,
     createOfflineScheduler,
     midiToFreq,
+    getVoiceSynthKind: (voice) => VOICE_SYNTH_KIND[voice] || "Synth",
     getContext: () => ensureContext(),
   };
 })();

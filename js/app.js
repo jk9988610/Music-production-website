@@ -181,6 +181,9 @@
       onPick: (value) => {
         runEdit(() => {
           Sequencer.setTrackInstrument(trackId, String(value));
+          if (typeof AudioEngine.invalidateTrack === "function") {
+            AudioEngine.invalidateTrack(trackId);
+          }
           renderSequencer();
           renderMixer();
         });

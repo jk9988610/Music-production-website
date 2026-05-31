@@ -63,13 +63,13 @@ const HelpGuide = (() => {
           <li><strong>军鼓</strong>：噪声 + 体共鸣</li>
           <li><strong>闭镲 / 开镲 / 碎音镲</strong>：短、开、长亮金属镲片分层</li>
           <li><strong>电贝斯</strong>：锯齿低音 + 低通滤波</li>
-          <li><strong>钢琴</strong>：FM 击齿 + 共鸣体；选音 C3–G5</li>
-          <li><strong>合成主音</strong>：主旋律 — 明亮锯齿、长延音</li>
-          <li><strong>和弦铺底</strong>：振幅调制垫音，适合铺底</li>
-          <li><strong>电吉他</strong>：拨弦快衰</li>
-          <li><strong>萨克斯</strong>：FM 管乐音色</li>
-          <li><strong>小号 / 长号</strong>：亮铜管 vs 暗厚铜管</li>
-          <li><strong>小提琴 / 大提琴</strong>：弓弦类；大提琴偏连弓长音</li>
+          <li><strong>钢琴</strong>：PolySynth + FM（快击、低 sustain、亮调制）</li>
+          <li><strong>合成主音</strong>：MonoSynth 锯齿 + 滤波扫频</li>
+          <li><strong>和弦铺底</strong>：PolySynth + AMSynth 方波垫音</li>
+          <li><strong>电吉他</strong>：PluckSynth 拨弦</li>
+          <li><strong>萨克斯</strong>：MonoSynth 带通滤波（管乐）</li>
+          <li><strong>小号</strong>：FMSynth 亮铜管；<strong>长号</strong>：MonoSynth 低通厚铜</li>
+          <li><strong>小提琴 / 大提琴</strong>：MonoSynth 慢起音弓弦；钢琴为快击 FM，勿混淆</li>
           <li><strong>换音色</strong>：点左侧轨名</li>
           <li><strong>密度</strong>：倍率按钮（½×～4×），弹窗选择。</li>
           <li><strong>±轨 / ±4步</strong>：增减轨道数与 Pattern 长度。</li>
