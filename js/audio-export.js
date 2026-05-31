@@ -1,5 +1,5 @@
 /**
- * 编曲离线渲染 — WAV / MP3 导出
+ * 编曲离线渲染 — Tone.Offline + WAV / MP3
  */
 const AudioExport = (() => {
   function getTrackIds(project) {
@@ -9,6 +9,18 @@ const AudioExport = (() => {
       return Sequencer.getTracks().map((t) => t.id);
     }
     return ["kick", "snare", "hihat", "openhat", "bass", "chord", "lead"];
+  }
+
+  function buildTrackVoiceMap(project) {
+    const map = {};
+    const layout = project?.sequencer?.trackLayout;
+    if (layout?.length && typeof Instruments !== "undefined") {
+      layout.forEach((t) => {
+        const inst = Instruments.get(t.instrumentId);
+        map[t.trackId] = inst?.voice || t.trackId;
+      });
+    }
+    return map;
   }
 
   function computeArrangementDuration(project) {
@@ -35,36 +47,40 @@ const AudioExport = (() => {
     const info = computeArrangementDuration(project);
     if (!info.sections.length) throw new Error("没有编曲段落可导出");
 
-    const sampleRate = 44100;
-    const padding = 0.15;
-    const length = Math.ceil((info.total + padding) * sampleRate);
-    const offline = new OfflineAudioContext(2, length, sampleRate);
-    const master = offline.createGain();
-    master.gain.value = 0.85;
-    master.connect(offline.destination);
-    const scheduler = AudioEngine.createOfflineScheduler(info.volumes || {});
-
-    let time = 0;
-    const totalSteps = info.sections.length * info.steps;
-    for (let g = 0; g < totalSteps; g++) {
-      const sectionIdx = Math.floor(g / info.steps);
-      const step = g % info.steps;
-      const patternIndex = info.sections[sectionIdx]?.patternIndex ?? 0;
-      const pattern = info.patterns[patternIndex];
-      if (pattern) {
-        getTrackIds(project).forEach((trackId) => {
-          const cell = pattern[trackId]?.[step];
-          const rates = info.trackRates || {};
-          const rate = TrackTiming.normalizeRate(rates[trackId] ?? 1);
-          TrackTiming.playStepCell(rate, step, cell, time, info.base, (t, note, dur) => {
-            scheduler.schedule(offline, master, trackId, t, note, dur);
-          });
-        });
-      }
-      time += info.base;
+    if (typeof Tone === "undefined") {
+      throw new Error("Tone.js 未加载");
     }
+    await AudioEngine.unlockAudio();
 
-    return offline.startRendering();
+    const duration = info.total + 0.15;
+    const trackVoiceMap = buildTrackVoiceMap(project);
+    const scheduler = AudioEngine.createOfflineScheduler(
+      info.volumes || {},
+      trackVoiceMap
+    );
+
+    const buffer = await Tone.Offline(() => {
+      let time = 0;
+      const totalSteps = info.sections.length * info.steps;
+      for (let g = 0; g < totalSteps; g++) {
+        const sectionIdx = Math.floor(g / info.steps);
+        const step = g % info.steps;
+        const patternIndex = info.sections[sectionIdx]?.patternIndex ?? 0;
+        const pattern = info.patterns[patternIndex];
+        if (pattern) {
+          getTrackIds(project).forEach((trackId) => {
+            const cell = pattern[trackId]?.[step];
+            const rate = TrackTiming.normalizeRate(info.trackRates[trackId] ?? 1);
+            TrackTiming.playStepCell(rate, step, cell, time, info.base, (t, note, dur) => {
+              scheduler.schedule(null, null, trackId, t, note, dur);
+            });
+          });
+        }
+        time += info.base;
+      }
+    }, duration);
+
+    return buffer;
   }
 
   function encodeWav(audioBuffer) {
