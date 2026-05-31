@@ -19,6 +19,8 @@
   let arrangeSectionClipboard = null;
   let arrangeClipboardFromCut = false;
   let schedulerTimer = null;
+  let audioWatchdogTimer = null;
+  let unlockWarmTimer = null;
   let nextStepTime = 0;
   let stepCounter = 0;
   let bpm = 120;
@@ -547,16 +549,50 @@
 
   function wireAudioUnlock() {
     const warm = () => {
+      if (unlockWarmTimer) return;
+      unlockWarmTimer = window.setTimeout(() => {
+        unlockWarmTimer = null;
+      }, 200);
       AudioEngine.unlockAudio().catch(() => {});
     };
-    document.addEventListener("pointerdown", warm, { once: true, capture: true });
-    document.addEventListener("keydown", warm, { once: true, capture: true });
+    document.addEventListener("pointerdown", warm, { capture: true });
+    document.addEventListener("keydown", warm, { capture: true });
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState !== "visible" || !playing) return;
+      if (document.visibilityState !== "visible") return;
+      AudioEngine.unlockAudio()
+        .then(() => {
+          if (playing) syncSchedulerClock();
+        })
+        .catch(() => {});
+    });
+    AudioEngine.setOnSuspendWhilePlaying(() => {
+      if (!playing) return;
       AudioEngine.unlockAudio()
         .then(() => syncSchedulerClock())
         .catch(() => {});
     });
+  }
+
+  function startAudioWatchdog() {
+    stopAudioWatchdog();
+    audioWatchdogTimer = window.setInterval(() => {
+      if (!playing) {
+        stopAudioWatchdog();
+        return;
+      }
+      if (!AudioEngine.isRunning()) {
+        AudioEngine.unlockAudio()
+          .then(() => syncSchedulerClock())
+          .catch(() => {});
+      }
+    }, 350);
+  }
+
+  function stopAudioWatchdog() {
+    if (audioWatchdogTimer) {
+      clearInterval(audioWatchdogTimer);
+      audioWatchdogTimer = null;
+    }
   }
 
   function setTypeLoopEnabled(on) {
@@ -923,7 +959,11 @@
   }
 
   function bindEvents() {
-    els.btnPlay.addEventListener("click", togglePlay);
+    els.btnPlay.addEventListener("click", () => {
+      AudioEngine.unlockAudio()
+        .then(() => togglePlay())
+        .catch(() => togglePlay());
+    });
     els.btnStop.addEventListener("click", stop);
     els.bpm.addEventListener("input", () => {
       bpm = Number(els.bpm.value);
@@ -1326,6 +1366,8 @@
       setStatus("音频未就绪，请再点一次播放");
       return;
     }
+    AudioEngine.setPlaybackActive(true);
+    startAudioWatchdog();
     playing = true;
     playMode = mode;
     stepCounter = 0;
@@ -1362,6 +1404,8 @@
   function pause(options = {}) {
     const { keepLoopFlags = false } = options;
     playing = false;
+    AudioEngine.setPlaybackActive(false);
+    stopAudioWatchdog();
     if (schedulerTimer) {
       clearTimeout(schedulerTimer);
       schedulerTimer = null;
@@ -1401,11 +1445,11 @@
           schedule();
         })
         .catch(() => {});
-      schedulerTimer = setTimeout(schedule, 50);
+      schedulerTimer = setTimeout(schedule, 40);
       return;
     }
 
-    const lookAhead = 0.1;
+    const lookAhead = 0.15;
     const now = ctx.currentTime;
     syncSchedulerClock();
 

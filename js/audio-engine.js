@@ -5,6 +5,9 @@ const AudioEngine = (() => {
   let ctx = null;
   let masterGain = null;
   let resumePromise = null;
+  let keepAliveSrc = null;
+  let playbackActive = false;
+  let onSuspendWhilePlaying = null;
   const trackGains = {};
 
   function midiToFreq(midi) {
@@ -886,29 +889,67 @@ const AudioEngine = (() => {
       masterGain.gain.value = 0.85;
       masterGain.connect(ctx.destination);
       ctx.addEventListener("statechange", () => {
-        if (ctx.state === "suspended" && typeof AppLogger !== "undefined") {
-          AppLogger.warn("音频引擎已挂起", "再点播放或任意音序格可恢复");
+        if (ctx.state === "suspended") {
+          if (typeof AppLogger !== "undefined") {
+            AppLogger.warn("音频引擎已挂起", playbackActive ? "正在尝试恢复…" : "再点播放可恢复");
+          }
+          if (playbackActive && typeof onSuspendWhilePlaying === "function") {
+            onSuspendWhilePlaying();
+          }
         }
       });
     }
     return ctx;
   }
 
+  function startKeepAlive(c) {
+    if (keepAliveSrc || !c || !masterGain) return;
+    try {
+      const buf = c.createBuffer(1, 1, c.sampleRate);
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const mute = c.createGain();
+      mute.gain.value = 0;
+      src.connect(mute);
+      mute.connect(masterGain);
+      src.start(0);
+      keepAliveSrc = src;
+    } catch {
+      /* ignore */
+    }
+  }
+
   /** 等待 AudioContext 进入 running（浏览器自动播放策略要求用户手势后 resume） */
   async function unlockAudio() {
     const c = ensureContext();
-    if (c.state === "running") return c;
+    if (c.state === "running") {
+      startKeepAlive(c);
+      return c;
+    }
     if (!resumePromise) {
       resumePromise = c.resume().finally(() => {
         resumePromise = null;
       });
     }
     await resumePromise;
+    if (c.state !== "running") {
+      throw new Error(`AudioContext 仍为 ${c.state}`);
+    }
+    startKeepAlive(c);
     return c;
   }
 
   function isRunning() {
     return ctx != null && ctx.state === "running";
+  }
+
+  function setPlaybackActive(active) {
+    playbackActive = !!active;
+  }
+
+  function setOnSuspendWhilePlaying(fn) {
+    onSuspendWhilePlaying = typeof fn === "function" ? fn : null;
   }
 
   function getTrackGain(trackId, defaultVol = 0.8) {
@@ -927,7 +968,17 @@ const AudioEngine = (() => {
   }
 
   function playTrackSound(trackId, time, noteMidi, stepDuration) {
-    playTrackSoundOn(ensureContext(), (id) => getTrackGain(id), trackId, time, noteMidi, stepDuration);
+    const c = ensureContext();
+    const fire = () => {
+      const now = c.currentTime;
+      const t = typeof time === "number" && time >= now - 0.02 ? time : now + 0.001;
+      playTrackSoundOn(c, (id) => getTrackGain(id), trackId, t, noteMidi, stepDuration);
+    };
+    if (c.state === "running") {
+      fire();
+      return;
+    }
+    unlockAudio().then(fire).catch(() => {});
   }
 
   function previewTrackNote(trackId, midi, duration) {
@@ -935,9 +986,19 @@ const AudioEngine = (() => {
     const dur =
       duration != null ? duration : previewDurationForVoice(voice);
     const stepDur = melodicNoteDuration(voice, dur);
-    unlockAudio().then(() => {
-      playTrackSound(trackId, ensureContext().currentTime + 0.02, midi, stepDur);
-    });
+    unlockAudio()
+      .then(() => {
+        const c = ensureContext();
+        playTrackSoundOn(
+          c,
+          (id) => getTrackGain(id),
+          trackId,
+          c.currentTime + 0.02,
+          midi,
+          stepDur
+        );
+      })
+      .catch(() => {});
   }
 
   function createOfflineScheduler(volumes) {
@@ -959,6 +1020,8 @@ const AudioEngine = (() => {
     ensureContext,
     unlockAudio,
     isRunning,
+    setPlaybackActive,
+    setOnSuspendWhilePlaying,
     setTrackVolume,
     playTrackSound,
     playTrackSoundOn,
