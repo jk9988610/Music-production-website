@@ -442,6 +442,9 @@
 
     AppLogger.info("HarmonyForge 启动", `v${AppVersion.CURRENT} · build ${AppVersion.BUILD}`);
     AppVersion.initUI();
+    if (typeof BeatBattleCloud !== "undefined") {
+      BeatBattleCloud.initUI({ getProjectData, setStatus });
+    }
     if (typeof HelpGuide !== "undefined") HelpGuide.init();
     LayoutManager.init({
       onChange: () => scheduleAutosave(),

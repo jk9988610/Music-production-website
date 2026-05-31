@@ -177,17 +177,15 @@ const AudioExport = (() => {
     URL.revokeObjectURL(url);
   }
 
-  async function exportAudio(project, format, filenameBase) {
+  async function renderExportBlob(project, format = "mp3") {
     const buffer = await renderArrangementBuffer(project);
-    let blob;
-    let ext;
-    if (format === "mp3") {
-      blob = await encodeMp3(buffer);
-      ext = ".mp3";
-    } else {
-      blob = encodeWav(buffer);
-      ext = ".wav";
-    }
+    if (format === "mp3") return encodeMp3(buffer);
+    return encodeWav(buffer);
+  }
+
+  async function exportAudio(project, format, filenameBase) {
+    const blob = await renderExportBlob(project, format);
+    const ext = format === "mp3" ? ".mp3" : ".wav";
     const name = filenameBase.endsWith(ext) ? filenameBase : `${filenameBase}${ext}`;
     downloadBlob(blob, name);
     return { filename: name, bytes: blob.size };
@@ -195,6 +193,7 @@ const AudioExport = (() => {
 
   return {
     renderArrangementBuffer,
+    renderExportBlob,
     encodeWav,
     encodeMp3,
     exportAudio,

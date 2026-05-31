@@ -52,6 +52,19 @@
   padding: 0.1rem 0.35rem;
 }
 
+.header-review-badge {
+  font-size: 0.6rem;
+  padding: 0.08rem 0.35rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.header-battle-link {
+  text-decoration: none;
+}
+
 /* .main 间距见 layout-spacing.css */
 
 .footer-slim {
