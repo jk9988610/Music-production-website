@@ -2,6 +2,27 @@
  * Creates and triggers instruments from InstrumentRegistry (sampler or synth).
  */
 const InstrumentEngine = (() => {
+  /** 解析采样相对路径（适配 GitHub Pages 子目录部署） */
+  function appBaseUrl() {
+    try {
+      const path = window.location.pathname || "/";
+      const dir = path.endsWith("/") ? path : path.replace(/\/[^/]*$/, "/");
+      return new URL(dir, window.location.origin).href;
+    } catch (_) {
+      return "/";
+    }
+  }
+
+  function resolveSampleBaseUrl(rel) {
+    if (!rel) return rel;
+    if (/^https?:\/\//i.test(rel) || rel.startsWith("data:")) return rel;
+    try {
+      return new URL(rel, appBaseUrl()).href;
+    } catch (_) {
+      return rel;
+    }
+  }
+
   function midiToNote(midi) {
     return Tone.Frequency(midi, "midi").toNote();
   }
@@ -78,12 +99,13 @@ const InstrumentEngine = (() => {
     const cacheKey = preset.id;
     if (samplerLoadCache.has(cacheKey)) return samplerLoadCache.get(cacheKey);
 
+    const resolvedBase = resolveSampleBaseUrl(baseUrl);
     const promise = new Promise((resolve, reject) => {
       const sampler = new Tone.Sampler({
         urls,
-        baseUrl,
+        baseUrl: resolvedBase,
         onload: () => resolve(sampler),
-        onerror: (err) => reject(err || new Error("Sampler load failed")),
+        onerror: (err) => reject(err || new Error(`Sampler load failed: ${resolvedBase}`)),
       });
     });
     samplerLoadCache.set(cacheKey, promise);

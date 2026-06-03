@@ -36,14 +36,14 @@ jobs:
           sed -i 's/BUNDLED_BUILD = "[^"]*"/BUNDLED_BUILD = "'"${BUILD}"'"/' js/version.js
           mkdir -p _site
           cp index.html .nojekyll version.json _site/
-          cp -r css js _site/
+          cp -r css js samples _site/
           sed -i "s|href=\"css/styles.css\"|href=\"css/styles.css?v=${BUILD}\"|" _site/index.html
           sed -i "s|href=\"css/layout.css\"|href=\"css/layout.css?v=${BUILD}\"|" _site/index.html
           sed -i "s|href=\"css/layout-spacing.css\"|href=\"css/layout-spacing.css?v=${BUILD}\"|" _site/index.html
           sed -i 's|<meta name="hf-app-version" content="[^"]*"|<meta name="hf-app-version" content="'"${VERSION}"'"|' _site/index.html
           sed -i 's|<meta name="hf-app-build" content="[^"]*"|<meta name="hf-app-build" content="'"${BUILD}"'"|' _site/index.html
           sed -i 's|class="app-version-value">[^<]*<|class="app-version-value">'"${VERSION}"'<|' _site/index.html
-          for f in app-logger.js version.js instruments.js tone.min.js layout.js file-save.js project-io.js help-guide.js history.js audio-engine.js track-timing.js track-playback.js lame.min.js audio-export.js draft-station.js beat-battle-cloud.js sequencer.js arranger.js app.js; do
+          for f in app-logger.js version.js instrument-registry.js instrument-engine.js instruments.js tone.min.js layout.js file-save.js project-io.js help-guide.js history.js audio-engine.js track-timing.js track-playback.js lame.min.js audio-export.js draft-station.js beat-battle-cloud.js sequencer.js arranger.js app.js; do
             sed -i "s|src=\"js/${f}\"|src=\"js/${f}?v=${BUILD}\"|" _site/index.html
           done
 

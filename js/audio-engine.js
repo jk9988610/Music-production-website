@@ -34,7 +34,11 @@ const AudioEngine = (() => {
       "INS-008",
       "INS-009",
     ].forEach((id) => {
-      InstrumentEngine.createAsync(id).catch(() => {});
+      InstrumentEngine.createAsync(id).catch((err) => {
+        if (typeof AppLogger !== "undefined") {
+          AppLogger.warn("采样预加载失败", id, err?.message || err);
+        }
+      });
     });
     if (typeof AppLogger !== "undefined") {
       AppLogger.info("Tone.js 采样引擎就绪", `v${Tone.version}`);
@@ -138,9 +142,15 @@ const AudioEngine = (() => {
     if (preset?.kind === "sampler") {
       ensureTrackInstrumentAsync(trackId, instrumentId)
         .then((inst) => {
-          if (inst) InstrumentEngine.trigger(inst, t, noteMidi, duration, velocity);
+          if (!inst) return;
+          const playAt = Math.max(t, Tone.now() + 0.02);
+          InstrumentEngine.trigger(inst, playAt, noteMidi, duration, velocity);
         })
-        .catch(() => {});
+        .catch((err) => {
+          if (typeof AppLogger !== "undefined") {
+            AppLogger.error("采样发声失败", instrumentId, err?.message || err);
+          }
+        });
       return;
     }
     const inst = ensureTrackInstrument(trackId, instrumentId);
@@ -197,17 +207,23 @@ const AudioEngine = (() => {
     playInstrumentOn(trackId, instrumentId, t, noteMidi, stepDuration);
   }
 
-  function previewTrackNote(trackId, midi, duration) {
+  async function previewTrackNote(trackId, midi, duration) {
     const instrumentId = resolveInstrumentId(trackId);
     const stepDur = InstrumentEngine.melodicDuration(
       instrumentId,
       duration != null ? duration : InstrumentEngine.previewDuration(instrumentId)
     );
-    unlockAudio()
-      .then(() =>
-        triggerInstrument(trackId, instrumentId, Tone.now() + 0.03, midi, stepDur, playVelocityFor(instrumentId))
-      )
-      .catch(() => {});
+    try {
+      await unlockAudio();
+      const inst = await ensureTrackInstrumentAsync(trackId, instrumentId);
+      if (!inst) return;
+      const playAt = Tone.now() + 0.03;
+      InstrumentEngine.trigger(inst, playAt, midi, stepDur, playVelocityFor(instrumentId));
+    } catch (err) {
+      if (typeof AppLogger !== "undefined") {
+        AppLogger.error("试听失败", instrumentId, err?.message || err);
+      }
+    }
   }
 
   function setTransportBpm(bpm) {
