@@ -78,8 +78,6 @@
     noteGrid: $("#noteGrid"),
     noteClear: $("#noteClear"),
     noteApply: $("#noteApply"),
-    btnNoteKeyPick: $("#btnNoteKeyPick"),
-    btnNoteScalePick: $("#btnNoteScalePick"),
     choiceDialog: $("#choiceDialog"),
     choiceDialogTitle: $("#choiceDialogTitle"),
     choiceGrid: $("#choiceGrid"),
@@ -91,11 +89,6 @@
   function patternLabel(index) {
     if (index < 26) return String.fromCharCode(65 + index);
     return `P${index + 1}`;
-  }
-
-  function scaleLabel(scaleId) {
-    const opt = Sequencer.SCALE_OPTIONS.find((o) => o.id === scaleId);
-    return opt ? opt.label : scaleId;
   }
 
   function openChoiceDialog({ title, items, currentValue, columns, onPick }) {
@@ -799,23 +792,11 @@
     scheduleAutosave();
   }
 
-  function updateNoteDialogTonalityButtons() {
-    if (!noteEditContext) return;
-    const { trackId, step, patternIndex } = noteEditContext;
-    const ton = Sequencer.getCellTonality(patternIndex, trackId, step);
-    if (els.btnNoteKeyPick) {
-      els.btnNoteKeyPick.textContent = Sequencer.KEYS[ton.rootKey] ?? "C";
-    }
-    if (els.btnNoteScalePick) {
-      els.btnNoteScalePick.textContent = scaleLabel(ton.scaleName);
-    }
-  }
-
   function rebuildNoteGrid() {
     if (!noteEditContext || !els.noteGrid) return;
     const { trackId, step, patternIndex } = noteEditContext;
     const track = Sequencer.TRACKS.find((t) => t.id === trackId);
-    const notes = Sequencer.getScaleNotesForCell(patternIndex, trackId, step);
+    const notes = Sequencer.getPitchChoicesForCell(patternIndex, trackId, step);
     els.noteGrid.innerHTML = "";
     notes.forEach((midi) => {
       const btn = document.createElement("button");
@@ -841,48 +822,6 @@
     });
   }
 
-  function openKeyPickerForNoteCell() {
-    if (!noteEditContext) return;
-    const { trackId, step, patternIndex } = noteEditContext;
-    const ton = Sequencer.getCellTonality(patternIndex, trackId, step);
-    openChoiceDialog({
-      title: "选调",
-      columns: 4,
-      currentValue: ton.rootKey,
-      items: Sequencer.KEYS.map((key, i) => ({ value: i, label: key })),
-      onPick: (value) => {
-        runEdit(() => {
-          Sequencer.setCellTonality(patternIndex, trackId, step, Number(value), null);
-          updateNoteDialogTonalityButtons();
-          rebuildNoteGrid();
-        });
-        scheduleAutosave();
-        setStatus(`本格调：${Sequencer.KEYS[Number(value)]}`);
-      },
-    });
-  }
-
-  function openScalePickerForNoteCell() {
-    if (!noteEditContext) return;
-    const { trackId, step, patternIndex } = noteEditContext;
-    const ton = Sequencer.getCellTonality(patternIndex, trackId, step);
-    openChoiceDialog({
-      title: "选阶",
-      columns: 2,
-      currentValue: ton.scaleName,
-      items: Sequencer.SCALE_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
-      onPick: (value) => {
-        runEdit(() => {
-          Sequencer.setCellTonality(patternIndex, trackId, step, null, value);
-          updateNoteDialogTonalityButtons();
-          rebuildNoteGrid();
-        });
-        scheduleAutosave();
-        setStatus(`本格音阶：${scaleLabel(value)}`);
-      },
-    });
-  }
-
   function openNoteDialog(trackId, step, patternIndex) {
     noteEditContext = { trackId, step, patternIndex };
     const cell = Sequencer.getPattern(patternIndex)[trackId][step];
@@ -892,7 +831,11 @@
       els.noteDialogTitle.textContent = `选择音高 · ${track.name} · 第 ${step + 1} 步`;
     }
     if (els.notePreview) els.notePreview.checked = true;
-    updateNoteDialogTonalityButtons();
+    if (els.noteGrid) {
+      const tr = Sequencer.TRACKS.find((t) => t.id === trackId);
+      const piano = tr && Sequencer.isPianoTrack && Sequencer.isPianoTrack(tr);
+      els.noteGrid.classList.toggle("note-grid--piano", !!piano);
+    }
     rebuildNoteGrid();
     els.noteDialog.showModal();
   }
@@ -996,19 +939,6 @@
           if (playing && playMode === "pattern") pause({ keepLoopFlags: true });
           setStatus("类型循环已关闭");
         }
-      });
-    }
-
-    if (els.btnNoteKeyPick) {
-      els.btnNoteKeyPick.addEventListener("click", (e) => {
-        e.preventDefault();
-        openKeyPickerForNoteCell();
-      });
-    }
-    if (els.btnNoteScalePick) {
-      els.btnNoteScalePick.addEventListener("click", (e) => {
-        e.preventDefault();
-        openScalePickerForNoteCell();
       });
     }
 

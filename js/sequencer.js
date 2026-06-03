@@ -279,17 +279,14 @@ const Sequencer = (() => {
     const prev = getTrack(trackId);
     entry.instrumentId = instrumentId;
     if (prev && prev.type !== inst.type) {
-      const def = defaultTonality();
-      const defaults = getScaleNotesFor(def.rootKey, def.scaleName);
-      const mid = defaults[Math.floor(defaults.length / 2)] || 60;
       patterns.forEach((pattern) => {
         const row = pattern[trackId];
         if (!row) return;
-        row.forEach((cell) => {
+        row.forEach((cell, stepIndex) => {
           if (inst.type === "drum") {
             cell.note = null;
           } else if (cell.on && cell.note == null) {
-            cell.note = mid;
+            cell.note = defaultMidiForTrack(trackId, patterns.indexOf(pattern), stepIndex);
           }
         });
       });
@@ -297,33 +294,61 @@ const Sequencer = (() => {
     return true;
   }
 
-  const PIANO_MIDI_MIN = 48;
-  const PIANO_MIDI_MAX = 80;
+  /** 88 键钢琴：A0 (21) ～ C8 (108) */
+  const PIANO_MIDI_MIN = 21;
+  const PIANO_MIDI_MAX = 108;
 
-  function getScaleNotesForCell(patternIndex, trackId, step, octaves = 3) {
-    const t = getCellTonality(patternIndex, trackId, step);
-    let notes = getScaleNotesFor(t.rootKey, t.scaleName, octaves);
-    const track = getTrack(trackId);
-    if (track && typeof Instruments !== "undefined" && Instruments.isPianoId(track.instrumentId)) {
-      notes = notes.filter((m) => m >= PIANO_MIDI_MIN && m <= PIANO_MIDI_MAX);
-      if (!notes.length) {
-        notes = getScaleNotesFor(t.rootKey, t.scaleName, 2).filter(
-          (m) => m >= PIANO_MIDI_MIN && m <= PIANO_MIDI_MAX
-        );
-      }
+  function resolveInstrumentId(track) {
+    if (!track) return "";
+    const raw = track.engineId || track.instrumentId || "";
+    return typeof Instruments !== "undefined" && Instruments.resolveId
+      ? Instruments.resolveId(raw)
+      : raw;
+  }
+
+  function isPianoTrack(track) {
+    if (!track) return false;
+    if (typeof Instruments !== "undefined" && Instruments.isPianoId) {
+      return Instruments.isPianoId(track.instrumentId);
     }
+    const id = resolveInstrumentId(track);
+    return id === "INS-008" || track.voice === "piano" || track.instrumentId === "piano";
+  }
+
+  function getPitchRangeForTrack(track) {
+    const id = resolveInstrumentId(track);
+    if (isPianoTrack(track)) return { min: PIANO_MIDI_MIN, max: PIANO_MIDI_MAX };
+    if (id === "INS-007" || track?.voice === "bass") return { min: 28, max: 55 };
+    if (id === "INS-009" || track?.voice === "chord") return { min: 36, max: 72 };
+    return { min: 48, max: 72 };
+  }
+
+  function getChromaticNotes(minMidi, maxMidi) {
+    const lo = Math.min(minMidi, maxMidi);
+    const hi = Math.max(minMidi, maxMidi);
+    const notes = [];
+    for (let m = lo; m <= hi; m++) notes.push(m);
     return notes;
   }
 
-  function defaultMidiForTrack(trackId, patternIndex, step) {
-    const notes = getScaleNotesForCell(patternIndex, trackId, step);
-    if (!notes.length) return 60;
+  function getPitchChoicesForCell(patternIndex, trackId, step) {
     const track = getTrack(trackId);
-    if (track && typeof Instruments !== "undefined" && Instruments.isPianoId(track.instrumentId)) {
-      const mid = notes.filter((m) => m >= 55 && m <= 67);
-      if (mid.length) return mid[Math.floor(mid.length / 2)];
-    }
-    return notes[Math.floor(notes.length / 2)];
+    const { min, max } = getPitchRangeForTrack(track);
+    return getChromaticNotes(min, max);
+  }
+
+  /** 兼容旧调用；返回半音列表，不再按调/阶过滤 */
+  function getScaleNotesForCell(patternIndex, trackId, step) {
+    return getPitchChoicesForCell(patternIndex, trackId, step);
+  }
+
+  function defaultMidiForTrack(trackId, patternIndex, step) {
+    const track = getTrack(trackId);
+    const { min, max } = getPitchRangeForTrack(track);
+    if (isPianoTrack(track)) return 60;
+    if (resolveInstrumentId(track) === "INS-007") return 36;
+    if (resolveInstrumentId(track) === "INS-009") return 60;
+    return Math.min(max, Math.max(min, Math.floor((min + max) / 2)));
   }
 
   function stepColumnHasContent(patternIndex, step) {
@@ -478,6 +503,11 @@ const Sequencer = (() => {
     setTrackRate,
     getScaleNotesFor,
     getScaleNotesForCell,
+    getPitchChoicesForCell,
+    getChromaticNotes,
+    getPitchRangeForTrack,
+    isPianoTrack,
+    resolveInstrumentId,
     defaultMidiForTrack,
     PIANO_MIDI_MIN,
     PIANO_MIDI_MAX,

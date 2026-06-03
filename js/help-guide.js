@@ -10,11 +10,11 @@ const HelpGuide = (() => {
         <h4>从零完成一首编曲</h4>
         <p>HarmonyForge 把「节奏 → 和声 → 旋律 → 段落」拆开，用 <strong>类型</strong> 存短循环，用 <strong>时间轴</strong> 拼成完整曲式。建议按下面顺序操作。</p>
         <ol class="help-steps">
-          <li><strong>定调</strong>：点旋律格子打开选音弹窗，在弹窗里设「调」「阶」（未改时默认 C 大调）。节奏类音色无音高。</li>
+          <li><strong>选音高</strong>：点旋律格子打开选音弹窗，按该轨音区列出全部半音（钢琴 A0–C8，贝斯/和弦有各自范围）。节奏类音色无音高。</li>
           <li><strong>做节奏</strong>：在音序器选 Pattern A，用底鼓 / 军鼓 / 闭镲等，做出 1 小节节奏模板。</li>
           <li><strong>做贝斯</strong>：仍在 A（或新建 B），在电贝斯轨填根音 — 通常落在强拍，与底鼓对齐。</li>
           <li><strong>做和弦</strong>：在和弦铺底轨填块状和弦根音（见「音高与配器」），常每 4 步换一次。</li>
-          <li><strong>做主旋律</strong>：在钢琴轨用音阶内音填句，避开与和弦铺底打架的密集区。</li>
+          <li><strong>做主旋律</strong>：在钢琴轨用中高音区填句，避开与和弦铺底打架的密集区。</li>
           <li><strong>复制变型</strong>：用「+型」复制出 B/C/D，做加花、过门或副歌加密度。</li>
           <li><strong>排段落</strong>：在编曲模块用时间轴把 §1§2§… 指到 A/B/C/D；「+段」会弹窗选类型。</li>
           <li><strong>混音</strong>：平衡各轨音量；音序轨旁可设「密度」½×～4×。</li>
@@ -97,7 +97,13 @@ const HelpGuide = (() => {
       label: "音高与配器",
       html: `
         <h4>程序音高基础</h4>
-        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。点格子打开<strong>选音弹窗</strong>，在弹窗顶部设「调」「阶」——<strong>只决定可选音列表，不改变该轨音色</strong>。钢琴选音限定在 C3–G5，避免过低像电贝斯。未设时默认 <strong>C 大调</strong>。</p>
+        <p>旋律轨每格存一个 <strong>MIDI 音高</strong>（数字），界面写成 <code>音名+八度</code>（如 <code>G2</code>、<code>C4</code>）。点格子打开<strong>选音弹窗</strong>，可选范围由<strong>当前轨音色</strong>决定，不再使用调/阶过滤：</p>
+        <ul class="help-list">
+          <li><strong>钢琴</strong>：A0–C8 全键盘半音（12 列网格）</li>
+          <li><strong>电贝斯</strong>：约 E1–G3</li>
+          <li><strong>和弦铺底</strong>：约 C2–C5</li>
+          <li><strong>其他旋律轨</strong>：约 C3–C5</li>
+        </ul>
         <p>选音弹窗默认勾选 <strong>试听</strong>：点击音高会用该轨当前音色预听一次，并会停止编曲 / 类型循环 / 单步循环播放；满意后点「选用」写入格子。</p>
 
         <h4>底鼓 · 军鼓 · 镲片类</h4>
@@ -109,7 +115,7 @@ const HelpGuide = (() => {
         </ul>
 
         <h4>电贝斯轨</h4>
-        <p><strong>单音</strong>，跟根音走。在 C 大调里优先选 C、F、G 等音阶音，低八度（如 C2–G2）。</p>
+        <p><strong>单音</strong>，跟根音走。优先低八度（弹窗内 E1–G3 区），与底鼓、和弦根音对齐。</p>
         <ul class="help-list">
           <li>强拍（1、3 拍）放根音，与底鼓对齐</li>
           <li>可每 4 步换一个音，形成 I–IV–V 进行（如 C → F → G → C）</li>
@@ -120,20 +126,20 @@ const HelpGuide = (() => {
         <p>格内音高是<strong>和弦根音</strong>。程序会自动叠 <strong>根音 + 大三度 + 纯五度</strong>（大三和弦）。</p>
         <ul class="help-list">
           <li>同一和弦常持续 4 步或 8 步再换</li>
-          <li>C 大调：I=C，IV=F，V=G — 选对应根音即可</li>
+          <li>进行示例：I=C，IV=F，V=G — 在弹窗里选对应 MIDI 根音即可</li>
           <li>和弦铺底偏中低区（如 C3–G3），不要比贝斯还低</li>
         </ul>
 
         <h4>钢琴 / 主旋律轨</h4>
         <p><strong>单音</strong>，最亮。常用比和弦铺底高一个八度以上（如 C4–G4）。默认主旋律轨使用钢琴采样。</p>
         <ul class="help-list">
-          <li>从音阶音开始，先写短 motive（3～5 个音）再重复变奏</li>
-          <li>强拍可用音阶 1 度或 5 度，弱拍用经过音</li>
+          <li>先写短 motive（3～5 个音）再重复变奏</li>
+          <li>强拍用根音或五度，弱拍用经过音</li>
           <li>一句结束音落在 1 度或 3 度更稳</li>
           <li>格内字被边框挡住时：缩小步进或略增模块下内边距；播放检查听感为主</li>
         </ul>
 
-        <h4>搭配总表（C 大调示例）</h4>
+        <h4>搭配总表（音区示例）</h4>
         <table class="help-table">
           <thead><tr><th>音色</th><th>音区</th><th>节奏</th><th>作用</th></tr></thead>
           <tbody>
@@ -145,8 +151,8 @@ const HelpGuide = (() => {
           </tbody>
         </table>
 
-        <h4>不同调式</h4>
-        <p>换「阶」为五声时选音变少；蓝调适合爵士句；小调时贝斯 / 和弦铺底优先 i、iv、V 级。每格可单独选调/阶。改调/阶后已填音不会自动移调，需手动重选。</p>
+        <h4>移调与和声</h4>
+        <p>选音为半音列表，需自行选择和声音。旧工程里若曾保存 per-cell 的调/阶字段，已不再影响选音弹窗；已填 MIDI 音高保持不变。</p>
       `,
     },
     {

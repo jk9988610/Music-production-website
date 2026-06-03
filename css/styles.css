@@ -849,6 +849,19 @@ kbd {
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
   margin-bottom: 1rem;
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.note-grid.note-grid--piano {
+  grid-template-columns: repeat(12, 1fr);
+  max-height: min(62vh, 520px);
+}
+
+.note-grid.note-grid--piano .note-btn {
+  padding: 0.35rem 0.2rem;
+  font-size: 0.62rem;
 }
 
 .note-btn {
