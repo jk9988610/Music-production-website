@@ -14,7 +14,7 @@ const HelpGuide = (() => {
           <li><strong>做节奏</strong>：在音序器选 Pattern A，用底鼓 / 军鼓 / 闭镲等，做出 1 小节节奏模板。</li>
           <li><strong>做贝斯</strong>：仍在 A（或新建 B），在电贝斯轨填根音 — 通常落在强拍，与底鼓对齐。</li>
           <li><strong>做和弦</strong>：在和弦铺底轨填块状和弦根音（见「音高与配器」），常每 4 步换一次。</li>
-          <li><strong>做主旋律</strong>：在合成主音轨用音阶内音填句，避开与和弦铺底打架的密集区。</li>
+          <li><strong>做主旋律</strong>：在钢琴轨用音阶内音填句，避开与和弦铺底打架的密集区。</li>
           <li><strong>复制变型</strong>：用「+型」复制出 B/C/D，做加花、过门或副歌加密度。</li>
           <li><strong>排段落</strong>：在编曲模块用时间轴把 §1§2§… 指到 A/B/C/D；「+段」会弹窗选类型。</li>
           <li><strong>混音</strong>：平衡各轨音量；音序轨旁可设「密度」½×～4×。</li>
@@ -58,21 +58,15 @@ const HelpGuide = (() => {
       label: "音序",
       html: `
         <h4>步进音序器</h4>
-        <p>默认 7 轨，可用「+轨」「−轨」增减（1～12 轨）。<strong>点击轨名</strong>切换音色（共 16 种标准制作用语命名）。</p>
+        <p>默认 7 轨，可用「+轨」「−轨」增减（1～12 轨）。<strong>点击轨名</strong>切换音色（共 9 种离线采样音色）。</p>
         <ul class="help-list">
-          <li><strong>节奏类</strong>：底鼓、军鼓、闭镲、开镲、通鼓、碎音镲</li>
-          <li><strong>旋律类</strong>：电贝斯、钢琴、电吉他、和弦铺底、合成主音、萨克斯、小号、长号、小提琴、大提琴</li>
-          <li><strong>底鼓</strong>：低频膜片合成 + 击点击</li>
-          <li><strong>军鼓</strong>：噪声 + 体共鸣</li>
-          <li><strong>闭镲 / 开镲 / 碎音镲</strong>：短、开、长亮金属镲片分层</li>
-          <li><strong>电贝斯</strong>：锯齿低音 + 低通滤波</li>
-          <li><strong>钢琴</strong>：按音高分参 FM（低音编钟非谐波、极短调制敲击）+ 高通/EQ</li>
-          <li><strong>合成主音</strong>：MonoSynth 锯齿 + 滤波扫频</li>
-          <li><strong>和弦铺底</strong>：PolySynth + AMSynth 方波垫音</li>
-          <li><strong>电吉他</strong>：PluckSynth 拨弦</li>
-          <li><strong>萨克斯</strong>：MonoSynth 带通滤波（管乐）</li>
-          <li><strong>小号</strong>：FMSynth 亮铜管；<strong>长号</strong>：MonoSynth 低通厚铜</li>
-          <li><strong>小提琴 / 大提琴</strong>：MonoSynth 慢起音弓弦；钢琴为快击 FM，勿混淆</li>
+          <li><strong>节奏类</strong>：底鼓、军鼓、闭镲、开镲、通鼓、碎音镲（Tone.js acoustic-kit 采样）</li>
+          <li><strong>旋律类</strong>：电贝斯、钢琴、和弦铺底</li>
+          <li><strong>底鼓 / 军鼓 / 镲 / 通鼓</strong>：单点采样，通过 <code>Tone.Sampler</code> 触发</li>
+          <li><strong>电贝斯</strong>：Casio 风格多采样低音</li>
+          <li><strong>钢琴</strong>：Salamander 多采样钢琴 + 均衡后级</li>
+          <li><strong>和弦铺底</strong>：Pad 采样；格内根音自动叠大三和弦</li>
+          <li>旧工程中的管乐、弦乐、合成主音等 ID 会自动映射为钢琴采样</li>
           <li><strong>换音色</strong>：点左侧轨名</li>
           <li><strong>密度</strong>：倍率按钮（½×～4×），弹窗选择。</li>
           <li><strong>±轨 / ±4步</strong>：增减轨道数与 Pattern 长度。</li>
@@ -130,8 +124,8 @@ const HelpGuide = (() => {
           <li>和弦铺底偏中低区（如 C3–G3），不要比贝斯还低</li>
         </ul>
 
-        <h4>合成主音轨</h4>
-        <p><strong>单音</strong>，最亮。常用比和弦铺底高一个八度以上（如 C4–G4）。</p>
+        <h4>钢琴 / 主旋律轨</h4>
+        <p><strong>单音</strong>，最亮。常用比和弦铺底高一个八度以上（如 C4–G4）。默认主旋律轨使用钢琴采样。</p>
         <ul class="help-list">
           <li>从音阶音开始，先写短 motive（3～5 个音）再重复变奏</li>
           <li>强拍可用音阶 1 度或 5 度，弱拍用经过音</li>
@@ -147,7 +141,7 @@ const HelpGuide = (() => {
             <tr><td>军鼓</td><td>—</td><td>2/4 拍</td><td>节奏骨架</td></tr>
             <tr><td>电贝斯</td><td>C2–G2</td><td>根音在强拍</td><td>和声底座</td></tr>
             <tr><td>和弦铺底</td><td>C3–G3</td><td>每 4 步换根</td><td>和声填充</td></tr>
-            <tr><td>合成主音</td><td>C4–G4</td><td>句型</td><td>记忆点</td></tr>
+            <tr><td>钢琴</td><td>C4–G4</td><td>句型</td><td>记忆点</td></tr>
           </tbody>
         </table>
 
@@ -164,7 +158,7 @@ const HelpGuide = (() => {
         <ul class="help-list">
           <li>节奏类合计最大（底鼓、军鼓、镲片约 80～90%）</li>
           <li>电贝斯次之（约 75%），再和弦铺底（约 70%）</li>
-          <li>合成主音略低于节奏、高于和弦铺底（约 65～75%），避免盖过主唱想象位</li>
+          <li>钢琴主旋律略低于节奏、高于和弦铺底（约 65～75%），避免盖过主唱想象位</li>
         </ul>
         <p>随草稿自动保存。</p>
         <h4>播放</h4>

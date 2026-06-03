@@ -66,6 +66,7 @@ const Sequencer = (() => {
     return {
       id: entry.trackId,
       instrumentId: entry.instrumentId,
+      engineId: inst.engineId || inst.id,
       name: inst.name,
       type: inst.type,
       class: inst.class,
@@ -303,7 +304,7 @@ const Sequencer = (() => {
     const t = getCellTonality(patternIndex, trackId, step);
     let notes = getScaleNotesFor(t.rootKey, t.scaleName, octaves);
     const track = getTrack(trackId);
-    if (track && (track.voice === "piano" || track.instrumentId === "piano")) {
+    if (track && typeof Instruments !== "undefined" && Instruments.isPianoId(track.instrumentId)) {
       notes = notes.filter((m) => m >= PIANO_MIDI_MIN && m <= PIANO_MIDI_MAX);
       if (!notes.length) {
         notes = getScaleNotesFor(t.rootKey, t.scaleName, 2).filter(
@@ -318,7 +319,7 @@ const Sequencer = (() => {
     const notes = getScaleNotesForCell(patternIndex, trackId, step);
     if (!notes.length) return 60;
     const track = getTrack(trackId);
-    if (track && (track.voice === "piano" || track.instrumentId === "piano")) {
+    if (track && typeof Instruments !== "undefined" && Instruments.isPianoId(track.instrumentId)) {
       const mid = notes.filter((m) => m >= 55 && m <= 67);
       if (mid.length) return mid[Math.floor(mid.length / 2)];
     }

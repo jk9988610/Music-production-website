@@ -6,7 +6,7 @@
 
 ## 功能
 
-- **步进音序器**：默认 7 轨、可 ±轨 增至 12 轨，16 种音色可切换（听感命名，非乐器名）；步数可 ±4 调整（4–64 步）
+- **步进音序器**：默认 7 轨、可 ±轨 增至 12 轨，9 种离线采样音色（鼓组 + 贝斯 + 钢琴 + 和弦铺底）；步数可 ±4 调整（4–64 步）
 - **Pattern 库**：默认 4 个，可 ± 增减（1–16 个），编曲栏与时间轴分配
 - **编曲时间轴**：多段编排，± 段增减，末尾「+段」；播放按段循环
 - **调性与音阶**：在选音弹窗设置（默认 C 大调）；大调、小调、五声、蓝调
@@ -82,7 +82,10 @@ index.html          # 主页面
 css/styles.css      # 基础样式
 css/layout.css      # 布局与模块外壳
 js/tone.min.js      # Tone.js 音频引擎（v14）
-js/audio-engine.js  # 音色合成与轨道路由
+js/instrument-registry.js  # 采样音色注册表
+js/instrument-engine.js   # Tone.Sampler 创建与触发
+js/audio-engine.js        # 采样播放与轨道路由
+samples/                  # 离线 MP3 采样（INS-001 … INS-009）
 js/sequencer.js     # Pattern 与音序数据
 js/arranger.js      # 编曲时间轴
 js/app.js           # 应用逻辑与 UI

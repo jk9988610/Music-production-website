@@ -11,13 +11,12 @@ const AudioExport = (() => {
     return ["kick", "snare", "hihat", "openhat", "bass", "chord", "lead"];
   }
 
-  function buildTrackVoiceMap(project) {
+  function buildTrackInstrumentMap(project) {
     const map = {};
     const layout = project?.sequencer?.trackLayout;
     if (layout?.length && typeof Instruments !== "undefined") {
       layout.forEach((t) => {
-        const inst = Instruments.get(t.instrumentId);
-        map[t.trackId] = inst?.voice || t.trackId;
+        map[t.trackId] = Instruments.resolveId(t.instrumentId);
       });
     }
     return map;
@@ -53,10 +52,12 @@ const AudioExport = (() => {
     await AudioEngine.unlockAudio();
 
     const duration = info.total + 0.15;
-    const trackVoiceMap = buildTrackVoiceMap(project);
+    const trackInstrumentMap = buildTrackInstrumentMap(project);
+    const preloaded = await AudioEngine.preloadInstrumentsForTracks(trackInstrumentMap);
     const scheduler = AudioEngine.createOfflineScheduler(
       info.volumes || {},
-      trackVoiceMap
+      trackInstrumentMap,
+      preloaded
     );
 
     const buffer = await Tone.Offline(() => {

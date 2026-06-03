@@ -1,63 +1,144 @@
 /**
- * 音色目录 — 标准制作用语命名，内部 id/voice 保持稳定以兼容旧工程
+ * 音色目录 — 内置采样（INS-xxx），兼容旧工程 ID
  */
 const Instruments = (() => {
-  /** 旧工程 ID → 现音色 ID（仅解析轨，合成以现 ID 为准） */
-  const LEGACY_IDS = {
-    ride: "cymbal",
-    splash: "cymbal",
-    clap: "snare",
-    wood: "tom",
-    tri: "tom",
-    perc: "tom",
-    viola: "violin",
-    clarinet: "sax",
-    oboe: "sax",
-    flute: "sax",
-    organ: "piano",
-    pipeorgan: "piano",
-    pluck: "eguitar",
-    pad: "piano",
-    bells: "piano",
-    harp: "cello",
-    brass: "trumpet",
-    strings: "violin",
-    synth: "lead",
-    woodblock: "tom",
+  const EMPTY_ID = "INS-000";
+
+  const NAME_BY_ID = {
+    "INS-000": "空轨",
+    "INS-001": "底鼓",
+    "INS-002": "军鼓",
+    "INS-003": "闭镲",
+    "INS-004": "开镲",
+    "INS-005": "通鼓",
+    "INS-006": "碎音镲",
+    "INS-007": "电贝斯",
+    "INS-008": "钢琴",
+    "INS-009": "和弦铺底",
   };
 
-  const CATALOG = [
-    { id: "kick", name: "底鼓", type: "drum", voice: "kick", class: "drum-kick" },
-    { id: "snare", name: "军鼓", type: "drum", voice: "snare", class: "drum-snare" },
-    { id: "hihat", name: "闭镲", type: "drum", voice: "hihat", class: "drum-hat" },
-    { id: "openhat", name: "开镲", type: "drum", voice: "openhat", class: "drum-open" },
-    { id: "tom", name: "通鼓", type: "drum", voice: "tom", class: "drum-tom" },
-    { id: "cymbal", name: "碎音镲", type: "drum", voice: "cymbal", class: "drum-cymbal" },
-    { id: "bass", name: "电贝斯", type: "melodic", voice: "bass", class: "bass" },
-    { id: "piano", name: "钢琴", type: "melodic", voice: "piano", class: "melodic-piano" },
-    { id: "eguitar", name: "电吉他", type: "melodic", voice: "eguitar", class: "melodic-eguitar" },
-    { id: "chord", name: "和弦铺底", type: "melodic", voice: "chord", class: "chord" },
-    { id: "lead", name: "合成主音", type: "melodic", voice: "lead", class: "lead" },
-    { id: "sax", name: "萨克斯", type: "melodic", voice: "sax", class: "melodic-sax" },
-    { id: "trumpet", name: "小号", type: "melodic", voice: "trumpet", class: "melodic-trumpet" },
-    { id: "trombone", name: "长号", type: "melodic", voice: "trombone", class: "melodic-trombone" },
-    { id: "violin", name: "小提琴", type: "melodic", voice: "violin", class: "melodic-violin" },
-    { id: "cello", name: "大提琴", type: "melodic", voice: "cello", class: "melodic-cello" },
-  ];
+  const VISUAL_CLASS_BY_ID = {
+    "INS-000": "inst-empty",
+    "INS-001": "drum-kick",
+    "INS-002": "drum-snare",
+    "INS-003": "drum-hat",
+    "INS-004": "drum-open",
+    "INS-005": "drum-tom",
+    "INS-006": "drum-cymbal",
+    "INS-007": "bass",
+    "INS-008": "melodic-piano",
+    "INS-009": "chord",
+  };
 
-  const byId = Object.fromEntries(CATALOG.map((i) => [i.id, i]));
+  const VOICE_BY_ID = {
+    "INS-001": "kick",
+    "INS-002": "snare",
+    "INS-003": "hihat",
+    "INS-004": "openhat",
+    "INS-005": "tom",
+    "INS-006": "cymbal",
+    "INS-007": "bass",
+    "INS-008": "piano",
+    "INS-009": "chord",
+  };
+
+  const LEGACY_IDS = {
+    kick: "INS-001",
+    snare: "INS-002",
+    hihat: "INS-003",
+    openhat: "INS-004",
+    tom: "INS-005",
+    cymbal: "INS-006",
+    ride: "INS-006",
+    splash: "INS-006",
+    bass: "INS-007",
+    piano: "INS-008",
+    eguitar: "INS-008",
+    chord: "INS-009",
+    pad: "INS-009",
+    lead: "INS-008",
+    sax: "INS-008",
+    clarinet: "INS-008",
+    oboe: "INS-008",
+    flute: "INS-008",
+    trumpet: "INS-008",
+    trombone: "INS-008",
+    violin: "INS-008",
+    viola: "INS-008",
+    cello: "INS-008",
+    harp: "INS-008",
+    brass: "INS-008",
+    strings: "INS-008",
+    synth: "INS-008",
+    organ: "INS-008",
+    pipeorgan: "INS-008",
+    pluck: "INS-008",
+    bells: "INS-008",
+    clap: "INS-002",
+    wood: "INS-005",
+    tri: "INS-005",
+    perc: "INS-005",
+    woodblock: "INS-005",
+    "INS-008-FM": "INS-008",
+    "INS-010": "INS-009",
+    "INS-011": "INS-008",
+    "INS-012": "INS-008",
+    "INS-013": "INS-008",
+    "INS-014": "INS-008",
+    "INS-015": "INS-008",
+    "INS-016": "INS-008",
+  };
+
+  let CATALOG = [];
+  let byId = {};
+
+  function visualClassFor(p) {
+    if (p.user) return "inst-user";
+    if (VISUAL_CLASS_BY_ID[p.id]) return VISUAL_CLASS_BY_ID[p.id];
+    if (p.kind === "empty") return "inst-empty";
+    if (p.type === "drum") return "inst-drum";
+    if (p.type === "melodic") return "inst-melodic";
+    return "inst-melodic";
+  }
+
+  function catalogName(p) {
+    if (p.user && p.name) return p.name;
+    return NAME_BY_ID[p.id] || p.id;
+  }
+
+  function presetToCatalogEntry(p) {
+    return {
+      id: p.id,
+      name: catalogName(p),
+      type: p.type,
+      engineId: p.id,
+      voice: VOICE_BY_ID[p.id] || p.id,
+      kind: p.kind,
+      toneClass: InstrumentRegistry.toneLabel(p),
+      class: visualClassFor(p),
+      synthesis: p.synthesis,
+      user: !!p.user,
+    };
+  }
+
+  function refreshCatalog() {
+    const presets = InstrumentRegistry.list(null, { includeHidden: false, includeEmpty: false });
+    CATALOG = presets.map(presetToCatalogEntry);
+    byId = Object.fromEntries(CATALOG.map((i) => [i.id, i]));
+  }
 
   const DEFAULT_LAYOUT = [
-    { trackId: "kick", instrumentId: "kick" },
-    { trackId: "snare", instrumentId: "snare" },
-    { trackId: "hihat", instrumentId: "hihat" },
-    { trackId: "openhat", instrumentId: "openhat" },
-    { trackId: "bass", instrumentId: "bass" },
-    { trackId: "chord", instrumentId: "chord" },
-    { trackId: "lead", instrumentId: "lead" },
+    { trackId: "kick", instrumentId: "INS-001" },
+    { trackId: "snare", instrumentId: "INS-002" },
+    { trackId: "hihat", instrumentId: "INS-003" },
+    { trackId: "openhat", instrumentId: "INS-004" },
+    { trackId: "bass", instrumentId: "INS-007" },
+    { trackId: "chord", instrumentId: "INS-009" },
+    { trackId: "lead", instrumentId: "INS-008" },
   ];
 
   function resolveId(id) {
+    if (!id) return id;
     let cur = id;
     const seen = new Set();
     while (LEGACY_IDS[cur] && !seen.has(cur)) {
@@ -81,7 +162,18 @@ const Instruments = (() => {
     return type === "drum" ? 0.85 : 0.75;
   }
 
+  function isEmptyId(id) {
+    return resolveId(id) === EMPTY_ID;
+  }
+
+  function isPianoId(id) {
+    return resolveId(id) === "INS-008";
+  }
+
+  refreshCatalog();
+
   return {
+    EMPTY_ID,
     CATALOG,
     DEFAULT_LAYOUT,
     LEGACY_IDS,
@@ -89,5 +181,9 @@ const Instruments = (() => {
     get,
     list,
     defaultVolume,
+    isEmptyId,
+    isPianoId,
+    refreshCatalog,
+    visualClassFor,
   };
 })();
